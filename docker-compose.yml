@@ -59,6 +59,14 @@ services:
       CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
       IDEMPOTENCY_WINDOW_SECONDS: ${IDEMPOTENCY_WINDOW_SECONDS:-60}
       RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-5000}
+      # RabbitMQ
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-host.docker.internal}  # hoặc IP máy bạn
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-amq.topic}
+      RABBITMQ_ROUTING_KEY: ${RABBITMQ_ROUTING_KEY:-core.notification.alerts}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-notification.alerts}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
