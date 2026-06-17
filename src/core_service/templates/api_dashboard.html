@@ -553,6 +553,85 @@
             font-weight: 600;
             margin-top: 2px;
         }
+        /* ===== REQUEST LOGS ===== */
+.request-log-item {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-left: 4px solid #e2e8f0;
+    transition: all 0.3s ease;
+    animation: slideIn 0.3s ease;
+}
+.request-log-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.request-log-item .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.request-log-item .log-service {
+    font-weight: 600;
+    font-size: 13px;
+}
+.request-log-item .log-status {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.log-status-200 { background: #dcfce7; color: #166534; }
+.log-status-202 { background: #dbeafe; color: #1e40af; }
+.log-status-400 { background: #fef3c7; color: #92400e; }
+.log-status-401 { background: #fef3c7; color: #92400e; }
+.log-status-403 { background: #fee2e2; color: #991b1b; }
+.log-status-404 { background: #fee2e2; color: #991b1b; }
+.log-status-429 { background: #fef3c7; color: #92400e; }
+.log-status-500 { background: #fee2e2; color: #991b1b; }
+.request-log-item .log-body {
+    font-size: 12px;
+    color: #475569;
+    margin-top: 6px;
+}
+.request-log-item .log-body pre {
+    background: #f8fafc;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    overflow-x: auto;
+    max-height: 150px;
+}
+.request-log-item .log-explanation {
+    background: #f1f5f9;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 6px;
+}
+.log-explanation .highlight {
+    color: #ea580c;
+    font-weight: 600;
+}
+.log-time {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.log-filter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.log-filter select, .log-filter input {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+    background: white;
+}
     </style>
 </head>
 <body>
@@ -816,6 +895,42 @@
                             </div>
                             <button id="refreshStatusBtn" class="btn btn-secondary btn-sm" style="margin-top:12px;">🔄 Refresh Status</button>
                             <div id="connectionDetails" style="margin-top:10px; font-size:12px; color:#94a3b8;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Request Logs -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📥 Request Logs (Real-time)</h3>
+                            <button id="refreshLogsBtn" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="log-filter">
+                                <select id="logServiceFilter">
+                                    <option value="">Tất cả service</option>
+                                    <option value="B1">B1 - IoT Sensor</option>
+                                    <option value="B2">B2 - Camera</option>
+                                    <option value="B3">B3 - Access Gate</option>
+                                    <option value="B4">B4 - AI Vision</option>
+                                    <option value="B5">B5 - Analytics</option>
+                                </select>
+                                <select id="logStatusFilter">
+                                    <option value="">Tất cả status</option>
+                                    <option value="200">✅ 200 OK</option>
+                                    <option value="202">✅ 202 Accepted</option>
+                                    <option value="400">❌ 400 Bad Request</option>
+                                    <option value="401">🔒 401 Unauthorized</option>
+                                    <option value="403">🔒 403 Forbidden</option>
+                                    <option value="404">❌ 404 Not Found</option>
+                                    <option value="429">⚠️ 429 Rate Limit</option>
+                                    <option value="500">❌ 500 Server Error</option>
+                                </select>
+                                <input type="number" id="logLimit" value="20" min="5" max="100" style="width:80px;">
+                                <button id="applyLogFilterBtn" class="btn btn-secondary btn-sm">Apply</button>
+                            </div>
+                            <div id="requestLogsContainer">
+                                <div style="text-align:center; color:#94a3b8; padding:20px;">Loading logs...</div>
+                            </div>
                         </div>
                     </div>
 
@@ -1518,6 +1633,96 @@
             if (target === 'health') refreshHealthDashboard();
         });
     });
+
+    // ==================== REQUEST LOGS ====================
+    async function fetchRequestLogs() {
+        const service = document.getElementById('logServiceFilter').value;
+        const status = document.getElementById('logStatusFilter').value;
+        const limit = document.getElementById('logLimit').value || 20;
+        
+        let url = `/internal/request-logs?limit=${limit}`;
+        if (service) url += `&service=${service}`;
+        if (status) url += `&status_code=${status}`;
+        
+        try {
+            const res = await callApi('GET', url);
+            if (res.status === 200 && res.data) {
+                renderRequestLogs(res.data.logs);
+            }
+        } catch (e) {
+            document.getElementById('requestLogsContainer').innerHTML = 
+                `<div style="text-align:center; color:#ef4444; padding:20px;">❌ Failed to load logs: ${e.message}</div>`;
+        }
+    }
+
+    function renderRequestLogs(logs) {
+        const container = document.getElementById('requestLogsContainer');
+        if (!logs || logs.length === 0) {
+            container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">📭 No requests yet</div>`;
+            return;
+        }
+        
+        container.innerHTML = logs.map(log => {
+            const exp = log.explanation || {};
+            const statusClass = `log-status-${log.status_code}`;
+            const time = new Date(log.timestamp).toLocaleTimeString();
+            
+            // Dữ liệu hiển thị
+            let bodyHtml = '';
+            if (log.body && Object.keys(log.body).length > 0) {
+                bodyHtml = `<pre>${escapeHtml(JSON.stringify(log.body, null, 2))}</pre>`;
+            }
+            
+            // Giải thích dữ liệu
+            let summaryHtml = '';
+            if (exp.data_summary && Object.keys(exp.data_summary).length > 0) {
+                summaryHtml = Object.entries(exp.data_summary)
+                    .map(([key, value]) => `<span><strong>${key}:</strong> ${value}</span>`)
+                    .join(' · ');
+            }
+            
+            // Status code with label
+            const statusLabels = {
+                200: '200 OK',
+                202: '202 Accepted',
+                400: '400 Bad Request',
+                401: '401 Unauthorized',
+                403: '403 Forbidden',
+                404: '404 Not Found',
+                429: '429 Rate Limit',
+                500: '500 Server Error'
+            };
+            
+            return `
+                <div class="request-log-item">
+                    <div class="log-header">
+                        <span class="log-service">${exp.service || 'Unknown'}</span>
+                        <span class="log-status ${statusClass}">${statusLabels[log.status_code] || log.status_code}</span>
+                        <span class="log-time">${time}</span>
+                    </div>
+                    <div style="font-size:12px; color:#64748b;">
+                        <strong>${log.method}</strong> ${log.path}
+                        <span style="color:#94a3b8;">· ${log.duration_ms}ms</span>
+                        <span style="color:#94a3b8; margin-left:8px;">${exp.meaning || ''}</span>
+                    </div>
+                    ${summaryHtml ? `<div style="font-size:12px; color:#475569; margin-top:4px;">📊 ${summaryHtml}</div>` : ''}
+                    ${bodyHtml}
+                    <div class="log-explanation">
+                        <span class="highlight">📤 Response:</span> ${exp.status_meaning || 'Unknown'}
+                        ${log.status_code === 202 ? ' (Async - đang xử lý)' : ''}
+                        ${log.status_code === 200 ? ' (Xử lý thành công)' : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Auto-refresh logs
+    document.getElementById('refreshLogsBtn').addEventListener('click', fetchRequestLogs);
+    document.getElementById('applyLogFilterBtn').addEventListener('click', fetchRequestLogs);
+
+    // Refresh mỗi 5 giây
+    setInterval(fetchRequestLogs, 5000);
 
     // ==================== ENVIRONMENT SELECTOR ====================
     const envSelect = document.getElementById('envSelect');

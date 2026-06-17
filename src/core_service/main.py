@@ -12,6 +12,8 @@ from contextlib import asynccontextmanager
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
 from uuid import uuid4
+from collections import deque
+import asyncio
 
 # ============================================================
 # LOAD ENVIRONMENT VARIABLES
@@ -82,6 +84,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+request_logs = deque(maxlen=1000)
 
 # ============================================================
 # Services Initialization
@@ -245,6 +249,193 @@ def update_health_status():
             return "DEGRADED"
     return "UP"
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Middleware để log tất cả request và response"""
+    start_time = datetime.now()
+    
+    # Đọc body (chỉ cho POST/PUT/PATCH)
+    body = None
+    if request.method in ["POST", "PUT", "PATCH"]:
+        try:
+            body_bytes = await request.body()
+            if body_bytes:
+                body = json.loads(body_bytes)
+        except:
+            body = {"error": "Cannot parse body"}
+    
+    # Xử lý request
+    response = await call_next(request)
+    
+    # Tính thời gian
+    duration = (datetime.now() - start_time).total_seconds() * 1000
+    
+    # Lưu log
+    log_entry = {
+        "timestamp": start_time.isoformat(),
+        "method": request.method,
+        "path": request.url.path,  # ← SỬA: dùng request.url.path
+        "client_ip": request.client.host if request.client else "unknown",
+        "status_code": response.status_code,
+        "duration_ms": round(duration, 2),
+        "body": body,
+        "headers": dict(request.headers),
+        "query_params": dict(request.query_params)
+    }
+    request_logs.append(log_entry)
+    
+    # Log ra console - SỬA: dùng request.url.path
+    logger.info(f"📥 {request.method} {request.url.path} from {request.client.host} → {response.status_code} ({duration:.2f}ms)")
+    
+    return response
+
+# ============================================================
+# API Endpoint - GET REQUEST LOGS
+# ============================================================
+@app.get("/internal/request-logs", tags=["System Admin"])
+async def get_request_logs(
+    limit: int = 50,
+    service: Optional[str] = None,
+    status_code: Optional[int] = None,
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Lấy danh sách request logs để hiển thị trên dashboard.
+    Có thể lọc theo service (B1, B2, B3, B4, B5) và status code.
+    """
+    logs = list(request_logs)
+    
+    # Lọc theo service (dựa trên path)
+    if service:
+        service_paths = {
+            "B1": "/internal/evaluate-sensor",
+            "B2": "/policies/evaluate-camera-event",
+            "B3": "/access/check",
+            "B4": "/policies/evaluate-detection",
+            "B5": "/alerts"
+        }
+        path = service_paths.get(service)
+        if path:
+            logs = [log for log in logs if path in log["path"]]
+    
+    # Lọc theo status code
+    if status_code:
+        logs = [log for log in logs if log["status_code"] == status_code]
+    
+    # Sắp xếp theo thời gian mới nhất
+    logs = sorted(logs, key=lambda x: x["timestamp"], reverse=True)
+    
+    # Giải thích dữ liệu
+    for log in logs:
+        log["explanation"] = explain_request(log)
+    
+    return {
+        "total": len(logs),
+        "logs": logs[:limit]
+    }
+
+def explain_request(log: dict) -> dict:
+    """Giải thích ý nghĩa của request"""
+    explanation = {
+        "service": "Unknown",
+        "action": "Unknown",
+        "data_summary": {},
+        "meaning": ""
+    }
+    
+    path = log["path"]
+    body = log.get("body", {})
+    status = log["status_code"]
+    
+    # Xác định service
+    if "/internal/evaluate-sensor" in path:
+        explanation["service"] = "B1 (IoT Sensor)"
+        explanation["action"] = "Gửi dữ liệu cảm biến"
+        if body:
+            device = body.get("device_id", "unknown")
+            temp = body.get("temperature_c", "N/A")
+            co2 = body.get("co2_ppm", "N/A")
+            smoke = body.get("smoke_ppm", "N/A")
+            motion = body.get("motion_detected", False)
+            explanation["data_summary"] = {
+                "Thiết bị": device,
+                "Nhiệt độ": f"{temp}°C",
+                "CO2": f"{co2} ppm",
+                "Khói": f"{smoke} ppm",
+                "Chuyển động": "✅ Có" if motion else "❌ Không"
+            }
+            explanation["meaning"] = f"📊 Dữ liệu từ cảm biến {device}"
+    
+    elif "/policies/evaluate-camera-event" in path:
+        explanation["service"] = "B2 (Camera Stream)"
+        explanation["action"] = "Gửi sự kiện camera"
+        if body:
+            camera = body.get("camera_id", "unknown")
+            event_type = body.get("event_type", "unknown")
+            location = body.get("location", "unknown")
+            motion = body.get("motion_detected", False)
+            explanation["data_summary"] = {
+                "Camera": camera,
+                "Sự kiện": event_type,
+                "Vị trí": location,
+                "Chuyển động": "✅ Có" if motion else "❌ Không"
+            }
+            explanation["meaning"] = f"📹 Sự kiện camera {event_type} từ {camera}"
+    
+    elif "/access/check" in path:
+        explanation["service"] = "B3 (Access Gate)"
+        explanation["action"] = "Kiểm tra quyền truy cập"
+        if body:
+            card = body.get("cardId", "unknown")
+            gate = body.get("gateId", "unknown")
+            direction = body.get("direction", "IN")
+            explanation["data_summary"] = {
+                "Thẻ": card,
+                "Cổng": gate,
+                "Hướng": direction
+            }
+            explanation["meaning"] = f"🚪 Kiểm tra thẻ {card} tại cổng {gate}"
+    
+    elif "/policies/evaluate-detection" in path:
+        explanation["service"] = "B4 (AI Vision)"
+        explanation["action"] = "Gửi kết quả nhận diện"
+        if body:
+            label = body.get("label", "unknown")
+            confidence = body.get("confidence", 0)
+            matched = body.get("matched", False)
+            explanation["data_summary"] = {
+                "Nhãn": label,
+                "Độ tin cậy": f"{confidence*100:.1f}%",
+                "Khớp": "✅" if matched else "❌"
+            }
+            explanation["meaning"] = f"👁️ Phát hiện {label} với độ tin cậy {confidence*100:.1f}%"
+    
+    elif "/alerts" in path:
+        explanation["service"] = "B5 (Analytics)"
+        explanation["action"] = "Lấy danh sách cảnh báo"
+        params = log.get("query_params", {})
+        limit = params.get("limit", "20")
+        severity = params.get("severity", "Tất cả")
+        explanation["data_summary"] = {
+            "Số lượng": limit,
+            "Severity": severity
+        }
+        explanation["meaning"] = f"📋 Lấy danh sách cảnh báo (limit={limit})"
+    
+    # Giải thích status code
+    status_explanations = {
+        200: "✅ Thành công",
+        202: "✅ Đã tiếp nhận (xử lý async)",
+        400: "❌ Request không hợp lệ",
+        401: "🔒 Chưa xác thực",
+        403: "🔒 Không có quyền truy cập",
+        404: "❌ Endpoint không tồn tại",
+        429: "⚠️ Quá rate limit",
+        500: "❌ Lỗi server"
+    }
+    explanation["status_meaning"] = status_explanations.get(status, f"Status {status}")
+    
+    return explanation
 
 # ============================================================
 # API Endpoints - CẶP 10: ACCESS GATE → B6 (Provider)
