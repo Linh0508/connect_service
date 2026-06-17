@@ -1,0 +1,211 @@
+time="2026-06-15T01:21:28+07:00" level=warning msg="/home/linhnguyen050805/Dịch vụ kết nối và công nghệ nền tảng/BTL/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+b6-core-api  | INFO:     Started server process [1]
+b6-core-api  | INFO:     Waiting for application startup.
+b6-core-api  | INFO:     Application startup complete.
+b6-core-api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+b6-core-api  | INFO:     127.0.0.1:39468 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:46282 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:41542 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:52294 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:44646 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:60544 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:54288 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:52102 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:54464 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:52972 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:53732 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     127.0.0.1:41596 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:38710 - "POST /access/check HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     172.21.0.1:38710 - "GET /policies/access/string HTTP/1.1" 404 Not Found
+b6-core-api  | INFO:     172.21.0.1:38710 - "GET /decisions/089b66da-4b3c-2f7e-e6f0-7f3ffb35cea5 HTTP/1.1" 404 Not Found
+b6-core-api  | INFO:     172.21.0.1:38710 - "POST /cache/invalidate/LT_0ZQSP8ZU155HC HTTP/1.1" 204 No Content
+b6-core-api  | ERROR:    Exception in ASGI application
+b6-core-api  | Traceback (most recent call last):
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+b6-core-api  |     result = await app(  # type: ignore[func-returns-value]
+b6-core-api  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+b6-core-api  |     return await self.app(scope, receive, send)
+b6-core-api  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/fastapi/applications.py", line 1106, in __call__
+b6-core-api  |     await super().__call__(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/applications.py", line 122, in __call__
+b6-core-api  |     await self.middleware_stack(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 184, in __call__
+b6-core-api  |     raise exc
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 162, in __call__
+b6-core-api  |     await self.app(scope, receive, _send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+b6-core-api  |     raise exc
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+b6-core-api  |     await self.app(scope, receive, sender)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+b6-core-api  |     raise e
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+b6-core-api  |     await self.app(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/routing.py", line 718, in __call__
+b6-core-api  |     await route.handle(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+b6-core-api  |     await self.app(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/routing.py", line 69, in app
+b6-core-api  |     await response(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/responses.py", line 171, in __call__
+b6-core-api  |     await send({"type": "http.response.body", "body": self.body})
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in sender
+b6-core-api  |     await send(message)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 159, in _send
+b6-core-api  |     await send(message)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 560, in send
+b6-core-api  |     raise RuntimeError("Response content longer than Content-Length")
+b6-core-api  | RuntimeError: Response content longer than Content-Length
+b6-core-api  | INFO:     172.21.0.1:38732 - "POST /internal/evaluate-sensor HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     172.21.0.1:38732 - "GET /internal/access-logs?from=2021-04-16T05:53:25.055Z&to=2021-04-16T05:53:25.055Z&limit=20 HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:38732 - "GET /internal/gates/string/status HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:38732 - "POST /evaluate-detection HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     172.21.0.1:38732 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:38744 - "POST /evaluate-detection HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     127.0.0.1:49264 - "GET /health HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:36204 - "POST /access/check HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     172.21.0.1:36204 - "GET /policies/access/string HTTP/1.1" 404 Not Found
+b6-core-api  | INFO:     172.21.0.1:36204 - "GET /decisions/089b66da-4b3c-2f7e-e6f0-7f3ffb35cea5 HTTP/1.1" 404 Not Found
+b6-core-api  | INFO:     172.21.0.1:36204 - "POST /cache/invalidate/LT_0ZQSP8ZU155HC HTTP/1.1" 204 No Content
+b6-core-api  | ERROR:    Exception in ASGI application
+b6-core-api  | Traceback (most recent call last):
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 426, in run_asgi
+b6-core-api  |     result = await app(  # type: ignore[func-returns-value]
+b6-core-api  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
+b6-core-api  |     return await self.app(scope, receive, send)
+b6-core-api  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/fastapi/applications.py", line 1106, in __call__
+b6-core-api  |     await super().__call__(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/applications.py", line 122, in __call__
+b6-core-api  |     await self.middleware_stack(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 184, in __call__
+b6-core-api  |     raise exc
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 162, in __call__
+b6-core-api  |     await self.app(scope, receive, _send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 79, in __call__
+b6-core-api  |     raise exc
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 68, in __call__
+b6-core-api  |     await self.app(scope, receive, sender)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 20, in __call__
+b6-core-api  |     raise e
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 17, in __call__
+b6-core-api  |     await self.app(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/routing.py", line 718, in __call__
+b6-core-api  |     await route.handle(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+b6-core-api  |     await self.app(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/routing.py", line 69, in app
+b6-core-api  |     await response(scope, receive, send)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/responses.py", line 171, in __call__
+b6-core-api  |     await send({"type": "http.response.body", "body": self.body})
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in sender
+b6-core-api  |     await send(message)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 159, in _send
+b6-core-api  |     await send(message)
+b6-core-api  |   File "/home/appuser/.local/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 560, in send
+b6-core-api  |     raise RuntimeError("Response content longer than Content-Length")
+b6-core-api  | RuntimeError: Response content longer than Content-Length
+b6-core-api  | INFO:     172.21.0.1:36222 - "POST /internal/evaluate-sensor HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     172.21.0.1:36222 - "GET /internal/access-logs?from=2021-04-16T05:53:25.055Z&to=2021-04-16T05:53:25.055Z&limit=20 HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:36222 - "GET /internal/gates/string/status HTTP/1.1" 200 OK
+b6-core-api  | INFO:     172.21.0.1:36222 - "POST /evaluate-detection HTTP/1.1" 422 Unprocessable Entity
+b6-core-api  | INFO:     172.21.0.1:36222 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     Started server process [1]
+b6-ai-vision  | INFO:     Waiting for application startup.
+b6-ai-vision  | INFO:     Application startup complete.
+b6-ai-vision  | INFO:     Uvicorn running on http://0.0.0.0:9000 (Press CTRL+C to quit)
+b6-ai-vision  | INFO:     127.0.0.1:43716 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:55224 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:52728 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:49738 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:40486 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:58332 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:41820 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:45086 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:41558 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:48454 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:45840 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:35970 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:45540 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:58978 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:39212 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:54296 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:52974 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:33796 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:52610 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     172.21.0.1:56510 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:60340 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:36324 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:37158 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:59474 - "GET /health HTTP/1.1" 200 OK
+b6-ai-vision  | INFO:     127.0.0.1:45246 - "GET /health HTTP/1.1" 200 OK
+b6-postgres   | The files belonging to this database system will be owned by user "postgres".
+b6-postgres   | This user must also own the server process.
+b6-postgres   | 
+b6-postgres   | The database cluster will be initialized with locale "en_US.utf8".
+b6-postgres   | The default database encoding has accordingly been set to "UTF8".
+b6-postgres   | The default text search configuration will be set to "english".
+b6-postgres   | 
+b6-postgres   | Data page checksums are disabled.
+b6-postgres   | 
+b6-postgres   | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+b6-postgres   | creating subdirectories ... ok
+b6-postgres   | selecting dynamic shared memory implementation ... posix
+b6-postgres   | selecting default max_connections ... 100
+b6-postgres   | selecting default shared_buffers ... 128MB
+b6-postgres   | selecting default time zone ... UTC
+b6-postgres   | creating configuration files ... ok
+b6-postgres   | running bootstrap script ... ok
+b6-postgres   | sh: locale: not found
+b6-postgres   | 2026-06-14 18:15:16.884 UTC [35] WARNING:  no usable system locales were found
+b6-postgres   | performing post-bootstrap initialization ... ok
+b6-postgres   | syncing data to disk ... ok
+b6-postgres   | 
+b6-postgres   | 
+b6-postgres   | Success. You can now start the database server using:
+b6-postgres   | 
+b6-postgres   |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+b6-postgres   | 
+b6-postgres   | initdb: warning: enabling "trust" authentication for local connections
+b6-postgres   | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+b6-postgres   | waiting for server to start....2026-06-14 18:15:17.373 UTC [41] LOG:  starting PostgreSQL 15.18 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+b6-postgres   | 2026-06-14 18:15:17.374 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+b6-postgres   | 2026-06-14 18:15:17.378 UTC [44] LOG:  database system was shut down at 2026-06-14 18:15:17 UTC
+b6-postgres   | 2026-06-14 18:15:17.384 UTC [41] LOG:  database system is ready to accept connections
+b6-postgres   |  done
+b6-postgres   | server started
+b6-postgres   | CREATE DATABASE
+b6-postgres   | 
+b6-postgres   | 
+b6-postgres   | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init-db.sql
+b6-postgres   | CREATE TABLE
+b6-postgres   | CREATE TABLE
+b6-postgres   | CREATE TABLE
+b6-postgres   | INSERT 0 1
+b6-postgres   | CREATE INDEX
+b6-postgres   | CREATE INDEX
+b6-postgres   | 
+b6-postgres   | 
+b6-postgres   | waiting for server to shut down....2026-06-14 18:15:17.533 UTC [41] LOG:  received fast shutdown request
+b6-postgres   | 2026-06-14 18:15:17.534 UTC [41] LOG:  aborting any active transactions
+b6-postgres   | 2026-06-14 18:15:17.536 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+b6-postgres   | 2026-06-14 18:15:17.536 UTC [42] LOG:  shutting down
+b6-postgres   | 2026-06-14 18:15:17.538 UTC [42] LOG:  checkpoint starting: shutdown immediate
+b6-postgres   | 2026-06-14 18:15:17.577 UTC [42] LOG:  checkpoint complete: wrote 928 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.015 s, sync=0.023 s, total=0.041 s; sync files=311, longest=0.001 s, average=0.001 s; distance=4281 kB, estimate=4281 kB
+b6-postgres   | 2026-06-14 18:15:17.582 UTC [41] LOG:  database system is shut down
+b6-postgres   |  done
+b6-postgres   | server stopped
+b6-postgres   | 
+b6-postgres   | PostgreSQL init process complete; ready for start up.
+b6-postgres   | 
+b6-postgres   | 2026-06-14 18:15:17.650 UTC [1] LOG:  starting PostgreSQL 15.18 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+b6-postgres   | 2026-06-14 18:15:17.650 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+b6-postgres   | 2026-06-14 18:15:17.650 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+b6-postgres   | 2026-06-14 18:15:17.652 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+b6-postgres   | 2026-06-14 18:15:17.654 UTC [59] LOG:  database system was shut down at 2026-06-14 18:15:17 UTC
+b6-postgres   | 2026-06-14 18:15:17.658 UTC [1] LOG:  database system is ready to accept connections
+b6-postgres   | 2026-06-14 18:20:26.784 UTC [57] LOG:  checkpoint starting: time
+b6-postgres   | 2026-06-14 18:20:31.214 UTC [57] LOG:  checkpoint complete: wrote 47 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.414 s, sync=0.009 s, total=4.431 s; sync files=13, longest=0.005 s, average=0.001 s; distance=252 kB, estimate=252 kB

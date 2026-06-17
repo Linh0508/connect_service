@@ -1,0 +1,66 @@
+# Spectral Ruleset for B6 Core Business API
+# Validates OpenAPI contract quality
+
+extends: [[spectral:oas, off]]
+
+rules:
+  # Basic validation
+  oas3-api-servers: off
+  oas3-valid-media-example: off
+  
+  # Custom rules for B6 API
+  info-description:
+    description: API info must have a description
+    recommended: true
+    severity: warn
+    given: $.info
+    then:
+      field: description
+      function: truthy
+  
+  # Path naming conventions
+  path-params:
+    description: Path parameters must be in kebab-case
+    severity: warn
+    given: $.paths.*~
+    then:
+      function: pattern
+      functionOptions:
+        match: '^\/[a-z][a-z0-9\-]*(\{[a-z][a-zA-Z0-9]*\})?$'
+  
+  # Response structure
+  response-200:
+    description: GET operations should have a 200 response
+    severity: warn
+    given: $.paths.*.get.responses
+    then:
+      field: "200"
+      function: truthy
+  
+  # Security check
+  security-required:
+    description: Operations should have security defined
+    severity: warn
+    given: $.paths.*.*
+    then:
+      field: security
+      function: truthy
+  
+  # Operation ID required
+  operation-id-required:
+    description: Each operation must have an operationId
+    severity: error
+    given: $.paths.*.*
+    then:
+      field: operationId
+      function: truthy
+  
+  # Schema naming
+  schema-naming:
+    description: Schema names should be PascalCase
+    severity: warn
+    given: $.components.schemas.*~
+    then:
+      function: pattern
+      functionOptions:
+        match: '^[A-Z][a-zA-Z0-9]*$'

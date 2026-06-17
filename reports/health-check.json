@@ -1,0 +1,12 @@
+{
+    "status": "UP",
+    "components": {
+        "database": "UP",
+        "cache": "UP",
+        "rule_engine": {
+            "status": "UP",
+            "avg_latency_ms": 35
+        }
+    },
+    "timestamp": "2026-06-14T17:55:38.514452"
+}

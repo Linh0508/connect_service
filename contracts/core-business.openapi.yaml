@@ -1,0 +1,767 @@
+openapi: 3.1.0
+info:
+  title: Core Business — Smart Campus Decision Engine API
+  version: 1.3.0
+  description: |
+    Dịch vụ xử lý nghiệp vụ trung tâm (B6). Chịu trách nhiệm đánh giá chính sách (Policy), 
+    tiếp nhận sự kiện từ IoT/AI và điều phối cảnh báo.
+    
+    **Versioning Policy:**
+    - Strategy: URL path versioning (không sử dụng prefix /v1)
+    - Parallel Support: Hỗ trợ song song phiên bản cũ trong 6 tháng
+    - Deprecation: Cảnh báo Sunset header trước 30 ngày
+    
+    **Data Retention:**
+    - Audit Records: Lưu trữ Online 30 ngày
+    - Cold Storage: Lưu trữ nén trong 2 năm
+    - Privacy: Masking cardId trong audit log
+    
+    **SLA Commitments:**
+    - /access/check: P99 < 100ms
+    - /health: < 500ms
+    - Fail-closed sau 5 phút mất kết nối
+  contact:
+    name: Nhóm B6 (Core Business)
+    email: support-b6@campus.local
+
+servers:
+  - url: http://localhost:4010
+    description: Prism Mock Server (Lab 02)
+  - url: https://api.campus.local/core
+    description: Production Server
+
+tags:
+  - name: Access Control
+    description: Đánh giá quyền ra vào real-time (Cặp 10 - Access Gate → B6)
+  - name: Event Evaluation
+    description: Tiếp nhận dữ liệu từ IoT (Cặp 05) và AI Vision (Cặp 02)
+  - name: Audit & Policy
+    description: Tra cứu lịch sử quyết định và quản lý chính sách
+  - name: System Admin
+    description: Health check và cache management
+
+paths:
+  # ================================================================
+  # CẶP 10: ACCESS GATE → CORE BUSINESS (Provider)
+  # ================================================================
+  /access/check:
+    post:
+      tags: [Access Control]
+      summary: Kiểm tra quyền ra vào real-time
+      operationId: checkAccess
+      description: |
+        Access Gate gọi realtime để kiểm tra policy trước khi mở cổng.
+        - SLA: P99 < 100ms
+        - Hỗ trợ idempotency qua correlationId (cửa sổ 60 giây)
+        - Fail-closed: nếu B6 không phản hồi > 5 phút, Gate từ chối truy cập
+      security:
+        - bearerAuth: ['access:read']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessCheckRequest'
+      responses:
+        '200':
+          description: Quyết định truy cập
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessDecision'
+        '400':
+          description: Request không hợp lệ
+        '409':
+          description: Duplicate request trong 60 giây
+        '429':
+          description: Vượt quá rate limit (5000 req/min)
+
+  /policies/access/{policyId}:
+    get:
+      tags: [Access Control]
+      summary: Lấy chi tiết policy truy cập
+      operationId: getAccessPolicy
+      description: Access Gate có thể tra cứu policy để cache local
+      security:
+        - bearerAuth: ['access:read']
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chi tiết policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessPolicy'
+        '404':
+          description: Không tìm thấy policy
+
+  /decisions/{decisionId}:
+    get:
+      tags: [Audit & Policy]
+      summary: Tra cứu chi tiết quyết định truy cập
+      operationId: getDecision
+      description: |
+        Truy xuất bản ghi audit của một quyết định truy cập.
+        - Online: 30 ngày
+        - Cold storage: 2 năm (trả 404 nếu đã chuyển)
+        - CardId được che mờ (masking)
+      security:
+        - bearerAuth: ['admin:audit']
+      parameters:
+        - name: decisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Thông tin audit chi tiết
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditRecord'
+        '404':
+          description: Không tìm thấy hoặc đã quá 30 ngày
+
+  /cache/invalidate/{policyId}:
+    post:
+      tags: [System Admin]
+      summary: Xóa cache chính sách thủ công
+      operationId: invalidatePolicyCache
+      description: Đảm bảo thu hồi quyền thẻ có tác dụng ngay lập tức (< 5 giây)
+      security:
+        - bearerAuth: ['admin:policies']
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z0-9_]{3,50}$'
+      responses:
+        '204':
+          description: Đã xóa cache thành công
+        '404':
+          description: Không tìm thấy policy
+
+  # ================================================================
+  # CẶP 05: IoT INGESTION → CORE BUSINESS (Consumer - Queue Async)
+  # ================================================================
+  /internal/evaluate-sensor:
+    post:
+      tags: [Event Evaluation]
+      summary: Tiếp nhận dữ liệu cảm biến IoT (Internal)
+      operationId: evaluateSensor
+      description: |
+        **Cơ chế: Queue Async (Kafka topic: iot.sensors.raw)**
+        
+        IoT Ingestion publish event vào Kafka, B6 consume để đánh giá policy.
+        Schema này dùng để thống nhất format message.
+        
+        - At-least-once delivery từ IoT Ingestion
+        - Auto-commit offset sau xử lý thành công
+        - Lỗi → DLQ (Dead Letter Queue)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensorEvent'
+      responses:
+        '202':
+          description: Đã tiếp nhận (async)
+
+  # ================================================================
+  # CẶP 02: B6 → AI VISION (Consumer - REST Sync)
+  # ================================================================
+  /evaluate-detection:
+    post:
+      tags: [Event Evaluation]
+      summary: Đánh giá kết quả nhận diện từ AI Vision
+      operationId: evaluateDetection
+      description: |
+        **B6 là Consumer, AI Vision là Provider**
+        
+        B6 gọi AI Vision để lấy kết quả phân tích ảnh/face-match.
+        - Timeout: 5 giây (B6 client)
+        - AI Vision cam kết P99 ≤ 200ms
+        - Lỗi 5xx hoặc timeout → B6 retry tối đa 2 lần với backoff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIDetectionRequest'
+      responses:
+        '200':
+          description: Kết quả nhận diện
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIDetectionResponse'
+        '408':
+          description: Timeout
+        '422':
+          description: Dữ liệu không hợp lệ hoặc low confidence
+
+  # ================================================================
+  # CẶP 03: B6 → ACCESS GATE (Consumer - REST Sync)
+  # ================================================================
+  /internal/access-logs:
+    get:
+      tags: [Access Control]
+      summary: Lấy log quẹt thẻ từ Access Gate (Internal)
+      operationId: getAccessLogs
+      description: |
+        **B6 là Consumer, Access Gate là Provider**
+        
+        B6 gọi Access Gate để truy xuất log quẹt thẻ phục vụ audit.
+        - Rate limit: 10 req/s
+        - Timeout: 3 giây, nếu lỗi B6 bỏ qua
+      security:
+        - bearerAuth: ['access:read']
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Danh sách log
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessLogEntry'
+
+  /internal/gates/{gateId}/status:
+    get:
+      tags: [Access Control]
+      summary: Lấy trạng thái cổng từ Access Gate
+      operationId: getGateStatus
+      description: B6 gọi Access Gate để kiểm tra trạng thái hoạt động của cổng
+      security:
+        - bearerAuth: ['access:read']
+      parameters:
+        - name: gateId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Trạng thái cổng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GateStatus'
+
+  # ================================================================
+  # SYSTEM ADMIN
+  # ================================================================
+  /health:
+    get:
+      tags: [System Admin]
+      summary: Health check endpoint
+      operationId: getHealth
+      description: |
+        SLA phản hồi < 500ms.
+        Nếu rule_engine latency > 150ms trong 1 phút → status = DEGRADED
+      security: []
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+# ================================================================
+# WEBHOOKS / EVENT CONTRACTS (Queue Async)
+# B6 là Provider cho các event này
+# ================================================================
+webhooks:
+  # CẶP 04: B6 → NOTIFICATION (Queue Async)
+  onAlertGenerated:
+    post:
+      summary: Gửi cảnh báo mới sang Notification Service
+      description: |
+        **Cơ chế: Queue Async (Kafka topic: notification.alerts)**
+        
+        B6 publish event khi phát hiện bất thường.
+        - B6 publish bất đồng bộ, không chờ ack
+        - Retry tối đa **3 lần** với exponential backoff (1s, 2s, 4s)
+        - Sau 3 lần thất bại → Dead Letter Queue (DLQ)
+        - Provider cache `eventId` trong **24 giờ** để đảm bảo idempotency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertEvent'
+      responses:
+        '200':
+          description: Đã nhận (async)
+
+  # CẶP 04: Alert Resolved Event
+  onAlertResolved:
+    post:
+      summary: Gửi thông báo alert đã được giải quyết
+      description: |
+        **Cơ chế: Queue Async (Kafka topic: notification.alerts)**
+        
+        Được gọi khi alert được xử lý xong.
+        Bắt buộc có `resolvedBy` và có thể có `resolutionNote`.
+        - Retry tối đa **3 lần** với exponential backoff (1s, 2s, 4s)
+        - Provider cache `eventId` trong **24 giờ**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertResolvedEvent'
+      responses:
+        '200':
+          description: Đã nhận (async)
+
+  # CẶP 08: B6 → ANALYTICS (Queue Async)
+  onAnalyticsDecision:
+    post:
+      summary: Đẩy dữ liệu quyết định sang Analytics Service
+      description: |
+        **Cơ chế: Queue Async (Kafka topic: analytics.decisions)**
+        
+        B6 gửi 100% quyết định và cảnh báo để tính KPI vận hành.
+        - Schema: correlationId, decision, reason, latencyMs, quotaBefore/After, rulesTriggered
+        - Nếu Kafka down → local buffer (tối đa 10.000 bản ghi) và retry liên tục
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsEvent'
+      responses:
+        '200':
+          description: Đã nhận (async)
+
+# ================================================================
+# COMPONENTS
+# ================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.campus.local/oauth/token
+          scopes:
+            'access:read': 'Đọc thông tin quyền truy cập và log'
+            'admin:policies': 'Quản lý chính sách và cache'
+            'admin:audit': 'Xem audit logs và báo cáo'
+      description: |
+        JWT Token hoặc OAuth2 token yêu cầu các claims:
+        - `scope`: một trong `access:read`, `admin:policies`, `admin:audit`
+        - `gateIds`: danh sách gateId được phép truy cập (mảng string)
+        - Token TTL: 24h (Consumer), 12h (Admin)
+
+  schemas:
+    # ============================================================
+    # CẶP 10: Access Check Request/Response
+    # ============================================================
+    AccessCheckRequest:
+      type: object
+      required: [cardId, gateId, correlationId]
+      additionalProperties: false
+      properties:
+        cardId:
+          type: string
+          minLength: 1
+          maxLength: 50
+          example: "CARD_12345"
+        gateId:
+          type: string
+          pattern: '^[A-Z0-9_]{3,20}$'
+          example: "LOBBY_01"
+        direction:
+          type: string
+          enum: [IN, OUT]
+          default: IN
+        correlationId:
+          type: string
+          format: uuid
+          description: "Idempotency key, cửa sổ 60 giây"
+        timestamp:
+          type: string
+          format: date-time
+
+    AccessDecision:
+      type: object
+      required: [decision, decisionId]
+      properties:
+        decision:
+          type: string
+          enum: [ALLOW, DENY]
+        reasonCode:
+          type: string
+          enum: [VALID, EXPIRED, REVOKED, QUOTA_EXCEEDED, POLICY_VIOLATION]
+        decisionId:
+          type: string
+          format: uuid
+        remainingQuota:
+          type: integer
+          minimum: 0
+          description: "Hạn mức còn lại trong ngày (reset UTC 00:00)"
+        isDuplicate:
+          type: boolean
+          default: false
+        expiresAt:
+          type: string
+          format: date-time
+          description: "Thời gian hết hạn của quyết định (nếu có)"
+
+    AccessPolicy:
+      type: object
+      properties:
+        policyId:
+          type: string
+        name:
+          type: string
+        allowedTimeWindows:
+          type: array
+          items:
+            type: object
+            properties:
+              start: { type: string, format: time }
+              end: { type: string, format: time }
+        allowedGateIds:
+          type: array
+          items: { type: string }
+        quotaPerDay:
+          type: integer
+
+    AuditRecord:
+      type: object
+      properties:
+        decisionId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        gateId:
+          type: string
+        cardIdMasked:
+          type: string
+          description: "Che mờ một phần để bảo vệ PII, VD: CARD****2345"
+        decision:
+          type: string
+          enum: [ALLOW, DENY]
+        reasonCode:
+          type: string
+        latencyMs:
+          type: integer
+        requestContext:
+          type: object
+          properties:
+            correlationId:
+              type: string
+            clientIp:
+              type: string
+
+    # ============================================================
+    # CẶP 05: IoT Sensor Event (Queue Async)
+    # ============================================================
+    SensorEvent:
+      type: object
+      required: [correlationId, eventType, deviceId, readings]
+      additionalProperties: false
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [sensor.telemetry, sensor.threshold.exceeded]
+        deviceId:
+          type: string
+          pattern: '^SENSOR_[A-Z0-9]{6,}$'
+        locationId:
+          type: string
+          description: "Vị trí lắp đặt cảm biến"
+        readings:
+          type: object
+          required: [temperature_c, motion_detected]
+          properties:
+            temperature_c:
+              type: number
+              minimum: -20
+              maximum: 150
+            motion_detected:
+              type: boolean
+            smoke_ppm:
+              type: integer
+              minimum: 0
+              maximum: 5000
+            humidity_percent:
+              type: number
+              minimum: 0
+              maximum: 100
+        timestamp:
+          type: string
+          format: date-time
+
+    # ============================================================
+    # CẶP 02: AI Vision (B6 gọi sang AI Vision)
+    # ============================================================
+    AIDetectionRequest:
+      type: object
+      required: [correlationId, imageRef]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        imageRef:
+          type: string
+          description: "URL hoặc base64 của ảnh cần phân tích"
+        faceEmbedding:
+          type: array
+          items: { type: number }
+          description: "Vector face embedding (nếu có)"
+        detectionId:
+          type: string
+          format: uuid
+
+    AIDetectionResponse:
+      type: object
+      properties:
+        detectionId:
+          type: string
+          format: uuid
+        matched:
+          type: boolean
+        label:
+          type: string
+          example: "person"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: "Độ tin cậy, ngưỡng match ≥ 0.7"
+        status:
+          type: string
+          enum: [matched, not_matched, low_confidence, error]
+        modelVersion:
+          type: string
+        processedAt:
+          type: string
+          format: date-time
+
+    # ============================================================
+    # CẶP 03: Access Gate API (B6 gọi sang Access Gate)
+    # ============================================================
+    AccessLogEntry:
+      type: object
+      properties:
+        logId:
+          type: string
+        cardId:
+          type: string
+        gateId:
+          type: string
+        direction:
+          type: string
+          enum: [IN, OUT]
+        status:
+          type: string
+          enum: [GRANTED, DENIED, TIMEOUT]
+        timestamp:
+          type: string
+          format: date-time
+        operatorNote:
+          type: string
+
+    GateStatus:
+      type: object
+      properties:
+        gateId:
+          type: string
+        isOnline:
+          type: boolean
+        lastHeartbeat:
+          type: string
+          format: date-time
+        currentMode:
+          type: string
+          enum: [normal, degraded, offline]
+
+    # ============================================================
+    # CẶP 04: Notification Event (Queue Async)
+    # ĐÃ SỬA THEO BIÊN BẢN ĐÀM PHÁN CẶP 04
+    # ============================================================
+    AlertEvent:
+      type: object
+      required: [eventId, correlationId, traceId, severity, userId, gateId, alertDetails]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: "Idempotency key, Provider cache trong 24h"
+        correlationId:
+          type: string
+          format: uuid
+          description: "Để tracing end-to-end"
+        traceId:
+          type: string
+          format: uuid
+          description: "Để tracing end-to-end"
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          description: "LOW→email, MEDIUM→email+SMS, HIGH/CRITICAL→Telegram"
+        userId:
+          type: string
+          example: "USR_123"
+        userGroupId:
+          type: string
+          description: "Thay thế channels, Provider tự tra cứu kênh ưu tiên"
+        gateId:
+          type: string
+          example: "GATE_01"
+        alertDetails:
+          type: object
+          properties:
+            ruleId:
+              type: string
+            message:
+              type: string
+            imageReference:
+              type: string
+        timestamp:
+          type: string
+          format: date-time
+      # LƯU Ý: KHÔNG có field 'channels' - Provider tự quyết định
+
+    AlertResolvedEvent:
+      type: object
+      required: [eventId, correlationId, traceId, severity, userId, gateId, alertDetails, resolvedBy]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: "Idempotency key"
+        correlationId:
+          type: string
+          format: uuid
+        traceId:
+          type: string
+          format: uuid
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        userId:
+          type: string
+        gateId:
+          type: string
+        alertDetails:
+          type: object
+          properties:
+            ruleId:
+              type: string
+            message:
+              type: string
+            imageReference:
+              type: string
+        resolvedBy:
+          type: string
+          description: "Tên người hoặc system đã xử lý alert"
+        resolutionNote:
+          type: string
+          description: "Lý do giải quyết alert (optional)"
+        resolvedAt:
+          type: string
+          format: date-time
+        timestamp:
+          type: string
+          format: date-time
+
+    # ============================================================
+    # CẶP 08: Analytics Event (Queue Async)
+    # ============================================================
+    AnalyticsEvent:
+      type: object
+      required: [correlationId, decision, latencyMs]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        decision:
+          type: string
+          enum: [ALLOW, DENY]
+        reason:
+          type: string
+        latencyMs:
+          type: integer
+          minimum: 0
+        quotaBefore:
+          type: integer
+          minimum: 0
+        quotaAfter:
+          type: integer
+          minimum: 0
+        rulesTriggered:
+          type: array
+          items:
+            type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # ============================================================
+    # Health Check
+    # ============================================================
+    HealthResponse:
+      type: object
+      required: [status, components]
+      properties:
+        status:
+          type: string
+          enum: [UP, DEGRADED, DOWN]
+        components:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [UP, DOWN]
+            cache:
+              type: string
+              enum: [UP, DOWN]
+            rule_engine:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [UP, DEGRADED, DOWN]
+                avg_latency_ms:
+                  type: integer
+        timestamp:
+          type: string
+          format: date-time

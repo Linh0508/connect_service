@@ -1,0 +1,1227 @@
+{
+  "info": {
+    "_postman_id": "5b58796b-52a5-47e1-9d68-7277b87cfebe",
+    "name": "Core Business — Smart Campus Decision Engine API",
+    "description": "Dịch vụ xử lý nghiệp vụ trung tâm (B6). Chịu trách nhiệm đánh giá chính sách (Policy), \ntiếp nhận sự kiện từ IoT/AI và điều phối cảnh báo.\n\n**Versioning Policy:**\n- Strategy: URL path versioning (/v1)\n- Parallel Support: Hỗ trợ song song phiên bản cũ trong 6 tháng\n- Deprecation: Cảnh báo Sunset header trước 30 ngày\n\n**Data Retention:**\n- Audit Records: Lưu trữ Online 30 ngày\n- Cold Storage: Lưu trữ nén trong 2 năm\n- Privacy: Masking cardId trong audit log\n\n**SLA Commitments:**\n- /access/check: P99 < 100ms\n- /health: < 500ms\n- Fail-closed sau 5 phút mất kết nối\n\n\nContact Support:\n Name: Nhóm B6 (Core Business)\n Email: support-b6@campus.local",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "55436446",
+    "_collection_link": "https://go.postman.co/collection/55436446-5b58796b-52a5-47e1-9d68-7277b87cfebe?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "access",
+      "item": [
+        {
+          "name": "check",
+          "item": [
+            {
+              "name": "Kiểm tra quyền ra vào real-time",
+              "request": {
+                "auth": {
+                  "type": "oauth2",
+                  "oauth2": [
+                    {
+                      "key": "scope",
+                      "value": "access:read admin:policies admin:audit",
+                      "type": "string"
+                    },
+                    {
+                      "key": "accessTokenUrl",
+                      "value": "https://auth.campus.local/oauth/token",
+                      "type": "string"
+                    },
+                    {
+                      "key": "grant_type",
+                      "value": "client_credentials",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cardId\": \"CARD_12345\",\n  \"gateId\": \"LOBBY_01\",\n  \"correlationId\": \"764c3a4e-4c68-ae4c-7b9c-8778d50f7e02\",\n  \"direction\": \"IN\",\n  \"timestamp\": \"2009-04-07T12:08:43.125Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/access/check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "access",
+                    "check"
+                  ]
+                },
+                "description": "Access Gate gọi realtime để kiểm tra policy trước khi mở cổng.\n- SLA: P99 < 100ms\n- Hỗ trợ idempotency qua correlationId (cửa sổ 60 giây)\n- Fail-closed: nếu B6 không phản hồi > 5 phút, Gate từ chối truy cập\n"
+              },
+              "response": [
+                {
+                  "name": "Quyết định truy cập",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"cardId\": \"CARD_12345\",\n  \"gateId\": \"LOBBY_01\",\n  \"correlationId\": \"764c3a4e-4c68-ae4c-7b9c-8778d50f7e02\",\n  \"direction\": \"IN\",\n  \"timestamp\": \"2009-04-07T12:08:43.125Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/access/check",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "access",
+                        "check"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"decision\": \"ALLOW\",\n  \"decisionId\": \"fc8dc63a-9e0d-c2a4-be58-15ffb5cc0822\",\n  \"reasonCode\": \"REVOKED\",\n  \"remainingQuota\": 7668,\n  \"isDuplicate\": false,\n  \"expiresAt\": \"2022-06-14T11:59:04.821Z\"\n}"
+                },
+                {
+                  "name": "Request không hợp lệ",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"cardId\": \"CARD_12345\",\n  \"gateId\": \"LOBBY_01\",\n  \"correlationId\": \"764c3a4e-4c68-ae4c-7b9c-8778d50f7e02\",\n  \"direction\": \"IN\",\n  \"timestamp\": \"2009-04-07T12:08:43.125Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/access/check",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "access",
+                        "check"
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": "text",
+                  "header": [],
+                  "cookie": [],
+                  "body": ""
+                },
+                {
+                  "name": "Duplicate request trong 60 giây",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"cardId\": \"CARD_12345\",\n  \"gateId\": \"LOBBY_01\",\n  \"correlationId\": \"764c3a4e-4c68-ae4c-7b9c-8778d50f7e02\",\n  \"direction\": \"IN\",\n  \"timestamp\": \"2009-04-07T12:08:43.125Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/access/check",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "access",
+                        "check"
+                      ]
+                    }
+                  },
+                  "status": "Conflict",
+                  "code": 409,
+                  "_postman_previewlanguage": "text",
+                  "header": [],
+                  "cookie": [],
+                  "body": ""
+                },
+                {
+                  "name": "Vượt quá rate limit (5000 req/min)",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      },
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"cardId\": \"CARD_12345\",\n  \"gateId\": \"LOBBY_01\",\n  \"correlationId\": \"764c3a4e-4c68-ae4c-7b9c-8778d50f7e02\",\n  \"direction\": \"IN\",\n  \"timestamp\": \"2009-04-07T12:08:43.125Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/access/check",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "access",
+                        "check"
+                      ]
+                    }
+                  },
+                  "status": "Too Many Requests",
+                  "code": 429,
+                  "_postman_previewlanguage": "text",
+                  "header": [],
+                  "cookie": [],
+                  "body": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "policies",
+      "item": [
+        {
+          "name": "access",
+          "item": [
+            {
+              "name": "{policyId}",
+              "item": [
+                {
+                  "name": "Lấy chi tiết policy truy cập",
+                  "request": {
+                    "auth": {
+                      "type": "oauth2",
+                      "oauth2": [
+                        {
+                          "key": "scope",
+                          "value": "access:read admin:policies admin:audit",
+                          "type": "string"
+                        },
+                        {
+                          "key": "accessTokenUrl",
+                          "value": "https://auth.campus.local/oauth/token",
+                          "type": "string"
+                        },
+                        {
+                          "key": "grant_type",
+                          "value": "client_credentials",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/policies/access/:policyId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "policies",
+                        "access",
+                        ":policyId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "policyId",
+                          "value": "string"
+                        }
+                      ]
+                    },
+                    "description": "Access Gate có thể tra cứu policy để cache local"
+                  },
+                  "response": [
+                    {
+                      "name": "Chi tiết policy",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          },
+                          {
+                            "description": "Added as a part of security scheme: oauth2",
+                            "key": "Authorization",
+                            "value": "<token>"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/policies/access/:policyId",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "policies",
+                            "access",
+                            ":policyId"
+                          ],
+                          "variable": [
+                            {
+                              "key": "policyId",
+                              "value": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"policyId\": \"string\",\n  \"name\": \"string\",\n  \"allowedTimeWindows\": [\n    {\n      \"start\": \"14:35:03.405Z\",\n      \"end\": \"23:29:53.854Z\"\n    },\n    {\n      \"start\": \"04:43:05.247Z\",\n      \"end\": \"12:25:51.495Z\"\n    }\n  ],\n  \"allowedGateIds\": [\n    \"string\",\n    \"string\"\n  ],\n  \"quotaPerDay\": 8591\n}"
+                    },
+                    {
+                      "name": "Không tìm thấy policy",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [
+                          {
+                            "description": "Added as a part of security scheme: oauth2",
+                            "key": "Authorization",
+                            "value": "<token>"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/policies/access/:policyId",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "policies",
+                            "access",
+                            ":policyId"
+                          ],
+                          "variable": [
+                            {
+                              "key": "policyId",
+                              "value": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "_postman_previewlanguage": "text",
+                      "header": [],
+                      "cookie": [],
+                      "body": ""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "decisions",
+      "item": [
+        {
+          "name": "{decisionId}",
+          "item": [
+            {
+              "name": "Tra cứu chi tiết quyết định truy cập",
+              "request": {
+                "auth": {
+                  "type": "oauth2",
+                  "oauth2": [
+                    {
+                      "key": "scope",
+                      "value": "access:read admin:policies admin:audit",
+                      "type": "string"
+                    },
+                    {
+                      "key": "accessTokenUrl",
+                      "value": "https://auth.campus.local/oauth/token",
+                      "type": "string"
+                    },
+                    {
+                      "key": "grant_type",
+                      "value": "client_credentials",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/decisions/:decisionId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "decisions",
+                    ":decisionId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "decisionId",
+                      "value": "089b66da-4b3c-2f7e-e6f0-7f3ffb35cea5"
+                    }
+                  ]
+                },
+                "description": "Truy xuất bản ghi audit của một quyết định truy cập.\n- Online: 30 ngày\n- Cold storage: 2 năm (trả 404 nếu đã chuyển)\n- CardId được che mờ (masking)\n"
+              },
+              "response": [
+                {
+                  "name": "Thông tin audit chi tiết",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/decisions/:decisionId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "decisions",
+                        ":decisionId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "decisionId",
+                          "value": "089b66da-4b3c-2f7e-e6f0-7f3ffb35cea5"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"decisionId\": \"80dbb3a5-3a01-90d1-6d7a-a4827197bf70\",\n  \"timestamp\": \"1959-10-05T17:48:41.065Z\",\n  \"gateId\": \"string\",\n  \"cardIdMasked\": \"string\",\n  \"decision\": \"DENY\",\n  \"reasonCode\": \"string\",\n  \"latencyMs\": 1906,\n  \"requestContext\": {\n    \"correlationId\": \"string\",\n    \"clientIp\": \"string\"\n  }\n}"
+                },
+                {
+                  "name": "Không tìm thấy hoặc đã quá 30 ngày",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/decisions/:decisionId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "decisions",
+                        ":decisionId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "decisionId",
+                          "value": "089b66da-4b3c-2f7e-e6f0-7f3ffb35cea5"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "Not Found",
+                  "code": 404,
+                  "_postman_previewlanguage": "text",
+                  "header": [],
+                  "cookie": [],
+                  "body": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "cache",
+      "item": [
+        {
+          "name": "invalidate",
+          "item": [
+            {
+              "name": "{policyId}",
+              "item": [
+                {
+                  "name": "Xóa cache chính sách thủ công",
+                  "request": {
+                    "auth": {
+                      "type": "oauth2",
+                      "oauth2": [
+                        {
+                          "key": "scope",
+                          "value": "access:read admin:policies admin:audit",
+                          "type": "string"
+                        },
+                        {
+                          "key": "accessTokenUrl",
+                          "value": "https://auth.campus.local/oauth/token",
+                          "type": "string"
+                        },
+                        {
+                          "key": "grant_type",
+                          "value": "client_credentials",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/cache/invalidate/:policyId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "cache",
+                        "invalidate",
+                        ":policyId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "policyId",
+                          "value": "LT_0ZQSP8ZU155HC"
+                        }
+                      ]
+                    },
+                    "description": "Đảm bảo thu hồi quyền thẻ có tác dụng ngay lập tức (< 5 giây)"
+                  },
+                  "response": [
+                    {
+                      "name": "Đã xóa cache thành công",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [
+                          {
+                            "description": "Added as a part of security scheme: oauth2",
+                            "key": "Authorization",
+                            "value": "<token>"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/cache/invalidate/:policyId",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "cache",
+                            "invalidate",
+                            ":policyId"
+                          ],
+                          "variable": [
+                            {
+                              "key": "policyId",
+                              "value": "LT_0ZQSP8ZU155HC"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "No Content",
+                      "code": 204,
+                      "_postman_previewlanguage": "text",
+                      "header": [],
+                      "cookie": [],
+                      "body": ""
+                    },
+                    {
+                      "name": "Không tìm thấy policy",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [
+                          {
+                            "description": "Added as a part of security scheme: oauth2",
+                            "key": "Authorization",
+                            "value": "<token>"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/cache/invalidate/:policyId",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "cache",
+                            "invalidate",
+                            ":policyId"
+                          ],
+                          "variable": [
+                            {
+                              "key": "policyId",
+                              "value": "LT_0ZQSP8ZU155HC"
+                            }
+                          ]
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "_postman_previewlanguage": "text",
+                      "header": [],
+                      "cookie": [],
+                      "body": ""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "internal",
+      "item": [
+        {
+          "name": "evaluate-sensor",
+          "item": [
+            {
+              "name": "Tiếp nhận dữ liệu cảm biến IoT (Internal)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"correlationId\": \"58b6441c-8190-cd8c-29c9-437899be236f\",\n  \"eventType\": \"sensor.telemetry\",\n  \"deviceId\": \"SENSOR_AC8PPBIKN1\",\n  \"readings\": {\n    \"temperature_c\": 93.09271825554508,\n    \"motion_detected\": false,\n    \"smoke_ppm\": 2087,\n    \"humidity_percent\": 65.2667986246375\n  },\n  \"locationId\": \"string\",\n  \"timestamp\": \"1984-07-12T12:11:14.589Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/internal/evaluate-sensor",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "evaluate-sensor"
+                  ]
+                },
+                "description": "**Cơ chế: Queue Async (Kafka topic: iot.sensors.raw)**\n\nIoT Ingestion publish event vào Kafka, B6 consume để đánh giá policy.\nSchema này dùng để thống nhất format message.\n\n- At-least-once delivery từ IoT Ingestion\n- Auto-commit offset sau xử lý thành công\n- Lỗi → DLQ (Dead Letter Queue)\n"
+              },
+              "response": [
+                {
+                  "name": "Đã tiếp nhận (async)",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"correlationId\": \"58b6441c-8190-cd8c-29c9-437899be236f\",\n  \"eventType\": \"sensor.telemetry\",\n  \"deviceId\": \"SENSOR_AC8PPBIKN1\",\n  \"readings\": {\n    \"temperature_c\": 93.09271825554508,\n    \"motion_detected\": false,\n    \"smoke_ppm\": 2087,\n    \"humidity_percent\": 65.2667986246375\n  },\n  \"locationId\": \"string\",\n  \"timestamp\": \"1984-07-12T12:11:14.589Z\"\n}",
+                      "options": {
+                        "raw": {
+                          "headerFamily": "json",
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/internal/evaluate-sensor",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "internal",
+                        "evaluate-sensor"
+                      ]
+                    }
+                  },
+                  "status": "Accepted",
+                  "code": 202,
+                  "_postman_previewlanguage": "text",
+                  "header": [],
+                  "cookie": [],
+                  "body": ""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "access-logs",
+          "item": [
+            {
+              "name": "Lấy log quẹt thẻ từ Access Gate (Internal)",
+              "request": {
+                "auth": {
+                  "type": "oauth2",
+                  "oauth2": [
+                    {
+                      "key": "scope",
+                      "value": "access:read admin:policies admin:audit",
+                      "type": "string"
+                    },
+                    {
+                      "key": "accessTokenUrl",
+                      "value": "https://auth.campus.local/oauth/token",
+                      "type": "string"
+                    },
+                    {
+                      "key": "grant_type",
+                      "value": "client_credentials",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/access-logs?from=2021-04-16T05:53:25.055Z&to=2021-04-16T05:53:25.055Z&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "access-logs"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2021-04-16T05:53:25.055Z"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2021-04-16T05:53:25.055Z"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "**B6 là Consumer, Access Gate là Provider**\n\nB6 gọi Access Gate để truy xuất log quẹt thẻ phục vụ audit.\n- Rate limit: 10 req/s\n- Timeout: 3 giây, nếu lỗi B6 bỏ qua\n"
+              },
+              "response": [
+                {
+                  "name": "Danh sách log",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "description": "Added as a part of security scheme: oauth2",
+                        "key": "Authorization",
+                        "value": "<token>"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/internal/access-logs?from=2021-04-16T05:53:25.055Z&to=2021-04-16T05:53:25.055Z&limit=20",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "internal",
+                        "access-logs"
+                      ],
+                      "query": [
+                        {
+                          "key": "from",
+                          "value": "2021-04-16T05:53:25.055Z"
+                        },
+                        {
+                          "key": "to",
+                          "value": "2021-04-16T05:53:25.055Z"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "20"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "[\n  {\n    \"logId\": \"string\",\n    \"cardId\": \"string\",\n    \"gateId\": \"string\",\n    \"direction\": \"OUT\",\n    \"status\": \"GRANTED\",\n    \"timestamp\": \"1949-01-24T07:03:24.565Z\",\n    \"operatorNote\": \"string\"\n  },\n  {\n    \"logId\": \"string\",\n    \"cardId\": \"string\",\n    \"gateId\": \"string\",\n    \"direction\": \"IN\",\n    \"status\": \"TIMEOUT\",\n    \"timestamp\": \"1994-02-17T23:51:10.688Z\",\n    \"operatorNote\": \"string\"\n  }\n]"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "gates",
+          "item": [
+            {
+              "name": "{gateId}",
+              "item": [
+                {
+                  "name": "status",
+                  "item": [
+                    {
+                      "name": "Lấy trạng thái cổng từ Access Gate",
+                      "request": {
+                        "auth": {
+                          "type": "oauth2",
+                          "oauth2": [
+                            {
+                              "key": "scope",
+                              "value": "access:read admin:policies admin:audit",
+                              "type": "string"
+                            },
+                            {
+                              "key": "accessTokenUrl",
+                              "value": "https://auth.campus.local/oauth/token",
+                              "type": "string"
+                            },
+                            {
+                              "key": "grant_type",
+                              "value": "client_credentials",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "method": "GET",
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "application/json"
+                          }
+                        ],
+                        "url": {
+                          "raw": "{{baseUrl}}/internal/gates/:gateId/status",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "internal",
+                            "gates",
+                            ":gateId",
+                            "status"
+                          ],
+                          "variable": [
+                            {
+                              "key": "gateId",
+                              "value": "string"
+                            }
+                          ]
+                        },
+                        "description": "B6 gọi Access Gate để kiểm tra trạng thái hoạt động của cổng"
+                      },
+                      "response": [
+                        {
+                          "name": "Trạng thái cổng",
+                          "originalRequest": {
+                            "method": "GET",
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "application/json"
+                              },
+                              {
+                                "description": "Added as a part of security scheme: oauth2",
+                                "key": "Authorization",
+                                "value": "<token>"
+                              }
+                            ],
+                            "url": {
+                              "raw": "{{baseUrl}}/internal/gates/:gateId/status",
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "path": [
+                                "internal",
+                                "gates",
+                                ":gateId",
+                                "status"
+                              ],
+                              "variable": [
+                                {
+                                  "key": "gateId",
+                                  "value": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "_postman_previewlanguage": "json",
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "cookie": [],
+                          "body": "{\n  \"gateId\": \"string\",\n  \"isOnline\": false,\n  \"lastHeartbeat\": \"2009-05-21T12:25:04.451Z\",\n  \"currentMode\": \"offline\"\n}"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "evaluate-detection",
+      "item": [
+        {
+          "name": "Đánh giá kết quả nhận diện từ AI Vision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correlationId\": \"03ac257b-45d2-fea7-14ce-f846a90956ee\",\n  \"imageRef\": \"string\",\n  \"faceEmbedding\": [\n    8838.73909318419,\n    406.7735154196572\n  ],\n  \"detectionId\": \"ae5eb8d0-8b26-e81e-92e6-388b7e9cace3\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluate-detection",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evaluate-detection"
+              ]
+            },
+            "description": "**B6 là Consumer, AI Vision là Provider**\n\nB6 gọi AI Vision để lấy kết quả phân tích ảnh/face-match.\n- Timeout: 5 giây (B6 client)\n- AI Vision cam kết P99 ≤ 200ms\n- Lỗi 5xx hoặc timeout → B6 retry tối đa 2 lần với backoff\n"
+          },
+          "response": [
+            {
+              "name": "Kết quả nhận diện",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"correlationId\": \"03ac257b-45d2-fea7-14ce-f846a90956ee\",\n  \"imageRef\": \"string\",\n  \"faceEmbedding\": [\n    8838.73909318419,\n    406.7735154196572\n  ],\n  \"detectionId\": \"ae5eb8d0-8b26-e81e-92e6-388b7e9cace3\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/evaluate-detection",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "evaluate-detection"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detectionId\": \"e43c3486-31e1-85ac-5855-9cda6eab2df7\",\n  \"matched\": false,\n  \"label\": \"person\",\n  \"confidence\": 0.36714602764977033,\n  \"status\": \"matched\",\n  \"modelVersion\": \"string\",\n  \"processedAt\": \"2010-12-04T21:31:39.858Z\"\n}"
+            },
+            {
+              "name": "Timeout",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"correlationId\": \"03ac257b-45d2-fea7-14ce-f846a90956ee\",\n  \"imageRef\": \"string\",\n  \"faceEmbedding\": [\n    8838.73909318419,\n    406.7735154196572\n  ],\n  \"detectionId\": \"ae5eb8d0-8b26-e81e-92e6-388b7e9cace3\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/evaluate-detection",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "evaluate-detection"
+                  ]
+                }
+              },
+              "status": "Request Timeout",
+              "code": 408,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            },
+            {
+              "name": "Dữ liệu không hợp lệ hoặc low confidence",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"correlationId\": \"03ac257b-45d2-fea7-14ce-f846a90956ee\",\n  \"imageRef\": \"string\",\n  \"faceEmbedding\": [\n    8838.73909318419,\n    406.7735154196572\n  ],\n  \"detectionId\": \"ae5eb8d0-8b26-e81e-92e6-388b7e9cace3\"\n}",
+                  "options": {
+                    "raw": {
+                      "headerFamily": "json",
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/evaluate-detection",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "evaluate-detection"
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+              "code": 422,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "health",
+      "item": [
+        {
+          "name": "Health check endpoint",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "SLA phản hồi < 500ms.\nNếu rule_engine latency > 150ms trong 1 phút → status = DEGRADED\n"
+          },
+          "response": [
+            {
+              "name": "Service health status",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UP\",\n  \"components\": {\n    \"database\": \"DOWN\",\n    \"cache\": \"UP\",\n    \"rule_engine\": {\n      \"status\": \"DOWN\",\n      \"avg_latency_ms\": 1351\n    }\n  },\n  \"timestamp\": \"1996-08-06T22:53:39.495Z\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4010/v1"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# --- Cấu hình chung ---
+.env
+.env.local
+.DS_Store
+*.log
+
+# --- Thư mục Python & Môi trường ảo ---
+venv/
+__pycache__/
+*.py[co]
+*.pyo
+*.pyd
+
+# --- Dữ liệu & Báo cáo ---
+reports/*.html
+reports/*.xml
+data/*.db
+
+# --- Cấu hình dự án & Script ---
+check_folder.py
+node_modules/
+
+# --- Cấu trúc thư mục khác ---
+.github/
