@@ -63,7 +63,7 @@ class ConnectionManager:
             r'b3-access-gate',
             r'b6-ai-vision',
             r'b5-analytics',
-            r'b7-notification',
+            # r'b7-notification',
             r'localhost',
             r'127\.0\.0\.1',
             r'0\.0\.0\.0',
@@ -109,7 +109,7 @@ class ConnectionManager:
                     try:
                         data = response.json()
                         status = data.get("status", "").upper()
-                        if status == "UP":
+                        if status in ["UP", "OK"]:
                             self.status[service_name] = ConnectionStatus.REAL
                             logger.info(f"✅ {service_name} connected to REAL external service: {url}")
                             return ConnectionStatus.REAL

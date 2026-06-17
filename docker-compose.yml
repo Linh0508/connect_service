@@ -41,32 +41,58 @@ services:
     container_name: b6-core-api
     restart: unless-stopped
     environment:
+      # Server
       HOST: 0.0.0.0
       PORT: 8000
       DEBUG: ${DEBUG:-false}
+      
+      # Database
       DATABASE_URL: postgresql://${POSTGRES_USER:-b6_user}:${POSTGRES_PASSWORD:-b6_password}@postgres:5432/${POSTGRES_DB:-b6_core_db}
       DATABASE_DISABLED: ${DATABASE_DISABLED:-false}
-      AI_VISION_URL: ${AI_VISION_URL:-http://b6-ai-vision:9000}
+      
+      # B3 - Access Gate
       ACCESS_GATE_URL: ${ACCESS_GATE_URL:-http://b3-access-gate:8001}
-      ACCESS_GATE_MOCK: ${ACCESS_GATE_MOCK:-true}
-      NOTIFICATION_URL: ${NOTIFICATION_URL:-http://b7-notification:8002}
-      NOTIFICATION_WEBHOOK_PATH: ${NOTIFICATION_WEBHOOK_PATH:-/webhook/alerts}
-      NOTIFICATION_MOCK: ${NOTIFICATION_MOCK:-false}
+      ACCESS_GATE_AUTO_DETECT: ${ACCESS_GATE_AUTO_DETECT:-true}
+      ACCESS_GATE_TIMEOUT: ${ACCESS_GATE_TIMEOUT:-3.0}
+      
+      # B4 - AI Vision
+      AI_VISION_URL: ${AI_VISION_URL:-http://b4-ai-vision:9000}
+      AI_VISION_AUTO_DETECT: ${AI_VISION_AUTO_DETECT:-true}
+      B4_AI_VISION_URL: ${B4_AI_VISION_URL:-http://b4-ai-vision:9000}
+      AI_VISION_FALLBACK_URL: ${AI_VISION_FALLBACK_URL:-http://b6-ai-vision:9000}
+      
+      # B5 - Analytics
       ANALYTICS_URL: ${ANALYTICS_URL:-http://b5-analytics:8003}
       ANALYTICS_WEBHOOK_PATH: ${ANALYTICS_WEBHOOK_PATH:-/webhook/decisions}
+      ANALYTICS_AUTO_DETECT: ${ANALYTICS_AUTO_DETECT:-true}
+      ANALYTICS_TIMEOUT: ${ANALYTICS_TIMEOUT:-5.0}
       ANALYTICS_MOCK: ${ANALYTICS_MOCK:-false}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-mock-secret}
-      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
-      IDEMPOTENCY_WINDOW_SECONDS: ${IDEMPOTENCY_WINDOW_SECONDS:-60}
-      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-5000}
-      # RabbitMQ
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-host.docker.internal}  # hoặc IP máy bạn
+      
+      # B7 - Notification (REAL MODE via RabbitMQ)
+      NOTIFICATION_URL: ${NOTIFICATION_URL:-http://b7-notification:8002}
+      NOTIFICATION_WEBHOOK_PATH: ${NOTIFICATION_WEBHOOK_PATH:-/webhook/alerts}
+      NOTIFICATION_AUTO_DETECT: ${NOTIFICATION_AUTO_DETECT:-true}
+      NOTIFICATION_TIMEOUT: ${NOTIFICATION_TIMEOUT:-5.0}
+      NOTIFICATION_MOCK: ${NOTIFICATION_MOCK:-false}
+      
+      # RabbitMQ - Gửi alert REAL đến B7
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
       RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-amq.topic}
-      RABBITMQ_ROUTING_KEY: ${RABBITMQ_ROUTING_KEY:-core.notification.alerts}
+      RABBITMQ_ROUTING_KEY: ${RABBITMQ_ROUTING_KEY:-notification.alerts}
       RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-notification.alerts}
+      
+      # Security & Cache
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-mock-secret}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
+      IDEMPOTENCY_WINDOW_SECONDS: ${IDEMPOTENCY_WINDOW_SECONDS:-60}
+      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-5000}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      DEFAULT_QUOTA_PER_DAY: ${DEFAULT_QUOTA_PER_DAY:-5}
+      RULE_ENGINE_LATENCY_THRESHOLD_MS: ${RULE_ENGINE_LATENCY_THRESHOLD_MS:-150}
+      
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
