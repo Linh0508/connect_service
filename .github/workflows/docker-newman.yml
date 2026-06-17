@@ -1,0 +1,53 @@
+name: Docker Build and Newman Test
+
+on:
+  push:
+    branches: [main, lab04]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: docker build -t b6-core:test .
+
+    - name: Run container
+      run: |
+        docker run -d --name b6-core -p 8000:8000 --env-file .env.example b6-core:test
+        sleep 5
+
+    - name: Test health endpoint
+      run: curl -f http://localhost:8000/health
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Newman
+      run: npm install -g newman newman-reporter-junit
+
+    - name: Run Newman tests
+      run: |
+        mkdir -p reports
+        newman run postman/collections/B6-Core-Business.postman_collection.json \
+          --environment postman/environments/B6-local.postman_environment.json \
+          --reporters junit \
+          --reporter-junit-export reports/newman-report-local.xml
+
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: newman-reports
+        path: reports/
+
+    - name: Stop container
+      run: docker stop b6-core

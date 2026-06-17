@@ -1,0 +1,10 @@
+
+# Lab 04 specific
+reports/*.html
+reports/*.xml
+.env
+.env.local
+*.log
+data/*.db
+.DS_Store
+node_modules
