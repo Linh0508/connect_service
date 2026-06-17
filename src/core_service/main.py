@@ -56,7 +56,8 @@ from src.core_service.database import DatabaseManager
 from src.core_service.models import (
     AccessCheckRequest, AccessDecision, SensorEvent,
     AIDetectionRequest, AIDetectionResponse, HealthResponse,
-    ProblemDetails, AlertEvent, AnalyticsEvent, AuditRecord
+    ProblemDetails, AlertEvent, AnalyticsEvent, AuditRecord,
+    CameraEvent, CameraEventResponse
 )
 from src.core_service.services.policy_engine import PolicyEngine
 from src.core_service.services.quota_manager import QuotaManager
@@ -67,6 +68,7 @@ from src.core_service.services.access_gate_client import AccessGateClient
 from src.core_service.services.notification_client import NotificationClient
 from src.core_service.services.analytics_client import AnalyticsClient
 from src.core_service.services.connection_manager import connection_manager, ConnectionStatus
+from src.core_service.services.camera_evaluator import camera_evaluator
 
 # ============================================================
 # Configuration
@@ -665,6 +667,54 @@ async def evaluate_detection_from_ai(detection: AIDetectionResponse, token_data:
     
     return JSONResponse(status_code=200, content={"status": "received"})
 
+# ============================================================
+# API Endpoints - CẶP 02b: CAMERA EVENT (B2 → B6)
+# B2 gửi sự kiện camera sang B6
+# ============================================================
+@app.post("/policies/evaluate-camera-event", response_model=CameraEventResponse, tags=["Camera Integration"])
+async def evaluate_camera_event(
+    event: CameraEvent,
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Camera Stream (B2) gửi sự kiện camera sang B6
+    B6 đánh giá và ra quyết định có cảnh báo hay không
+    """
+    logger.info(f"Received camera event from B2: camera={event.camera_id}, event_type={event.event_type}, motion={event.motion_detected}")
+    
+    # 1. Đánh giá sự kiện
+    result = await camera_evaluator.evaluate(event)
+    
+    # 2. Nếu có alert, xử lý
+    if result["alert_triggered"] and result["alerts"]:
+        for alert in result["alerts"]:
+            # 💾 Lưu alert vào database và danh sách
+            await alert_storage.save_alert(alert)
+            alerts_list.append(alert.dict())
+            
+            # 🔔 Gửi alert sang Notification (B7)
+            await notification_client.send_alert(alert)
+            logger.info(f"🔔 Camera alert sent to B7: {alert.eventId} - {alert.severity}")
+            
+            # 📊 Gửi decision sang Analytics (B5)
+            await analytics_client.send_decision(
+                correlation_id=str(event.correlationId),
+                decision=alert.severity,
+                reason=f"Camera event: {result['message']}",
+                latency_ms=0,
+                quota_before=0,
+                quota_after=0,
+                rules_triggered=[result["rule_id"]]
+            )
+            logger.info(f"📊 Camera decision sent to B5: {alert.eventId}")
+    
+    # 3. Trả response cho B2
+    return CameraEventResponse(
+        status="processed",
+        alert_triggered=result["alert_triggered"],
+        message=result["message"] or "Event processed successfully",
+        correlation_id=event.correlationId
+    )
 
 # ============================================================
 # API Endpoints - CẶP 08: B6 → ANALYTICS (Provider - B5 gọi B6)

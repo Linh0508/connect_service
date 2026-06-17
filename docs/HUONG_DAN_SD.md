@@ -382,6 +382,132 @@ curl -X GET "http://localhost:8000/policies/access/POL_STUDENT_001" \
 }
 ```
 
+### Bước 5.7: Test camera event (B2 → B6)
+
+> **Mục đích**: Kiểm tra endpoint nhận sự kiện từ Camera Stream (B2).
+
+#### Test 1: Sự kiện chuyển động bình thường (không cảnh báo)
+
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST "http://localhost:8000/policies/evaluate-camera-event" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-lobby-01\",
+    \"event_type\": \"motion_detected\",
+    \"motion_detected\": true,
+    \"location\": \"Lobby 01 - Main Entrance\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": false,
+  "message": "Event processed successfully",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+#### Test 2: Sự kiện chuyển động tại khu vực nhạy cảm (CÓ CẢNH BÁO)
+
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST "http://localhost:8000/policies/evaluate-camera-event" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-server-room-01\",
+    \"event_type\": \"motion_detected\",
+    \"motion_detected\": true,
+    \"location\": \"SERVER_ROOM - Critical Area\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected in sensitive area: SERVER_ROOM - Critical Area - Camera: cam-server-room-01",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+#### Test 3: Sự kiện camera offline (CÓ CẢNH BÁO)
+
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST "http://localhost:8000/policies/evaluate-camera-event" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-gate-01\",
+    \"event_type\": \"camera_offline\",
+    \"motion_detected\": false,
+    \"location\": \"Main Gate\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-gate-01 is offline at Main Gate",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+#### Test 4: Sự kiện camera bị che khuất (CÓ CẢNH BÁO)
+
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST "http://localhost:8000/policies/evaluate-camera-event" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-lobby-01\",
+    \"event_type\": \"obstruction\",
+    \"motion_detected\": false,
+    \"location\": \"Lobby 01\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-lobby-01 is obstructed at Lobby 01",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+#### Kiểm tra log và alert
+
+```bash
+# Kiểm tra log camera event
+docker compose logs api | grep -E "camera event|Camera"
+
+# Kiểm tra alert đã được tạo
+curl -X GET "http://localhost:8000/alerts?limit=5" \
+  -H "Authorization: Bearer mock-token-123" | jq '.'
+
+# Kiểm tra log B7
+docker compose logs api | grep -E "Camera alert sent to B7"
+```
+
 ---
 
 ## 6. TEST PROVIDER: DÙNG IP MÁY B6 CHO BÊN KHÁC TEST VÀO
@@ -917,7 +1043,126 @@ curl -X POST http://localhost:8000/internal/send-test-alert \
 }
 ```
 
-#### Bước 7.3.5: Tóm tắt các trigger gửi B7
+#### Bước 7.3.5: Trigger Alert từ Camera Event (B2 → B6 → B7)
+
+Khi Camera Stream (B2) gửi sự kiện bất thường, B6 tự động gửi alert đến B7.
+
+**Test 1: Camera offline (CÓ CẢNH BÁO)**
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-gate-01\",
+    \"event_type\": \"camera_offline\",
+    \"motion_detected\": false,
+    \"location\": \"Main Gate\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-gate-01 is offline at Main Gate",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+**Test 2: Camera bị che khuất (CÓ CẢNH BÁO)**
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-lobby-01\",
+    \"event_type\": \"obstruction\",
+    \"motion_detected\": false,
+    \"location\": \"Lobby 01\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-lobby-01 is obstructed at Lobby 01",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+**Test 3: Chuyển động tại khu vực nhạy cảm (CÓ CẢNH BÁO)**
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-server-room-01\",
+    \"event_type\": \"motion_detected\",
+    \"motion_detected\": true,
+    \"location\": \"SERVER_ROOM - Critical Area\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected in sensitive area: SERVER_ROOM - Critical Area - Camera: cam-server-room-01",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+**Test 4: Chuyển động trong giờ cấm (CÓ CẢNH BÁO)**
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-lobby-01\",
+    \"event_type\": \"motion_detected\",
+    \"motion_detected\": true,
+    \"location\": \"Lobby 01\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT23:30:00.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected during restricted hours (23:30) at Lobby 01 - Camera: cam-lobby-01",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+**Kiểm tra log B7 từ camera event:**
+```bash
+docker compose logs api | grep -E "Camera alert sent to B7"
+```
+
+**Kết quả mong đợi:**
+```
+b6-core-api  | 2026-06-17 16:50:00,xxx - src.core_service.main - INFO - 🔔 Camera alert sent to B7: xxxxx... - CRITICAL
+b6-core-api  | 2026-06-17 16:50:00,xxx - src.core_service.services.notification_client - INFO - 📧 [B7_FALLBACK] Alert stored locally: xxxxx... - CRITICAL
+```
+
+#### Bước 7.3.6: Tóm tắt các trigger gửi B7
 
 | Trigger | Endpoint | Điều kiện | Severity |
 |---------|----------|-----------|----------|
@@ -928,6 +1173,10 @@ curl -X POST http://localhost:8000/internal/send-test-alert \
 | **Access Check lỗi** | `POST /access/check` | decision = DENY | CRITICAL |
 | **Access Check cảnh báo** | `POST /access/check` | quota <= 1 | WARNING |
 | **AI Detection** | `POST /policies/evaluate-detection` | person + confidence > 0.7 | HIGH |
+| **Camera - Offline** | `POST /policies/evaluate-camera-event` | event_type = camera_offline | CRITICAL |
+| **Camera - Obstruction** | `POST /policies/evaluate-camera-event` | event_type = obstruction | HIGH |
+| **Camera - Motion Sensitive** | `POST /policies/evaluate-camera-event` | motion_detected = true & location ∈ sensitive | CRITICAL |
+| **Camera - Motion Restricted Hours** | `POST /policies/evaluate-camera-event` | motion_detected = true & 22:00-06:00 | HIGH |
 
 ### Bước 7.4: B6 gửi decision đến B5 (Analytics) - Consumer
 
@@ -1118,7 +1367,69 @@ curl -X POST http://localhost:8000/internal/send-test-decision \
 }
 ```
 
-#### Bước 7.4.6: Tóm tắt các trigger gửi B5
+#### Bước 7.4.6: Trigger Decision từ Camera Event (B2 → B6 → B5)
+
+Khi Camera Stream gửi sự kiện bất thường, B6 tự động gửi decision đến B5.
+
+**Gửi camera event để trigger decision đến B5:**
+```bash
+CORR_ID=$(uuidgen)
+curl -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"camera_id\": \"cam-server-room-01\",
+    \"event_type\": \"motion_detected\",
+    \"motion_detected\": true,
+    \"location\": \"SERVER_ROOM - Critical Area\",
+    \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\",
+    \"correlationId\": \"${CORR_ID}\"
+  }"
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected in sensitive area: SERVER_ROOM - Critical Area - Camera: cam-server-room-01",
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+**Kiểm tra log B5 từ camera event:**
+```bash
+docker compose logs api | grep -E "Camera decision sent to B5"
+```
+
+**Kết quả mong đợi:**
+```
+b6-core-api  | 2026-06-17 16:55:00,xxx - src.core_service.main - INFO - 📊 Camera decision sent to B5: xxxxx...
+b6-core-api  | 2026-06-17 16:55:00,xxx - src.core_service.services.analytics_client - INFO - 📊 [ANALYTICS_FALLBACK] Decision stored locally: xxxxx... - CRITICAL
+```
+
+**Kiểm tra fallback decisions:**
+```bash
+curl -X GET "http://localhost:8000/internal/fallback-decisions?limit=10" \
+  -H "Authorization: Bearer mock-token-123" | jq '.[] | select(.reason | contains("Camera"))'
+```
+
+**Kết quả mong đợi:**
+```json
+{
+  "correlationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "decision": "CRITICAL",
+  "reason": "Camera event: Motion detected in sensitive area: SERVER_ROOM - Critical Area - Camera: cam-server-room-01",
+  "latencyMs": 0,
+  "quotaBefore": 0,
+  "quotaAfter": 0,
+  "rulesTriggered": ["MOTION_SENSITIVE_AREA"],
+  "timestamp": "2026-06-17T16:55:00.000000",
+  "mode": "fallback"
+}
+```
+
+#### Bước 7.4.7: Tóm tắt các trigger gửi B5
 
 | Trigger | Endpoint | Decision | Reason |
 |---------|----------|----------|--------|
@@ -1126,6 +1437,10 @@ curl -X POST http://localhost:8000/internal/send-test-decision \
 | **Sensor Alert** | `POST /internal/evaluate-sensor` | ALERT_CREATED | CRITICAL / HIGH / MEDIUM |
 | **AI Detection** | `POST /policies/evaluate-detection` | AI_DETECTION | Person detected with confidence X |
 | **Test Manual** | `POST /internal/send-test-decision` | ALLOW / DENY | TEST / CUSTOM |
+| **Camera - Offline** | `POST /policies/evaluate-camera-event` | event_type = camera_offline | CRITICAL |
+| **Camera - Obstruction** | `POST /policies/evaluate-camera-event` | event_type = obstruction | HIGH |
+| **Camera - Motion Sensitive** | `POST /policies/evaluate-camera-event` | motion_detected = true & location ∈ sensitive | CRITICAL |
+| **Camera - Motion Restricted Hours** | `POST /policies/evaluate-camera-event` | motion_detected = true & 22:00-06:00 | HIGH |
 
 #### Bước 7.4.7: Kiểm tra tổng hợp Fallback Storage
 

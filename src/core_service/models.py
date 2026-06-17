@@ -145,3 +145,29 @@ class SensorEvaluationResult(BaseModel):
     readings: SensorReading
     timestamp: datetime
     correlation_id: UUID4
+
+# ============================================================
+# CAMERA EVENT MODELS (TỪ B2)
+# ============================================================
+class CameraEvent(BaseModel):
+    """Sự kiện từ Camera Stream (B2)"""
+    camera_id: str = Field(..., description="Định danh camera")
+    event_type: str = Field(..., description="Loại sự kiện: motion_detected, camera_offline, obstruction, etc.")
+    motion_detected: bool = Field(False, description="Có phát hiện chuyển động không")
+    frame_url: Optional[str] = Field(None, description="Đường dẫn ảnh tĩnh tại thời điểm sự kiện")
+    location: Optional[str] = Field(None, description="Vị trí camera")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Thời gian xảy ra sự kiện")
+    correlationId: Optional[UUID4] = Field(None, description="ID định danh cho request")
+
+    @validator('correlationId', pre=True, always=True)
+    def set_correlation_id(cls, v):
+        if v is None:
+            return uuid4()
+        return v
+
+class CameraEventResponse(BaseModel):
+    """Phản hồi từ B6 cho B2"""
+    status: str = Field(..., description="Trạng thái xử lý: processed, rejected")
+    alert_triggered: bool = Field(False, description="Có kích hoạt cảnh báo không")
+    message: Optional[str] = Field(None, description="Thông báo chi tiết")
+    correlation_id: UUID4 = Field(..., description="ID định danh request")

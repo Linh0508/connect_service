@@ -246,6 +246,8 @@
         .btn-green:hover { background: #059669 !important; box-shadow: 0 8px 20px rgba(16,185,129,0.3) !important; }
         .btn-red { background: #ef4444 !important; }
         .btn-red:hover { background: #dc2626 !important; box-shadow: 0 8px 20px rgba(239,68,68,0.3) !important; }
+        .btn-teal { background: #14b8a6 !important; }
+        .btn-teal:hover { background: #0d9488 !important; box-shadow: 0 8px 20px rgba(20,184,166,0.3) !important; }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
         /* ===== RESULT CARD ===== */
@@ -521,6 +523,36 @@
         .sensor-test-btn .status-danger .status-label { color: #991b1b; }
         .sensor-test-btn .status-invalid .status-label { color: #475569; }
         .sensor-test-btn .status-error .status-label { color: #92400e; }
+
+        /* ===== CAMERA TEST GRID ===== */
+        .camera-test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .camera-test-btn {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1.5px solid #e2e8f0;
+            background: white;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .camera-test-btn:hover {
+            border-color: #f97316;
+            background: #fff7ed;
+            transform: translateY(-1px);
+        }
+        .camera-test-btn .status-label {
+            display: block;
+            font-size: 9px;
+            font-weight: 600;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -573,10 +605,9 @@
                             <div class="field-group"><label>Correlation ID</label><input type="text" id="corrId" placeholder="auto"></div>
                             <button id="sendAccessBtn" class="btn btn-secondary">🚀 POST /access/check</button>
 
-                            <!-- Sensor Evaluation - Updated with new JSON format -->
+                            <!-- Sensor Evaluation -->
                             <div class="section-title" style="margin-top:20px;">🌡️ Sensor Evaluation <span class="trigger-badge">B1 → B6</span></div>
                             
-                            <!-- Quick Test Buttons -->
                             <div style="margin-bottom:12px;">
                                 <label style="font-size:11px; font-weight:600; color:#475569;">Quick Test Scenarios:</label>
                                 <div class="sensor-test-grid">
@@ -654,6 +685,24 @@
                             <div class="field-group"><label>Label</label><input type="text" id="aiLabel" value="person"></div>
                             <div class="field-group"><label>Confidence</label><input type="number" id="aiConfidence" value="0.95" step="0.01" min="0" max="1"></div>
                             <button id="sendAiResultBtn" class="btn btn-secondary">👁️ POST /policies/evaluate-detection</button>
+                            
+                            <!-- Camera Event -->
+                            <div class="section-title" style="margin-top:20px;">📹 Camera Event <span class="trigger-badge">B2 → B6</span></div>
+                            <div class="field-group"><label>Camera ID</label><input type="text" id="cameraId" value="cam-lobby-01"></div>
+                            <div class="field-group"><label>Event Type</label>
+                                <select id="cameraEventType">
+                                    <option value="motion_detected">Motion Detected</option>
+                                    <option value="camera_offline">Camera Offline</option>
+                                    <option value="obstruction">Obstruction</option>
+                                    <option value="tamper_detected">Tamper Detected</option>
+                                </select>
+                            </div>
+                            <div class="field-group"><label>Motion</label><select id="cameraMotion"><option value="false">false</option><option value="true">true</option></select></div>
+                            <div class="field-group"><label>Location</label><input type="text" id="cameraLocation" value="Lobby 01"></div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top:8px;">
+                                <button id="sendCameraBtn" class="btn btn-secondary" style="flex:1;">📹 Send Camera Event</button>
+                                <button id="triggerCameraAlertBtn" class="btn btn-red btn-sm" style="flex:1;">🚨 Camera Alert (Sensitive)</button>
+                            </div>
 
                             <!-- Policy & Audit -->
                             <div class="section-title" style="margin-top:20px;">📋 Policy & Audit</div>
@@ -697,7 +746,7 @@
                                 <button id="callGateStatusBtn" class="btn btn-secondary btn-sm">📊 GET /internal/gates/LAB_01/status → B3</button>
                             </div>
 
-                            <!-- B7 -->
+                            <!-- B7 - Notification -->
                             <div class="section-title" style="margin-top:20px;">📤 Send to Notification <span class="trigger-badge">B7</span> <span id="b7ModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
                             <div class="field-group"><label>Severity</label><select id="notifSeverity"><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></div>
                             <div class="field-group"><label>Message</label><input type="text" id="notifMessage" value="Test alert from B6 dashboard"></div>
@@ -708,7 +757,7 @@
                                 <button id="triggerAccessAlertBtn" class="btn btn-amber btn-sm">🚪 Access Alert → B7</button>
                             </div>
 
-                            <!-- B5 -->
+                            <!-- B5 - Analytics -->
                             <div class="section-title" style="margin-top:20px;">📊 Send to Analytics <span class="trigger-badge">B5</span> <span id="b5ModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
                             <div class="field-group"><label>Decision</label><select id="analyticsDecision"><option>ALLOW</option><option>DENY</option><option>ALERT_CREATED</option><option>AI_DETECTION</option></select></div>
                             <div class="field-group"><label>Reason</label><input type="text" id="analyticsReason" value="TEST"></div>
@@ -718,6 +767,39 @@
                                 <button id="triggerSensorAnalyticsBtn" class="btn btn-amber btn-sm">🌡️ Sensor Decision → B5</button>
                                 <button id="triggerAIAnalyticsBtn" class="btn btn-pink btn-sm">🤖 AI Decision → B5</button>
                             </div>
+
+                            <!-- Camera Event - Consumer Trigger -->
+                            <div class="section-title" style="margin-top:20px;">📹 Camera Event Trigger <span class="trigger-badge">B2 → B6</span> <span id="cameraModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
+                            <div style="margin-bottom:8px;">
+                                <label style="font-size:11px; font-weight:600; color:#475569;">Quick Camera Scenarios:</label>
+                                <div class="camera-test-grid">
+                                    <button id="cameraTestMotionNormal" class="camera-test-btn" style="border-color:#10b981;">
+                                        🟢 Normal Motion
+                                        <span class="status-label" style="color:#166534;">Lobby 01</span>
+                                    </button>
+                                    <button id="cameraTestMotionSensitive" class="camera-test-btn" style="border-color:#ef4444;">
+                                        🔴 Sensitive Area
+                                        <span class="status-label" style="color:#991b1b;">Server Room</span>
+                                    </button>
+                                    <button id="cameraTestOffline" class="camera-test-btn" style="border-color:#f97316;">
+                                        🔶 Camera Offline
+                                        <span class="status-label" style="color:#92400e;">Main Gate</span>
+                                    </button>
+                                    <button id="cameraTestObstruction" class="camera-test-btn" style="border-color:#f97316;">
+                                        🔶 Obstruction
+                                        <span class="status-label" style="color:#92400e;">Lobby 01</span>
+                                    </button>
+                                    <button id="cameraTestRestrictedHours" class="camera-test-btn" style="border-color:#f97316;">
+                                        🔶 Restricted Hours
+                                        <span class="status-label" style="color:#92400e;">23:30</span>
+                                    </button>
+                                    <button id="cameraTestTamper" class="camera-test-btn" style="border-color:#ef4444;">
+                                        🔴 Tamper Detected
+                                        <span class="status-label" style="color:#991b1b;">Critical</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <button id="sendCameraConsumerBtn" class="btn btn-teal btn-sm" style="width:100%;">📹 Send Custom Camera Event → B7 & B5</button>
                         </div>
                     </div>
 
@@ -901,7 +983,7 @@
         addLog(`Access check: ${res.data?.decision || 'DENY'} - ${res.duration}ms`, res.status === 200 ? 'success' : 'error');
     });
     
-    // Sensor Evaluation - New JSON format
+    // Sensor Evaluation
     async function sendSensorEvent(deviceId, location, temp, humidity, co2, smoke, battery, motion, time = null) {
         const corrId = uuidv4();
         const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
@@ -927,7 +1009,6 @@
         return res;
     }
 
-    // Manual Sensor
     document.getElementById('sendSensorBtn').addEventListener('click', async () => {
         const deviceId = document.getElementById('sensorDeviceId').value;
         const location = document.getElementById('sensorLocation').value;
@@ -940,7 +1021,6 @@
         await sendSensorEvent(deviceId, location, temp, humidity, co2, smoke, battery, motion);
     });
 
-    // Quick Test Buttons
     document.querySelectorAll('.sensor-test-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
             const deviceId = btn.dataset.device;
@@ -952,7 +1032,6 @@
             const motion = btn.dataset.motion || 'false';
             const time = btn.dataset.time || null;
             
-            // Update form fields
             document.getElementById('sensorDeviceId').value = deviceId;
             document.getElementById('sensorLocation').value = 'Lab A101';
             if (temp !== null) document.getElementById('sensorTemp').value = temp;
@@ -983,6 +1062,38 @@
     document.getElementById('getAlertsBtn').addEventListener('click', async () => {
         const res = await callApi('GET', '/alerts?limit=20');
         displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
+    });
+
+    // ===== CAMERA EVENT (B2 → B6) - PROVIDER =====
+    document.getElementById('sendCameraBtn').addEventListener('click', async () => {
+        const corrId = uuidv4();
+        const body = {
+            camera_id: document.getElementById('cameraId').value,
+            event_type: document.getElementById('cameraEventType').value,
+            motion_detected: document.getElementById('cameraMotion').value === 'true',
+            location: document.getElementById('cameraLocation').value,
+            timestamp: new Date().toISOString(),
+            correlationId: corrId
+        };
+        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
+        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
+        const alertTriggered = res.data?.alert_triggered || false;
+        addLog(`Camera event: ${body.camera_id} - ${body.event_type} (alert: ${alertTriggered})`, alertTriggered ? 'success' : 'info');
+    });
+
+    document.getElementById('triggerCameraAlertBtn').addEventListener('click', async () => {
+        const corrId = uuidv4();
+        const body = {
+            camera_id: 'cam-server-room-01',
+            event_type: 'motion_detected',
+            motion_detected: true,
+            location: 'SERVER_ROOM - Critical Area',
+            timestamp: new Date().toISOString(),
+            correlationId: corrId
+        };
+        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
+        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
+        addLog(`🔴 Camera alert triggered: ${body.location}`, 'success');
     });
 
     // ==================== CONSUMER TAB ====================
@@ -1197,6 +1308,71 @@
         }
         displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
         addLog(res.status === 200 ? `✅ AI decision sent - AI_DETECTION (Person 95%)` : `❌ AI decision failed: ${res.status}`, res.status === 200 ? 'success' : 'error');
+    });
+
+    // ===== CAMERA EVENT - CONSUMER TRIGGER =====
+    // Function to send camera event from consumer tab
+    async function sendCameraEventConsumer(cameraId, eventType, motion, location, time = null) {
+        const corrId = uuidv4();
+        const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
+        const body = {
+            camera_id: cameraId,
+            event_type: eventType,
+            motion_detected: motion,
+            location: location,
+            timestamp: timestamp,
+            correlationId: corrId
+        };
+        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
+        const modeLower = mode.toLowerCase();
+        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
+        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
+        const alertTriggered = res.data?.alert_triggered || false;
+        addLog(`📹 Camera: ${cameraId} - ${eventType} (alert: ${alertTriggered})`, alertTriggered ? 'success' : 'info');
+        return res;
+    }
+
+    // Camera test buttons
+    document.getElementById('cameraTestMotionNormal').addEventListener('click', async () => {
+        await sendCameraEventConsumer('cam-lobby-01', 'motion_detected', true, 'Lobby 01 - Main Entrance');
+    });
+
+    document.getElementById('cameraTestMotionSensitive').addEventListener('click', async () => {
+        await sendCameraEventConsumer('cam-server-room-01', 'motion_detected', true, 'SERVER_ROOM - Critical Area');
+    });
+
+    document.getElementById('cameraTestOffline').addEventListener('click', async () => {
+        await sendCameraEventConsumer('cam-gate-01', 'camera_offline', false, 'Main Gate');
+    });
+
+    document.getElementById('cameraTestObstruction').addEventListener('click', async () => {
+        await sendCameraEventConsumer('cam-lobby-01', 'obstruction', false, 'Lobby 01');
+    });
+
+    document.getElementById('cameraTestRestrictedHours').addEventListener('click', async () => {
+        await sendCameraEventConsumer('cam-lobby-01', 'motion_detected', true, 'Lobby 01', '23:30');
+    });
+
+    document.getElementById('cameraTestTamper').addEventListener('click', async () => {
+        await sendCameraEventConsumer('cam-vault-01', 'tamper_detected', true, 'VAULT - High Security');
+    });
+
+    // Custom camera event from consumer tab
+    document.getElementById('sendCameraConsumerBtn').addEventListener('click', async () => {
+        const corrId = uuidv4();
+        const body = {
+            camera_id: document.getElementById('cameraId').value || 'cam-custom-01',
+            event_type: document.getElementById('cameraEventType').value || 'motion_detected',
+            motion_detected: document.getElementById('cameraMotion').value === 'true',
+            location: document.getElementById('cameraLocation').value || 'Custom Location',
+            timestamp: new Date().toISOString(),
+            correlationId: corrId
+        };
+        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
+        const modeLower = mode.toLowerCase();
+        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
+        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
+        addLog(`📹 Custom camera event: ${body.camera_id} - ${body.event_type}`, res.status === 200 ? 'success' : 'error');
     });
 
     // ==================== REAL vs FALLBACK COMPARISON ====================

@@ -35,6 +35,8 @@ tags:
     description: Đánh giá quyền ra vào real-time (Cặp 10 - Access Gate → B6)
   - name: Event Evaluation
     description: Tiếp nhận dữ liệu từ IoT (Cặp 05) và AI Vision (Cặp 02)
+  - name: Camera Integration
+    description: Tiếp nhận sự kiện từ Camera Stream (Cặp B2 → B6)
   - name: Audit & Policy
     description: Tra cứu lịch sử quyết định và quản lý chính sách
   - name: System Admin
@@ -211,6 +213,53 @@ paths:
           description: Dữ liệu không hợp lệ hoặc low confidence
 
   # ================================================================
+  # CẶP B2: CAMERA STREAM → B6 (Provider)
+  # ================================================================
+  /policies/evaluate-camera-event:
+    post:
+      tags: [Camera Integration]
+      summary: Tiếp nhận sự kiện thô từ Camera Stream (B2)
+      operationId: evaluateCameraEvent
+      description: |
+        **B6 là Provider, Camera Stream (B2) là Consumer**
+        
+        Camera Stream gửi sự kiện camera đến B6 để đánh giá.
+        B6 sẽ kiểm tra các quy tắc và kích hoạt cảnh báo nếu cần.
+        
+        **Các trường hợp cảnh báo:**
+        - Chuyển động tại khu vực nhạy cảm (SERVER_ROOM, DATA_CENTER, ...)
+        - Chuyển động trong khung giờ cấm (22:00 - 06:00)
+        - Camera offline
+        - Camera bị che khuất
+        
+        **Luồng xử lý:**
+        1. B2 gửi sự kiện camera
+        2. B6 đánh giá theo quy tắc
+        3. Nếu bất thường → Gửi alert đến B7
+        4. Gửi decision đến B5 để phân tích
+      security:
+        - bearerAuth: ['camera:events']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraEvent'
+      responses:
+        '200':
+          description: Đã xử lý sự kiện thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CameraEventResponse'
+        '400':
+          description: Dữ liệu không hợp lệ
+        '401':
+          description: Unauthorized
+        '429':
+          description: Rate limit exceeded
+
+  # ================================================================
   # CẶP 03: B6 → ACCESS GATE (Consumer - REST Sync)
   # ================================================================
   /internal/access-logs:
@@ -377,9 +426,10 @@ components:
             'access:read': 'Đọc thông tin quyền truy cập và log'
             'admin:policies': 'Quản lý chính sách và cache'
             'admin:audit': 'Xem audit logs và báo cáo'
+            'camera:events': 'Gửi sự kiện camera'
       description: |
         JWT Token hoặc OAuth2 token yêu cầu các claims:
-        - `scope`: một trong `access:read`, `admin:policies`, `admin:audit`
+        - `scope`: một trong `access:read`, `admin:policies`, `admin:audit`, `camera:events`
         - `gateIds`: danh sách gateId được phép truy cập (mảng string)
         - Token TTL: 24h (Consumer), 12h (Admin)
 
@@ -614,8 +664,90 @@ components:
           enum: [normal, degraded, offline]
 
     # ============================================================
+    # CẶP B2: Camera Event (B2 → B6)
+    # ============================================================
+    CameraEvent:
+      type: object
+      required:
+        - camera_id
+        - event_type
+      properties:
+        camera_id:
+          type: string
+          description: Định danh camera
+          example: "cam-lobby-01"
+        event_type:
+          type: string
+          description: Loại sự kiện
+          enum:
+            - motion_detected
+            - camera_offline
+            - obstruction
+            - tamper_detected
+          example: "motion_detected"
+        motion_detected:
+          type: boolean
+          description: Có phát hiện chuyển động không
+          default: false
+        frame_url:
+          type: string
+          format: uri
+          description: Đường dẫn ảnh tĩnh tại thời điểm sự kiện
+          example: "http://storage.example.com/frames/cam-01-2026-06-17-14-30.jpg"
+        location:
+          type: string
+          description: Vị trí camera
+          example: "Lobby 01 - Main Entrance"
+        timestamp:
+          type: string
+          format: date-time
+          description: Thời gian xảy ra sự kiện
+          example: "2026-06-17T14:30:25+07:00"
+        correlationId:
+          type: string
+          format: uuid
+          description: ID định danh cho request
+      example:
+        camera_id: "cam-lobby-01"
+        event_type: "motion_detected"
+        motion_detected: true
+        location: "Lobby 01 - Main Entrance"
+        timestamp: "2026-06-17T14:30:25+07:00"
+        correlationId: "123e4567-e89b-12d3-a456-426614174000"
+    
+    CameraEventResponse:
+      type: object
+      required:
+        - status
+        - correlation_id
+      properties:
+        status:
+          type: string
+          description: Trạng thái xử lý
+          enum:
+            - processed
+            - rejected
+          example: "processed"
+        alert_triggered:
+          type: boolean
+          description: Có kích hoạt cảnh báo không
+          default: false
+        message:
+          type: string
+          description: Thông báo chi tiết
+          example: "Motion detected in sensitive area: Server Room"
+        correlation_id:
+          type: string
+          format: uuid
+          description: ID định danh request
+      example:
+        status: "processed"
+        alert_triggered: true
+        message: "Motion detected in sensitive area: Server Room"
+        correlation_id: "123e4567-e89b-12d3-a456-426614174000"
+
+    # ============================================================
     # CẶP 04: Notification Event (Queue Async)
-    # ĐÃ SỬA THEO BIÊN BẢN ĐÀM PHÁN CẶP 04
     # ============================================================
     AlertEvent:
       type: object
@@ -658,7 +790,6 @@ components:
         timestamp:
           type: string
           format: date-time
-      # LƯU Ý: KHÔNG có field 'channels' - Provider tự quyết định
 
     AlertResolvedEvent:
       type: object
