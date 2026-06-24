@@ -1,6 +1,6 @@
 """
 B6 Core Business Service - Smart Campus Decision Engine
-Version: 1.3.0 - Production Ready
+Version: 1.5.0 - Production Ready
 """
 
 import os
@@ -13,7 +13,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date, timedelta
 from uuid import uuid4
 from collections import deque
-import asyncio
+import traceback
 
 # ============================================================
 # LOAD ENVIRONMENT VARIABLES
@@ -58,8 +58,7 @@ from src.core_service.database import DatabaseManager
 from src.core_service.models import (
     AccessCheckRequest, AccessDecision, SensorEvent,
     AIDetectionRequest, AIDetectionResponse, HealthResponse,
-    ProblemDetails, AlertEvent, AnalyticsEvent, AuditRecord,
-    CameraEvent, CameraEventResponse
+    ProblemDetails, AlertEvent, CameraEvent, CameraEventResponse
 )
 from src.core_service.services.policy_engine import PolicyEngine
 from src.core_service.services.quota_manager import QuotaManager
@@ -76,7 +75,7 @@ from src.core_service.services.camera_evaluator import camera_evaluator
 # Configuration
 # ============================================================
 API_TITLE = os.getenv("API_TITLE", "Core Business API")
-API_VERSION = os.getenv("API_VERSION", "1.3.0")
+API_VERSION = os.getenv("API_VERSION", "1.5.0")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
 logging.basicConfig(
@@ -90,6 +89,8 @@ request_logs = deque(maxlen=1000)
 # ============================================================
 # Services Initialization
 # ============================================================
+logger.info("Initializing services...")
+
 db_manager = DatabaseManager()
 policy_engine = PolicyEngine()
 quota_manager = QuotaManager()
@@ -99,6 +100,8 @@ alert_storage = AlertStorage()
 access_gate_client = AccessGateClient()
 notification_client = NotificationClient()
 analytics_client = AnalyticsClient()
+
+logger.info("All services initialized")
 
 # In-memory cache for idempotency
 processed_correlation_ids: Dict[str, tuple] = {}
@@ -160,43 +163,28 @@ def check_rate_limit(client_ip: str) -> bool:
 async def lifespan(app: FastAPI):
     logger.info("Starting B6 Core Business Service...")
     
+    # 1. Kết nối Database
     db_disabled = os.getenv("DATABASE_DISABLED", "false").lower() == "true"
     if db_disabled:
         logger.info("Database is DISABLED (running in mock mode)")
     else:
         await db_manager.connect()
     
+    # 2. Load policies
     await policy_engine.load_policies()
-    logger.info("Service started successfully")
     
-    # Kiểm tra kết nối đến các B khác
-    logger.info("Checking connections to other services...")
-
-    # Kiểm tra B3 (Access Gate)
-    b3_url = os.getenv("ACCESS_GATE_URL", "http://b3-access-gate:8001")
-    status = await connection_manager.check_connection("b3", b3_url)
-    logger.info(f"B3 connection status: {status.value}")
-
-    # Kiểm tra B4 (AI Vision) - ĐÃ CÓ LOGIC ĐẶC BIỆT
-    b4_url = os.getenv("AI_VISION_URL", "http://b4-ai-vision:9000")
-    status = await connection_manager.check_connection("b4", b4_url)
-    logger.info(f"B4 connection status: {status.value}")
-
-    # Kiểm tra B5 (Analytics)
-    b5_url = os.getenv("ANALYTICS_URL", "http://b5-analytics:8003")
-    status = await connection_manager.check_connection("b5", b5_url)
-    logger.info(f"B5 connection status: {status.value}")
-
-    # Kiểm tra B7 (Notification)
-    b7_url = os.getenv("NOTIFICATION_URL", "http://b7-notification:8002")
-    status = await connection_manager.check_connection("b7", b7_url)
-    logger.info(f"B7 connection status: {status.value}")
-        
-    logger.info("Service started successfully")
+    # 3. Kiểm tra kết nối
+    await connection_manager.initial_check_all()
+    await connection_manager.start_retry_tasks()
+    connection_manager.log_status_summary()
+    
+    logger.info("Service started successfully!")
     
     yield
     
+    # Shutdown
     logger.info("Shutting down B6 Core Business Service...")
+    await connection_manager.stop_retry_tasks()
     if not db_disabled:
         await db_manager.close()
     await ai_client.close()
@@ -249,32 +237,51 @@ def update_health_status():
             return "DEGRADED"
     return "UP"
 
+
+# ============================================================
+# Middleware - Đọc body 1 lần và lưu vào request.state
+# ============================================================
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Middleware để log tất cả request và response"""
     start_time = datetime.now()
     
-    # Đọc body (chỉ cho POST/PUT/PATCH)
+    # Đọc body và lưu vào request state (chỉ cho POST/PUT/PATCH)
     body = None
     if request.method in ["POST", "PUT", "PATCH"]:
         try:
             body_bytes = await request.body()
             if body_bytes:
-                body = json.loads(body_bytes)
-        except:
-            body = {"error": "Cannot parse body"}
+                try:
+                    body = json.loads(body_bytes)
+                except:
+                    body = {"error": "Cannot parse body"}
+            
+            # Lưu body vào request state để endpoint dùng lại
+            request.state.body = body_bytes
+            request.state.body_parsed = body
+            
+        except Exception as e:
+            logger.warning(f"Cannot read body: {e}")
+            body = {"error": "Cannot read body"}
+            request.state.body = b"{}"
+            request.state.body_parsed = {}
     
     # Xử lý request
-    response = await call_next(request)
-    
-    # Tính thời gian
-    duration = (datetime.now() - start_time).total_seconds() * 1000
+    try:
+        response = await call_next(request)
+        duration = (datetime.now() - start_time).total_seconds() * 1000
+        logger.info(f"📥 {request.method} {request.url.path} → {response.status_code} ({duration:.2f}ms)")
+    except Exception as e:
+        duration = (datetime.now() - start_time).total_seconds() * 1000
+        logger.error(f"❌ {request.method} {request.url.path} ERROR: {e} ({duration:.2f}ms)")
+        raise
     
     # Lưu log
     log_entry = {
         "timestamp": start_time.isoformat(),
         "method": request.method,
-        "path": request.url.path,  # ← SỬA: dùng request.url.path
+        "path": request.url.path,
         "client_ip": request.client.host if request.client else "unknown",
         "status_code": response.status_code,
         "duration_ms": round(duration, 2),
@@ -284,10 +291,8 @@ async def log_requests(request: Request, call_next):
     }
     request_logs.append(log_entry)
     
-    # Log ra console - SỬA: dùng request.url.path
-    logger.info(f"📥 {request.method} {request.url.path} from {request.client.host} → {response.status_code} ({duration:.2f}ms)")
-    
     return response
+
 
 # ============================================================
 # API Endpoint - GET REQUEST LOGS
@@ -299,13 +304,8 @@ async def get_request_logs(
     status_code: Optional[int] = None,
     token_data: dict = Depends(verify_token)
 ):
-    """
-    Lấy danh sách request logs để hiển thị trên dashboard.
-    Có thể lọc theo service (B1, B2, B3, B4, B5) và status code.
-    """
     logs = list(request_logs)
     
-    # Lọc theo service (dựa trên path)
     if service:
         service_paths = {
             "B1": "/internal/evaluate-sensor",
@@ -318,304 +318,175 @@ async def get_request_logs(
         if path:
             logs = [log for log in logs if path in log["path"]]
     
-    # Lọc theo status code
     if status_code:
         logs = [log for log in logs if log["status_code"] == status_code]
     
-    # Sắp xếp theo thời gian mới nhất
     logs = sorted(logs, key=lambda x: x["timestamp"], reverse=True)
-    
-    # Giải thích dữ liệu
-    for log in logs:
-        log["explanation"] = explain_request(log)
-    
-    return {
-        "total": len(logs),
-        "logs": logs[:limit]
-    }
+    return {"total": len(logs), "logs": logs[:limit]}
 
-def explain_request(log: dict) -> dict:
-    """Giải thích ý nghĩa của request"""
-    explanation = {
-        "service": "Unknown",
-        "action": "Unknown",
-        "data_summary": {},
-        "meaning": ""
-    }
-    
-    path = log["path"]
-    body = log.get("body", {})
-    status = log["status_code"]
-    
-    # Xác định service
-    if "/internal/evaluate-sensor" in path:
-        explanation["service"] = "B1 (IoT Sensor)"
-        explanation["action"] = "Gửi dữ liệu cảm biến"
-        if body:
-            device = body.get("device_id", "unknown")
-            temp = body.get("temperature_c", "N/A")
-            co2 = body.get("co2_ppm", "N/A")
-            smoke = body.get("smoke_ppm", "N/A")
-            motion = body.get("motion_detected", False)
-            explanation["data_summary"] = {
-                "Thiết bị": device,
-                "Nhiệt độ": f"{temp}°C",
-                "CO2": f"{co2} ppm",
-                "Khói": f"{smoke} ppm",
-                "Chuyển động": "✅ Có" if motion else "❌ Không"
-            }
-            explanation["meaning"] = f"📊 Dữ liệu từ cảm biến {device}"
-    
-    elif "/policies/evaluate-camera-event" in path:
-        explanation["service"] = "B2 (Camera Stream)"
-        explanation["action"] = "Gửi sự kiện camera"
-        if body:
-            camera = body.get("camera_id", "unknown")
-            event_type = body.get("event_type", "unknown")
-            location = body.get("location", "unknown")
-            motion = body.get("motion_detected", False)
-            explanation["data_summary"] = {
-                "Camera": camera,
-                "Sự kiện": event_type,
-                "Vị trí": location,
-                "Chuyển động": "✅ Có" if motion else "❌ Không"
-            }
-            explanation["meaning"] = f"📹 Sự kiện camera {event_type} từ {camera}"
-    
-    elif "/access/check" in path:
-        explanation["service"] = "B3 (Access Gate)"
-        explanation["action"] = "Kiểm tra quyền truy cập"
-        if body:
-            card = body.get("cardId", "unknown")
-            gate = body.get("gateId", "unknown")
-            direction = body.get("direction", "IN")
-            explanation["data_summary"] = {
-                "Thẻ": card,
-                "Cổng": gate,
-                "Hướng": direction
-            }
-            explanation["meaning"] = f"🚪 Kiểm tra thẻ {card} tại cổng {gate}"
-    
-    elif "/policies/evaluate-detection" in path:
-        explanation["service"] = "B4 (AI Vision)"
-        explanation["action"] = "Gửi kết quả nhận diện"
-        if body:
-            label = body.get("label", "unknown")
-            confidence = body.get("confidence", 0)
-            matched = body.get("matched", False)
-            explanation["data_summary"] = {
-                "Nhãn": label,
-                "Độ tin cậy": f"{confidence*100:.1f}%",
-                "Khớp": "✅" if matched else "❌"
-            }
-            explanation["meaning"] = f"👁️ Phát hiện {label} với độ tin cậy {confidence*100:.1f}%"
-    
-    elif "/alerts" in path:
-        explanation["service"] = "B5 (Analytics)"
-        explanation["action"] = "Lấy danh sách cảnh báo"
-        params = log.get("query_params", {})
-        limit = params.get("limit", "20")
-        severity = params.get("severity", "Tất cả")
-        explanation["data_summary"] = {
-            "Số lượng": limit,
-            "Severity": severity
-        }
-        explanation["meaning"] = f"📋 Lấy danh sách cảnh báo (limit={limit})"
-    
-    # Giải thích status code
-    status_explanations = {
-        200: "✅ Thành công",
-        202: "✅ Đã tiếp nhận (xử lý async)",
-        400: "❌ Request không hợp lệ",
-        401: "🔒 Chưa xác thực",
-        403: "🔒 Không có quyền truy cập",
-        404: "❌ Endpoint không tồn tại",
-        429: "⚠️ Quá rate limit",
-        500: "❌ Lỗi server"
-    }
-    explanation["status_meaning"] = status_explanations.get(status, f"Status {status}")
-    
-    return explanation
 
 # ============================================================
-# API Endpoints - CẶP 10: ACCESS GATE → B6 (Provider)
+# API Endpoint - B3: ACCESS GATE → B6
 # ============================================================
 @app.post("/access/check", response_model=AccessDecision, tags=["Access Control"])
 async def check_access(
-    request: AccessCheckRequest,
+    request: Request,
     token_data: dict = Depends(verify_token)
 ):
     """
-    Access Gate gọi để kiểm tra quyền ra vào real-time
-    - SLA: P99 < 100ms
-    - Idempotency: correlationId window 60 seconds
+    Access Gate (B3) gọi để kiểm tra quyền ra vào real-time
     """
     import time
     start_time = time.time()
     
-    client_ip = getattr(request, 'client_ip', "unknown")
-    if not check_rate_limit(client_ip):
-        raise HTTPException(status_code=429, detail="Rate limit exceeded")
-    
-    corr_id_str = str(request.correlationId)
-    if corr_id_str in processed_correlation_ids:
-        response, timestamp = processed_correlation_ids[corr_id_str]
-        if (datetime.now() - timestamp).total_seconds() < IDEMPOTENCY_WINDOW:
-            return response
+    try:
+        # Lấy body từ request state
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
         else:
-            del processed_correlation_ids[corr_id_str]
-    
-    # ============================================================
-    # KIỂM TRA GATE AUTHORIZATION
-    # ============================================================
-    gate_authorized = True
-    gate_error = None
-    
-    if token_data.get("gateIds") != ["*"] and request.gateId not in token_data.get("gateIds", []):
-        gate_authorized = False
-        gate_error = "Gate not authorized"
+            body = await request.json()
         
-        # 🔔 GỬI ALERT NGAY KHI PHÁT HIỆN GATE KHÔNG ĐƯỢC PHÉP
-        alert = AlertEvent(
-            eventId=uuid4(),
-            correlationId=request.correlationId,
-            traceId=uuid4(),
-            severity="CRITICAL",
-            userId=request.cardId,
-            gateId=request.gateId,
-            alertDetails={
-                "ruleId": "SECURITY_BREACH",
-                "message": f"Unauthorized gate access attempt: {request.cardId} -> {request.gateId}",
-                "reason": "Gate not authorized",
-                "cardId": request.cardId,
-                "gateId": request.gateId
-            },
-            timestamp=datetime.now()
-        )
-        # Lưu alert
-        await alert_storage.save_alert(alert)
-        alerts_list.append(alert.dict())
+        # Tạo AccessCheckRequest từ dict
+        access_request = AccessCheckRequest(**body)
         
-        # Gửi alert sang Notification (B7)
-        await notification_client.send_alert(alert)
-        logger.info(f"🔔 Alert sent to B7 for unauthorized gate: {request.cardId} -> {request.gateId}")
+        client_ip = getattr(access_request, 'client_ip', "unknown")
+        if not check_rate_limit(client_ip):
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
         
-        # Gửi decision sang Analytics (B5)
-        await analytics_client.send_decision(
-            correlation_id=str(request.correlationId),
-            decision="DENY",
-            reason="GATE_NOT_AUTHORIZED",
-            latency_ms=int((time.time() - start_time) * 1000),
-            quota_before=0,
-            quota_after=0,
-            rules_triggered=["GATE_AUTHORIZATION_FAILED"]
-        )
+        corr_id_str = str(access_request.correlationId)
+        if corr_id_str in processed_correlation_ids:
+            response, timestamp = processed_correlation_ids[corr_id_str]
+            if (datetime.now() - timestamp).total_seconds() < IDEMPOTENCY_WINDOW:
+                return response
+            else:
+                del processed_correlation_ids[corr_id_str]
         
-        raise HTTPException(status_code=403, detail="Gate not authorized")
-    
-    if token_data.get("gateIds") != ["*"] and request.gateId not in token_data.get("gateIds", []):
-        raise HTTPException(status_code=403, detail="Gate not authorized")
-    
-    policy_result = await policy_engine.evaluate(request.cardId, request.gateId)
-    quota_result = await quota_manager.check_and_decrement(request.cardId)
-    
-    decision = "DENY"
-    reason_code = None
-    has_warning = False
-    warning_message = None
-    
-    if quota_result["remaining"] <= 0:
+        # Kiểm tra Gate Authorization
+        if token_data.get("gateIds") != ["*"] and access_request.gateId not in token_data.get("gateIds", []):
+            alert = AlertEvent(
+                eventId=uuid4(),
+                correlationId=access_request.correlationId,
+                traceId=uuid4(),
+                severity="CRITICAL",
+                userId=access_request.cardId,
+                gateId=access_request.gateId,
+                alertDetails={
+                    "ruleId": "SECURITY_BREACH",
+                    "message": f"Unauthorized gate access attempt: {access_request.cardId} -> {access_request.gateId}",
+                    "reason": "Gate not authorized",
+                    "cardId": access_request.cardId,
+                    "gateId": access_request.gateId
+                },
+                timestamp=datetime.now()
+            )
+            await alert_storage.save_alert(alert)
+            alerts_list.append(alert.dict())
+            await notification_client.send_alert(alert)
+            await analytics_client.send_decision(
+                correlation_id=str(access_request.correlationId),
+                decision="DENY",
+                reason="GATE_NOT_AUTHORIZED",
+                latency_ms=int((time.time() - start_time) * 1000),
+                quota_before=0,
+                quota_after=0,
+                rules_triggered=["GATE_AUTHORIZATION_FAILED"]
+            )
+            raise HTTPException(status_code=403, detail="Gate not authorized")
+        
+        policy_result = await policy_engine.evaluate(access_request.cardId, access_request.gateId)
+        quota_result = await quota_manager.check_and_decrement(access_request.cardId)
+        
         decision = "DENY"
-        reason_code = "QUOTA_EXCEEDED"
-        has_warning = True
-        warning_message = f"Quota exceeded for card {request.cardId}, remaining: 0"
-    elif not policy_result["allowed"]:
-        decision = "DENY"
-        reason_code = "POLICY_VIOLATION"
-        has_warning = True
-        warning_message = f"Policy violation for card {request.cardId} at gate {request.gateId}"
-    else:
-        decision = "ALLOW"
-        reason_code = "VALID"
-        # Kiểm tra các điều kiện cảnh báo (ví dụ: quota gần hết)
-        if quota_result["remaining"] <= 1:
+        reason_code = None
+        has_warning = False
+        warning_message = None
+        
+        if quota_result["remaining"] <= 0:
+            decision = "DENY"
+            reason_code = "QUOTA_EXCEEDED"
             has_warning = True
-            warning_message = f"Quota almost exhausted for card {request.cardId}, remaining: {quota_result['remaining']}"
-    
-    response = AccessDecision(
-        decision=decision,
-        reasonCode=reason_code if decision == "DENY" else None,
-        decisionId=uuid4(),
-        remainingQuota=quota_result["remaining"],
-        isDuplicate=False,
-        expiresAt=datetime.now() + timedelta(hours=24) if decision == "ALLOW" else None
-    )
-    
-    processed_correlation_ids[corr_id_str] = (response, datetime.now())
-    
-    await audit_logger.log(
-        decision_id=str(response.decisionId),
-        gate_id=request.gateId,
-        card_id=request.cardId,
-        decision=decision,
-        reason_code=reason_code,
-        latency_ms=int((time.time() - start_time) * 1000),
-        correlation_id=corr_id_str
-    )
-    
-    # ============================================================
-    # 📤 Gửi decision sang Analytics (B5)
-    # ============================================================
-    await analytics_client.send_decision(
-        correlation_id=str(request.correlationId),
-        decision=decision,
-        reason=reason_code or "NONE",
-        latency_ms=int((time.time() - start_time) * 1000),
-        quota_before=quota_result["before"],
-        quota_after=quota_result["remaining"],
-        rules_triggered=policy_result.get("rules_triggered", [])
-    )
-    
-    # ============================================================
-    # 🔔 Gửi Alert sang B7 (Notification) nếu có lỗi hoặc cảnh báo
-    # ============================================================
-    if has_warning or decision == "DENY":
-        alert = AlertEvent(
-            eventId=uuid4(),
-            correlationId=request.correlationId,
-            traceId=uuid4(),
-            severity="WARNING" if has_warning and decision == "ALLOW" else "CRITICAL",
-            userId=request.cardId,
-            gateId=request.gateId,
-            alertDetails={
-                "ruleId": "ACCESS_CHECK_RULE",
-                "message": warning_message or f"Access denied for card {request.cardId}: {reason_code}",
-                "decision": decision,
-                "reasonCode": reason_code,
-                "remainingQuota": quota_result["remaining"],
-                "policyResult": policy_result
-            },
-            timestamp=datetime.now()
-        )
-        # Lưu alert
-        await alert_storage.save_alert(alert)
-        alerts_list.append(alert.dict())
+            warning_message = f"Quota exceeded for card {access_request.cardId}, remaining: 0"
+        elif not policy_result["allowed"]:
+            decision = "DENY"
+            reason_code = "POLICY_VIOLATION"
+            has_warning = True
+            warning_message = f"Policy violation for card {access_request.cardId} at gate {access_request.gateId}"
+        else:
+            decision = "ALLOW"
+            reason_code = "VALID"
+            if quota_result["remaining"] <= 1:
+                has_warning = True
+                warning_message = f"Quota almost exhausted for card {access_request.cardId}, remaining: {quota_result['remaining']}"
         
-        # Gửi alert sang Notification (B7)
-        await notification_client.send_alert(alert)
-        logger.info(f"🔔 Alert sent to B7 for access check: {request.cardId} - {decision}")
-    
-    elapsed_ms = (time.time() - start_time) * 1000
-    rule_engine_latencies.append(elapsed_ms)
-    if len(rule_engine_latencies) > 120:
-        rule_engine_latencies.pop(0)
-    
-    return response
+        response = AccessDecision(
+            decision=decision,
+            reasonCode=reason_code if decision == "DENY" else None,
+            decisionId=uuid4(),
+            remainingQuota=quota_result["remaining"],
+            isDuplicate=False,
+            expiresAt=datetime.now() + timedelta(hours=24) if decision == "ALLOW" else None
+        )
+        
+        processed_correlation_ids[corr_id_str] = (response, datetime.now())
+        
+        await audit_logger.log(
+            decision_id=str(response.decisionId),
+            gate_id=access_request.gateId,
+            card_id=access_request.cardId,
+            decision=decision,
+            reason_code=reason_code,
+            latency_ms=int((time.time() - start_time) * 1000),
+            correlation_id=corr_id_str
+        )
+        
+        await analytics_client.send_decision(
+            correlation_id=str(access_request.correlationId),
+            decision=decision,
+            reason=reason_code or "NONE",
+            latency_ms=int((time.time() - start_time) * 1000),
+            quota_before=quota_result["before"],
+            quota_after=quota_result["remaining"],
+            rules_triggered=policy_result.get("rules_triggered", [])
+        )
+        
+        if has_warning or decision == "DENY":
+            alert = AlertEvent(
+                eventId=uuid4(),
+                correlationId=access_request.correlationId,
+                traceId=uuid4(),
+                severity="WARNING" if has_warning and decision == "ALLOW" else "CRITICAL",
+                userId=access_request.cardId,
+                gateId=access_request.gateId,
+                alertDetails={
+                    "ruleId": "ACCESS_CHECK_RULE",
+                    "message": warning_message or f"Access denied for card {access_request.cardId}: {reason_code}",
+                    "decision": decision,
+                    "reasonCode": reason_code,
+                    "remainingQuota": quota_result["remaining"],
+                    "policyResult": policy_result
+                },
+                timestamp=datetime.now()
+            )
+            await alert_storage.save_alert(alert)
+            alerts_list.append(alert.dict())
+            await notification_client.send_alert(alert)
+        
+        elapsed_ms = (time.time() - start_time) * 1000
+        rule_engine_latencies.append(elapsed_ms)
+        if len(rule_engine_latencies) > 120:
+            rule_engine_latencies.pop(0)
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"check_access error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/policies/access/{policyId}", tags=["Access Control"])
 async def get_policy(policyId: str, token_data: dict = Depends(verify_token)):
-    """Access Gate gọi để lấy policy cache"""
     policy = await policy_engine.get_policy(policyId)
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
@@ -624,291 +495,226 @@ async def get_policy(policyId: str, token_data: dict = Depends(verify_token)):
 
 @app.get("/decisions/{decisionId}", tags=["Audit & Policy"])
 async def get_decision(decisionId: str, token_data: dict = Depends(verify_token)):
-    """Tra cứu quyết định theo ID (cho B3, B5)"""
     record = await audit_logger.get_by_id(decisionId)
     if not record:
-        raise HTTPException(status_code=404, detail="Decision not found or moved to cold storage")
-    
+        raise HTTPException(status_code=404, detail="Decision not found")
     if "cardId" in record:
         card = record["cardId"]
         record["cardIdMasked"] = f"{card[:4]}****{card[-4:]}"
         del record["cardId"]
-    
     return record
 
-# Trong hàm get_connection_status, sửa lại phần B4:
-@app.get("/connection-status", tags=["System Admin"])
-async def get_connection_status(token_data: dict = Depends(verify_token)):
-    """Lấy trạng thái kết nối đến các B khác"""
-    b4_status = connection_manager.get_status("b4")
-    b4_display = "🟢 Connected (REAL)" if b4_status == ConnectionStatus.REAL else "🟡 Using Fallback (Internal AI)"
-    
-    return {
-        "b3": {
-            "status": connection_manager.get_status("b3").value,
-            "display": "🟢 Connected" if connection_manager.get_status("b3") == ConnectionStatus.REAL else "🟡 Using Fallback"
-        },
-        "b4": {
-            "status": b4_status.value,
-            "display": b4_display,
-            "fallback_url": connection_manager.get_fallback_url("b4")
-        },
-        "b7": {
-            "status": connection_manager.get_status("b7").value,
-            "display": "🟢 Connected" if connection_manager.get_status("b7") == ConnectionStatus.REAL else "🟡 Using Fallback"
-        },
-        "b5": {
-            "status": connection_manager.get_status("b5").value,
-            "display": "🟢 Connected" if connection_manager.get_status("b5") == ConnectionStatus.REAL else "🟡 Using Fallback"
-        }
-    }
 
 # ============================================================
-# API Endpoints - TEST DECISION (B6 → B5)
+# API Endpoint - B1: IoT SENSOR → B6
 # ============================================================
-@app.post("/internal/send-test-decision", tags=["System Admin"])
-async def send_test_decision(
+@app.post("/internal/evaluate-sensor", tags=["Event Evaluation"])
+async def evaluate_sensor(
     request: Request,
     token_data: dict = Depends(verify_token)
 ):
     """
-    Test endpoint để gửi decision trực tiếp đến B5 (Analytics)
-    Dùng để kiểm tra kết nối đến Analytics Service
+    IoT Sensor (B1) gửi dữ liệu cảm biến lên B6
     """
-    body = await request.json()
+    from src.core_service.services.sensor_evaluator import sensor_evaluator
     
-    correlation_id = body.get("correlationId", str(uuid4()))
-    decision = body.get("decision", "ALLOW")
-    reason = body.get("reason", "TEST")
-    
-    # Gửi decision đến B5 (có fallback)
-    sent = await analytics_client.send_decision(
-        correlation_id=correlation_id,
-        decision=decision,
-        reason=reason,
-        latency_ms=10,
-        quota_before=5,
-        quota_after=4,
-        rules_triggered=["TEST_RULE"]
-    )
-    
-    return JSONResponse(
-        status_code=200 if sent else 202,
-        content={
-            "status": "sent" if sent else "queued",
-            "correlationId": correlation_id,
-            "decision": decision,
-            "mode": "real" if sent else "fallback",
-            "message": "Decision sent successfully" if sent else "Decision queued (fallback mode)"
-        }
-    )
-
-# Thêm endpoint để dashboard lấy mode hiện tại
-@app.get("/ai-vision-mode", tags=["System Admin"])
-async def get_ai_vision_mode(token_data: dict = Depends(verify_token)):
-    """Lấy mode hiện tại của AI Vision (real/fallback)"""
-    mode = await ai_client.get_mode()
-    return {
-        "mode": mode,
-        "display": "🟢 Connected to B4 (Real)" if mode == "real" else "🟡 Using Fallback (Internal)"
-    }
-
-@app.post("/cache/invalidate/{policyId}", tags=["System Admin"])
-async def invalidate_cache(policyId: str, token_data: dict = Depends(verify_token)):
-    """Xóa cache policy (admin)"""
-    await policy_engine.invalidate_cache(policyId)
-    return JSONResponse(status_code=204, content=None)
+    try:
+        # Lấy body từ request state
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
+        else:
+            body = await request.json()
+        
+        # Tạo SensorEvent từ dict
+        event = SensorEvent(**body)
+        
+        # Đánh giá dữ liệu sensor
+        result = await sensor_evaluator.evaluate(event)
+        
+        logger.info(f"Sensor evaluation: device={result.device_id}, status={result.status.value}, alerts={len(result.alerts)}")
+        
+        # Xử lý alerts
+        if result.alerts:
+            for alert_data in result.alerts:
+                # Lấy location từ device_registry (là dict)
+                location = "UNKNOWN"
+                if result.device_registry and isinstance(result.device_registry, dict):
+                    location = result.device_registry.get("location", "UNKNOWN")
+                elif result.device_registry and hasattr(result.device_registry, 'location'):
+                    location = result.device_registry.location
+                
+                alert = AlertEvent(
+                    eventId=uuid4(),
+                    correlationId=event.correlationId,
+                    traceId=uuid4(),
+                    severity=alert_data.get("severity", "MEDIUM"),
+                    userId="SYSTEM",
+                    gateId=location,
+                    alertDetails={
+                        "ruleId": alert_data.get("rule_id", "SENSOR_THRESHOLD_RULE"),
+                        "message": alert_data.get("message", ""),
+                        "deviceId": event.device_id,
+                        "status": result.status.value,
+                        "readings": result.readings.dict(),
+                        "device_registry": result.device_registry
+                    },
+                    timestamp=result.timestamp
+                )
+                
+                await alert_storage.save_alert(alert)
+                alerts_list.append(alert.dict())
+                await notification_client.send_alert(alert)
+                await analytics_client.send_decision(
+                    correlation_id=str(event.correlationId),
+                    decision=alert_data.get("severity", "ALERT_CREATED"),
+                    reason=f"{result.status.value}: {alert_data.get('message', '')}",
+                    latency_ms=0,
+                    quota_before=0,
+                    quota_after=0,
+                    rules_triggered=[alert_data.get("rule_id", "SENSOR_THRESHOLD_RULE")]
+                )
+        
+        return JSONResponse(
+            status_code=202,
+            content={
+                "message": "Event received for processing",
+                "device_id": event.device_id,
+                "status": result.status.value,
+                "alerts_count": len(result.alerts)
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"evaluate_sensor error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================
-# API Endpoints - CẶP 05: IoT INGESTION → B6 (Consumer - Queue Async)
+# API Endpoint - B4: AI VISION → B6
 # ============================================================
-@app.post("/internal/evaluate-sensor", tags=["Event Evaluation"])
-async def evaluate_sensor(
-    event: SensorEvent,
+@app.post("/policies/evaluate-detection", tags=["Event Evaluation"])
+async def evaluate_detection_from_ai(
+    request: Request,
     token_data: dict = Depends(verify_token)
 ):
     """
-    IoT Ingestion (B1) gửi dữ liệu cảm biến
-    B6 kiểm tra ngưỡng, phân loại trạng thái, phát sinh alert nếu cần
+    AI Vision (B4) gửi kết quả phân tích ảnh sang B6
     """
-    from src.core_service.services.sensor_evaluator import sensor_evaluator
-    from src.core_service.services.device_registry import device_registry_service
-    
-    # Đánh giá dữ liệu sensor
-    result = await sensor_evaluator.evaluate(event)
-    
-    # Log kết quả
-    logger.info(f"Sensor evaluation result: device={result.device_id}, status={result.status.value}, alerts={len(result.alerts)}")
-    
-    # Nếu có alert, xử lý
-    if result.alerts:
-        for alert_data in result.alerts:
-            # Tạo AlertEvent
+    try:
+        # Lấy body từ request state
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
+        else:
+            body = await request.json()
+        
+        # Tạo AIDetectionResponse từ dict
+        detection = AIDetectionResponse(**body)
+        
+        logger.info(f"Received detection from AI: {detection.detectionId} - {detection.label}")
+        
+        alert_triggered = False
+        alert = None
+        
+        if detection.matched and detection.label == "person" and detection.confidence > 0.7:
+            alert_triggered = True
             alert = AlertEvent(
                 eventId=uuid4(),
-                correlationId=event.correlationId,
+                correlationId=uuid4(),
                 traceId=uuid4(),
-                severity=alert_data.get("severity", "MEDIUM"),
+                severity="HIGH",
                 userId="SYSTEM",
-                gateId=result.device_registry.get("location", "UNKNOWN") if result.device_registry else "UNKNOWN",
+                gateId="UNKNOWN",
                 alertDetails={
-                    "ruleId": alert_data.get("rule_id", "SENSOR_THRESHOLD_RULE"),
-                    "message": alert_data.get("message", ""),
-                    "deviceId": event.device_id,
-                    "status": result.status.value,
-                    "readings": result.readings.dict(),
-                    "device_registry": result.device_registry
+                    "ruleId": "AI_DETECTION_RULE",
+                    "message": f"Person detected with confidence {detection.confidence}",
+                    "detectionId": str(detection.detectionId),
+                    "label": detection.label,
+                    "confidence": detection.confidence
                 },
-                timestamp=result.timestamp
+                timestamp=datetime.now()
             )
-            
-            # 💾 Lưu alert vào database và danh sách
+        
+        if alert_triggered and alert:
             await alert_storage.save_alert(alert)
             alerts_list.append(alert.dict())
-            
-            # 🔔 Gửi alert sang Notification (B7)
             await notification_client.send_alert(alert)
-            logger.info(f"🔔 Alert sent to B7: {alert.eventId} - {alert.severity}")
-            
-            # 📊 Gửi decision sang Analytics (B5)
             await analytics_client.send_decision(
-                correlation_id=str(event.correlationId),
-                decision=alert_data.get("severity", "ALERT_CREATED"),
-                reason=f"{result.status.value}: {alert_data.get('message', '')}",
+                correlation_id=str(detection.detectionId),
+                decision="AI_DETECTION",
+                reason=f"Person detected with confidence {detection.confidence}",
                 latency_ms=0,
                 quota_before=0,
                 quota_after=0,
-                rules_triggered=[alert_data.get("rule_id", "SENSOR_THRESHOLD_RULE")]
+                rules_triggered=["AI_DETECTION_RULE"]
             )
-            logger.info(f"📊 Decision sent to B5 (Analytics) for alert: {alert.eventId}")
-    
-    return JSONResponse(
-        status_code=202,
-        content={
-            "message": "Event received for processing",
-            "device_id": event.device_id,
-            "status": result.status.value,
-            "alerts_count": len(result.alerts)
-        }
-    )
-
-
-# ============================================================
-# API Endpoints - CẶP 02: B4 (AI Vision) → B6 (Provider)
-# B4 gửi kết quả phân tích ảnh sang B6
-# ============================================================
-@app.post("/policies/evaluate-detection", tags=["Event Evaluation"])
-async def evaluate_detection_from_ai(detection: AIDetectionResponse, token_data: dict = Depends(verify_token)):
-    """
-    AI Vision (B4) gửi kết quả phân tích ảnh sang B6
-    B6 dựa vào kết quả này để ra quyết định nghiệp vụ
-    """
-    logger.info(f"Received detection from AI Vision: {detection.detectionId} - {detection.label} - {detection.confidence}")
-    
-    alert_triggered = False
-    alert = None
-    
-    # ============================================================
-    # Kiểm tra kết quả detection và tạo alert nếu cần
-    # ============================================================
-    if detection.matched and detection.label == "person" and detection.confidence > 0.7:
-        alert_triggered = True
-        alert = AlertEvent(
-            eventId=uuid4(),
-            correlationId=uuid4(),
-            traceId=uuid4(),
-            severity="HIGH",
-            userId="SYSTEM",
-            gateId="UNKNOWN",
-            alertDetails={
-                "ruleId": "AI_DETECTION_RULE",
-                "message": f"Person detected with confidence {detection.confidence}",
-                "detectionId": str(detection.detectionId),
-                "label": detection.label,
-                "confidence": detection.confidence
-            },
-            timestamp=datetime.now()
-        )
-        logger.info(f"🔔 Alert created from AI detection: {alert.eventId}")
-    
-    # ============================================================
-    # Nếu có alert, gửi đến B7 và B5
-    # ============================================================
-    if alert_triggered and alert:
-        # 💾 Lưu alert
-        await alert_storage.save_alert(alert)
-        alerts_list.append(alert.dict())
         
-        # 🔔 Gửi alert sang Notification (B7)
-        await notification_client.send_alert(alert)
-        logger.info(f"🔔 Alert sent to B7 from AI detection: {alert.eventId}")
+        return JSONResponse(status_code=200, content={"status": "received"})
         
-        # 📊 Gửi decision sang Analytics (B5)
-        await analytics_client.send_decision(
-            correlation_id=str(detection.detectionId),
-            decision="AI_DETECTION",
-            reason=f"Person detected with confidence {detection.confidence}",
-            latency_ms=0,
-            quota_before=0,
-            quota_after=0,
-            rules_triggered=["AI_DETECTION_RULE"]
-        )
-        logger.info(f"📊 Decision sent to B5 (Analytics) from AI detection: {detection.detectionId}")
-    
-    return JSONResponse(status_code=200, content={"status": "received"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"evaluate_detection_from_ai error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============================================================
-# API Endpoints - CẶP 02b: CAMERA EVENT (B2 → B6)
-# B2 gửi sự kiện camera sang B6
+# API Endpoint - B2: CAMERA STREAM → B6
 # ============================================================
 @app.post("/policies/evaluate-camera-event", response_model=CameraEventResponse, tags=["Camera Integration"])
 async def evaluate_camera_event(
-    event: CameraEvent,
+    request: Request,
     token_data: dict = Depends(verify_token)
 ):
     """
     Camera Stream (B2) gửi sự kiện camera sang B6
-    B6 đánh giá và ra quyết định có cảnh báo hay không
     """
-    logger.info(f"Received camera event from B2: camera={event.camera_id}, event_type={event.event_type}, motion={event.motion_detected}")
-    
-    # 1. Đánh giá sự kiện
-    result = await camera_evaluator.evaluate(event)
-    
-    # 2. Nếu có alert, xử lý
-    if result["alert_triggered"] and result["alerts"]:
-        for alert in result["alerts"]:
-            # 💾 Lưu alert vào database và danh sách
-            await alert_storage.save_alert(alert)
-            alerts_list.append(alert.dict())
-            
-            # 🔔 Gửi alert sang Notification (B7)
-            await notification_client.send_alert(alert)
-            logger.info(f"🔔 Camera alert sent to B7: {alert.eventId} - {alert.severity}")
-            
-            # 📊 Gửi decision sang Analytics (B5)
-            await analytics_client.send_decision(
-                correlation_id=str(event.correlationId),
-                decision=alert.severity,
-                reason=f"Camera event: {result['message']}",
-                latency_ms=0,
-                quota_before=0,
-                quota_after=0,
-                rules_triggered=[result["rule_id"]]
-            )
-            logger.info(f"📊 Camera decision sent to B5: {alert.eventId}")
-    
-    # 3. Trả response cho B2
-    return CameraEventResponse(
-        status="processed",
-        alert_triggered=result["alert_triggered"],
-        message=result["message"] or "Event processed successfully",
-        correlation_id=event.correlationId
-    )
+    try:
+        # Lấy body từ request state
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
+        else:
+            body = await request.json()
+        
+        # Tạo CameraEvent từ dict
+        event = CameraEvent(**body)
+        
+        logger.info(f"Camera event: camera={event.camera_id}, event_type={event.event_type}")
+        
+        result = await camera_evaluator.evaluate(event)
+        
+        if result["alert_triggered"] and result["alerts"]:
+            for alert in result["alerts"]:
+                await alert_storage.save_alert(alert)
+                alerts_list.append(alert.dict())
+                await notification_client.send_alert(alert)
+                await analytics_client.send_decision(
+                    correlation_id=str(event.correlationId),
+                    decision=alert.severity,
+                    reason=f"Camera event: {result['message']}",
+                    latency_ms=0,
+                    quota_before=0,
+                    quota_after=0,
+                    rules_triggered=[result["rule_id"]]
+                )
+        
+        return CameraEventResponse(
+            status="processed",
+            alert_triggered=result["alert_triggered"],
+            message=result["message"] or "Event processed successfully",
+            correlation_id=event.correlationId
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"evaluate_camera_event error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============================================================
-# API Endpoints - CẶP 08: B6 → ANALYTICS (Provider - B5 gọi B6)
+# API Endpoint - B5: ANALYTICS → B6
 # ============================================================
 @app.get("/alerts", tags=["Analytics"])
 async def get_alerts(
@@ -926,20 +732,31 @@ async def get_alerts(
 
 
 # ============================================================
-# API Endpoints - B6 → AI VISION (Consumer - B6 gọi B4)
+# API Endpoint - B6 → AI VISION (Consumer)
 # ============================================================
 @app.post("/evaluate-detection", response_model=AIDetectionResponse, tags=["Event Evaluation"])
-async def evaluate_detection(request: AIDetectionRequest, token_data: dict = Depends(verify_token)):
+async def evaluate_detection(
+    request: Request,
+    token_data: dict = Depends(verify_token)
+):
     """
     B6 gọi AI Vision (B4) để phân tích ảnh
     """
     try:
-        result = await ai_client.detect(request)
+        # Lấy body từ request state
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
+        else:
+            body = await request.json()
+        
+        ai_request = AIDetectionRequest(**body)
+        
+        result = await ai_client.detect(ai_request)
         return result
     except Exception as e:
         logger.error(f"AI Vision error: {e}")
         return AIDetectionResponse(
-            detectionId=request.detectionId or uuid4(),
+            detectionId=uuid4(),
             matched=False,
             label="unknown",
             confidence=0.0,
@@ -950,7 +767,7 @@ async def evaluate_detection(request: AIDetectionRequest, token_data: dict = Dep
 
 
 # ============================================================
-# API Endpoints - B6 → ACCESS GATE (Consumer)
+# API Endpoint - B6 → ACCESS GATE (Consumer)
 # ============================================================
 @app.get("/internal/access-logs", tags=["Access Control"])
 async def get_access_logs(
@@ -964,69 +781,160 @@ async def get_access_logs(
 
 
 @app.get("/internal/gates/{gateId}/status", tags=["Access Control"])
-async def get_gate_status(gateId: str, token_data: dict = Depends(verify_token)):
+async def get_gate_status(
+    gateId: str,
+    token_data: dict = Depends(verify_token)
+):
     """B6 gọi Access Gate (B3) để lấy status"""
     return await access_gate_client.get_gate_status(gateId)
 
 # ============================================================
-# API Endpoints - TEST ALERT (B6 → B7)
+# API Endpoints - TEST: B6 → B5 & B6 → B7
 # ============================================================
+
+@app.post("/internal/send-test-decision", tags=["System Admin"])
+async def send_test_decision(
+    request: Request,
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Test endpoint để gửi decision trực tiếp đến B5 (Analytics)
+    Dùng để kiểm tra kết nối đến Analytics Service
+    """
+    try:
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
+        else:
+            body = await request.json()
+        
+        correlation_id = body.get("correlationId", str(uuid4()))
+        decision = body.get("decision", "ALLOW")
+        reason = body.get("reason", "TEST")
+        
+        sent = await analytics_client.send_decision(
+            correlation_id=correlation_id,
+            decision=decision,
+            reason=reason,
+            latency_ms=10,
+            quota_before=5,
+            quota_after=4,
+            rules_triggered=["TEST_RULE"]
+        )
+        
+        return JSONResponse(
+            status_code=200 if sent else 202,
+            content={
+                "status": "sent" if sent else "queued",
+                "correlationId": correlation_id,
+                "decision": decision,
+                "mode": "real" if sent else "fallback",
+                "message": "Decision sent successfully" if sent else "Decision queued (fallback mode)"
+            }
+        )
+    except Exception as e:
+        logger.error(f"send_test_decision error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/internal/send-test-alert", tags=["System Admin"])
 async def send_test_alert(
     request: Request,
     token_data: dict = Depends(verify_token)
 ):
     """
-    Test endpoint để gửi alert trực tiếp đến B7
+    Test endpoint để gửi alert trực tiếp đến B7 (Notification)
     Dùng để kiểm tra kết nối đến Notification Service
     """
     try:
-        body = await request.json()
-    except:
-        body = {}
-    
-    alert = AlertEvent(
-        eventId=uuid4(),
-        correlationId=uuid4(),
-        traceId=uuid4(),
-        severity=body.get("severity", "MEDIUM"),
-        userId="SYSTEM",
-        gateId="TEST",
-        alertDetails={
-            "ruleId": "TEST_RULE",
-            "message": body.get("message", "Test alert from B6 dashboard")
-        },
-        timestamp=datetime.now()
-    )
-    
-    # Gửi đến B7 (có fallback)
-    sent = await notification_client.send_alert(alert)
-    
-    # Lưu vào danh sách alerts
-    alerts_list.append(alert.dict())
-    
-    return JSONResponse(
-        status_code=200 if sent else 202,
-        content={
-            "status": "sent" if sent else "queued",
-            "alertId": str(alert.eventId),
-            "severity": alert.severity,
-            "mode": "real" if sent else "fallback",  # ← ĐÃ SỬA
-            "message": "Alert sent successfully" if sent else "Alert queued (fallback mode)"
-        }
-    )
+        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
+            body = request.state.body_parsed
+        else:
+            body = await request.json()
+        
+        alert = AlertEvent(
+            eventId=uuid4(),
+            correlationId=uuid4(),
+            traceId=uuid4(),
+            severity=body.get("severity", "MEDIUM"),
+            userId="SYSTEM",
+            gateId="TEST",
+            alertDetails={
+                "ruleId": "TEST_RULE",
+                "message": body.get("message", "Test alert from B6 dashboard")
+            },
+            timestamp=datetime.now()
+        )
+        
+        sent = await notification_client.send_alert(alert)
+        alerts_list.append(alert.dict())
+        
+        return JSONResponse(
+            status_code=200 if sent else 202,
+            content={
+                "status": "sent" if sent else "queued",
+                "alertId": str(alert.eventId),
+                "severity": alert.severity,
+                "mode": "real" if sent else "fallback",
+                "message": "Alert sent successfully" if sent else "Alert queued (fallback mode)"
+            }
+        )
+    except Exception as e:
+        logger.error(f"send_test_alert error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/internal/fallback-decisions", tags=["System Admin"])
 async def get_fallback_decisions(
     limit: int = 10,
     token_data: dict = Depends(verify_token)
 ):
-    """Lấy danh sách decisions đã lưu fallback (dùng để kiểm tra)"""
+    """
+    Lấy danh sách decisions đã lưu trong fallback storage
+    Dùng để kiểm tra dữ liệu đã được lưu khi B5 offline
+    """
     return await analytics_client.get_fallback_decisions(limit)
 
 # ============================================================
-# API Endpoints - SYSTEM ADMIN
+# API Endpoints - System Admin
 # ============================================================
+@app.get("/connection-status", tags=["System Admin"])
+async def get_connection_status(token_data: dict = Depends(verify_token)):
+    """Lấy trạng thái kết nối đến các B khác"""
+    return {
+        "b3": {
+            "status": connection_manager.get_status("b3").value,
+            "display": connection_manager.get_status_display()["b3"],
+            "auto_detect": connection_manager.auto_detect["b3"],
+            "retry_interval": connection_manager.retry_intervals["b3"]
+        },
+        "b4": {
+            "status": connection_manager.get_status("b4").value,
+            "display": connection_manager.get_status_display()["b4"],
+            "fallback_url": connection_manager.get_fallback_url("b4"),
+            "auto_detect": connection_manager.auto_detect["b4"],
+            "retry_interval": connection_manager.retry_intervals["b4"]
+        },
+        "b5": {
+            "status": connection_manager.get_status("b5").value,
+            "display": connection_manager.get_status_display()["b5"],
+            "auto_detect": connection_manager.auto_detect["b5"],
+            "retry_interval": connection_manager.retry_intervals["b5"]
+        },
+        "b7": {
+            "status": connection_manager.get_status("b7").value,
+            "display": connection_manager.get_status_display()["b7"],
+            "auto_detect": connection_manager.auto_detect["b7"],
+            "retry_interval": connection_manager.retry_intervals["b7"]
+        },
+        "rabbitmq": {
+            "status": connection_manager.get_status("b7_rabbitmq").value,
+            "display": connection_manager.get_status_display()["rabbitmq"],
+            "host": os.getenv("RABBITMQ_HOST", "not configured")
+        },
+        "retry_enabled": connection_manager.retry_enabled
+    }
+
+
 @app.get("/health", response_model=HealthResponse, tags=["System Admin"])
 async def health_check():
     db_disabled = os.getenv("DATABASE_DISABLED", "false").lower() == "true"

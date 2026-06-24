@@ -1,1747 +1,1542 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B6 Core | API Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>B6 Core · Decision Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #f8fafc; 
-            font-family: 'Inter', system-ui, sans-serif; 
-            color: #0f172a; 
-            min-height: 100vh; 
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            background-attachment: fixed;
+            color: #e0e0e0;
         }
-        .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .glass-input {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px 14px;
+            color: #e0e0e0;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .glass-select {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px 14px;
+            color: #e0e0e0;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s;
+            appearance: none;
+        }
+        .glass-select:focus { outline: none; border-color: rgba(99, 102, 241, 0.5); }
+        .glass-select option { background: #1a1a2e; color: #e0e0e0; }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
 
         /* ===== NAVBAR ===== */
-        .nav-header { 
-            background: rgba(255,255,255,0.98); 
-            backdrop-filter: blur(20px); 
-            border-bottom: 1px solid #e2e8f0; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            background: rgba(15, 12, 41, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .nav-container { 
-            max-width: 1600px; 
-            margin: 0 auto; 
-            padding: 0 24px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            height: 68px; 
+        .navbar-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .logo-area { display: flex; align-items: center; gap: 12px; }
-        .logo-icon { 
-            background: linear-gradient(135deg, #ea580c, #f97316); 
-            width: 36px; height: 36px; 
-            border-radius: 10px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            font-weight: 700; 
-            font-size: 16px; 
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+            text-decoration: none;
         }
-        .logo-text { 
-            font-weight: 700; 
-            font-size: 18px; 
-            background: linear-gradient(135deg, #0f172a, #ea580c); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
+        .navbar-brand .logo-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            display: inline-block;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
         }
-        .nav-tabs { 
-            display: flex; 
-            gap: 4px; 
-            background: #f1f5f9; 
-            padding: 4px; 
-            border-radius: 12px; 
+        .navbar-brand .badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.15);
         }
-        .tab { 
-            font-size: 13px; 
-            font-weight: 500; 
-            color: #64748b; 
-            cursor: pointer; 
-            padding: 8px 18px; 
-            border-radius: 8px; 
-            transition: all 0.25s ease; 
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .tabs .tab {
+            padding: 6px 20px;
+            border-radius: 8px;
             border: none;
             background: transparent;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
         }
-        .tab:hover { color: #1e293b; background: rgba(255,255,255,0.5); }
-        .tab.active { 
-            background: white; 
-            color: #ea580c; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08); 
-        }
-        .flex-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .token-input { 
-            background: #f1f5f9; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            padding: 6px 14px; 
-            font-size: 12px; 
-            font-family: 'Inter', monospace; 
-            width: 160px; 
-            transition: all 0.2s;
-        }
-        .token-input:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.12); }
-        .env-selector { 
-            background: #f1f5f9; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            padding: 6px 14px; 
-            font-size: 12px; 
-            font-weight: 500; 
-            cursor: pointer; 
-            transition: all 0.2s;
-        }
-        .env-selector:focus { outline: none; border-color: #f97316; }
-        .ip-input { 
-            background: #f1f5f9; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            padding: 6px 14px; 
-            font-size: 12px; 
-            font-family: 'Inter', monospace; 
-            width: 140px; 
-        }
-        .ip-input:focus { outline: none; border-color: #f97316; }
-
-        /* ===== MAIN ===== */
-        .main-content { max-width: 1600px; margin: 0 auto; padding: 24px; width: 100%; flex: 1; }
-        .two-columns { display: flex; gap: 24px; flex-wrap: wrap; }
-        .left-panel { flex: 1.2; min-width: 320px; }
-        .right-panel { flex: 1; min-width: 360px; }
-
-        /* ===== CARDS ===== */
-        .card { 
-            background: white; 
-            border-radius: 16px; 
-            border: 1px solid #e2e8f0; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04); 
-            overflow: hidden; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-bottom: 20px;
-        }
-        .card:hover { 
-            box-shadow: 0 8px 25px -8px rgba(0,0,0,0.08); 
-            transform: translateY(-2px); 
-        }
-        .card-header { 
-            padding: 16px 20px 12px 20px; 
-            border-bottom: 1px solid #f1f5f9; 
-            background: #fafbfc; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .card-header h3 { font-size: 15px; font-weight: 600; color: #0f172a; }
-        .card-header .badge { 
-            font-size: 11px; 
-            font-weight: 600; 
-            padding: 3px 12px; 
-            border-radius: 20px; 
-            background: #f1f5f9; 
-            color: #64748b; 
-        }
-        .badge-provider { background: #dcfce7; color: #166534; }
-        .badge-consumer { background: #fef3c7; color: #92400e; }
-        .badge-real { background: #d1fae5; color: #065f46; }
-        .badge-fallback { background: #fef3c7; color: #92400e; }
-        .card-body { padding: 16px 20px 20px; }
-
-        /* ===== FORM ===== */
-        .field-group { margin-bottom: 14px; }
-        .field-group label { 
-            font-size: 12px; 
-            font-weight: 600; 
-            color: #475569; 
-            display: block; 
-            margin-bottom: 4px; 
-        }
-        .field-group input, .field-group select { 
-            width: 100%; 
-            padding: 10px 14px; 
-            border-radius: 8px; 
-            border: 1.5px solid #e2e8f0; 
-            background: #ffffff; 
-            font-size: 13px; 
-            font-family: 'Inter', monospace; 
-            transition: all 0.2s;
-        }
-        .field-group input:focus, .field-group select:focus { 
-            outline: none; 
-            border-color: #f97316; 
-            box-shadow: 0 0 0 3px rgba(249,115,22,0.1); 
-        }
-        .field-group input[readonly] { background: #f8fafc; color: #64748b; }
-        .field-group .sensor-status-badge { 
-            display: inline-block; 
-            padding: 2px 10px; 
-            border-radius: 12px; 
-            font-size: 10px; 
-            font-weight: 700; 
-            margin-left: 8px;
-        }
-        .status-normal { background: #dcfce7; color: #166534; }
-        .status-warning { background: #fef3c7; color: #92400e; }
-        .status-danger { background: #fee2e2; color: #991b1b; }
-        .status-invalid { background: #f1f5f9; color: #475569; }
-        .status-error { background: #fef3c7; color: #92400e; }
-
-        /* ===== BUTTONS ===== */
-        .btn { 
-            background: linear-gradient(135deg, #ea580c, #f97316); 
-            border: none; 
-            border-radius: 8px; 
-            padding: 10px 20px; 
-            font-weight: 600; 
-            font-size: 13px; 
-            cursor: pointer; 
-            color: white; 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 8px; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        .btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .btn:hover::after { opacity: 1; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(234,88,12,0.3); }
-        .btn:active { transform: translateY(0); }
-        .btn-secondary { 
-            background: white; 
-            color: #1e293b; 
-            border: 1.5px solid #e2e8f0; 
-        }
-        .btn-secondary:hover { 
-            background: #f8fafc; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06); 
-        }
-        .btn-sm { padding: 6px 14px; font-size: 12px; }
-        .btn-purple { background: #8b5cf6 !important; }
-        .btn-purple:hover { background: #7c3aed !important; box-shadow: 0 8px 20px rgba(139,92,246,0.3) !important; }
-        .btn-pink { background: #ec4899 !important; }
-        .btn-pink:hover { background: #db2777 !important; box-shadow: 0 8px 20px rgba(236,72,153,0.3) !important; }
-        .btn-amber { background: #f59e0b !important; }
-        .btn-amber:hover { background: #d97706 !important; box-shadow: 0 8px 20px rgba(245,158,11,0.3) !important; }
-        .btn-green { background: #10b981 !important; }
-        .btn-green:hover { background: #059669 !important; box-shadow: 0 8px 20px rgba(16,185,129,0.3) !important; }
-        .btn-red { background: #ef4444 !important; }
-        .btn-red:hover { background: #dc2626 !important; box-shadow: 0 8px 20px rgba(239,68,68,0.3) !important; }
-        .btn-teal { background: #14b8a6 !important; }
-        .btn-teal:hover { background: #0d9488 !important; box-shadow: 0 8px 20px rgba(20,184,166,0.3) !important; }
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-
-        /* ===== RESULT CARD ===== */
-        .result-card { 
-            background: #fafbfc; 
-            border-radius: 12px; 
-            padding: 16px; 
-            margin-bottom: 12px; 
-            border-left: 4px solid #f97316; 
-            transition: all 0.3s ease;
-            animation: slideIn 0.3s ease;
-        }
-        .result-card.real { border-left-color: #10b981; background: #f0fdf4; }
-        .result-card.fallback { border-left-color: #f97316; background: #fff7ed; }
-        .result-card .badge-mode { 
-            display: inline-block; 
-            padding: 2px 12px; 
-            border-radius: 20px; 
-            font-size: 10px; 
-            font-weight: 700; 
-            margin-left: 8px; 
-        }
-        .badge-real { background: #d1fae5; color: #065f46; }
-        .badge-fallback { background: #fef3c7; color: #92400e; }
-        .result-status { 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 6px; 
-            padding: 4px 14px; 
-            border-radius: 20px; 
-            font-size: 12px; 
-            font-weight: 600; 
-            margin-bottom: 12px; 
-        }
-        .status-success { background: #dcfce7; color: #166534; }
-        .status-error { background: #fee2e2; color: #991b1b; }
-        .status-warning { background: #fef3c7; color: #92400e; }
-        .result-card pre { 
-            font-size: 12px; 
-            margin: 0; 
-            overflow-x: auto; 
-            white-space: pre-wrap; 
-            word-break: break-all; 
-            max-height: 250px; 
-            overflow-y: auto;
-            background: rgba(0,0,0,0.03);
-            padding: 12px;
-            border-radius: 8px;
+        .tabs .tab:hover { color: rgba(255, 255, 255, 0.7); background: rgba(255,255,255,0.03); }
+        .tabs .tab.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.05);
         }
 
-        /* ===== HEALTH GRID ===== */
-        .health-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-        .health-item { 
-            background: #fafbfc; 
-            border-radius: 10px; 
-            padding: 10px 14px; 
-            flex: 1; 
-            min-width: 100px; 
-            border: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
-        }
-        .health-item:hover { border-color: #f97316; }
-        .health-led { 
-            display: inline-block; 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            margin-right: 6px; 
-        }
-        .led-green { background: #10b981; animation: pulse-green 2s infinite; }
-        .led-orange { background: #f97316; animation: pulse-orange 2s infinite; }
-        .led-red { background: #ef4444; animation: pulse-red 2s infinite; }
-        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 70% { box-shadow: 0 0 0 6px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
-        @keyframes pulse-orange { 0% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); } 70% { box-shadow: 0 0 0 6px rgba(249,115,22,0); } 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); } }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 70% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
-
-        .status-badge { 
-            display: inline-block; 
-            padding: 2px 8px; 
-            border-radius: 20px; 
-            font-size: 10px; 
-            font-weight: 600; 
-            margin-left: 6px; 
-        }
-        .status-real { background: #d1fae5; color: #065f46; }
-        .status-fallback { background: #fef3c7; color: #92400e; }
-        .status-offline { background: #fee2e2; color: #991b1b; }
-
-        /* ===== COMPARE BOXES ===== */
-        .response-boxes { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 16px; 
-            margin-top: 12px; 
-        }
-        .response-box { 
-            border-radius: 12px; 
-            padding: 16px; 
-            border: 2px solid #e2e8f0; 
-            min-height: 180px; 
-            transition: all 0.3s ease;
-            animation: fadeIn 0.4s ease;
-        }
-        .response-box.real-box { border-color: #10b981; background: #f0fdf4; }
-        .response-box.fallback-box { border-color: #f97316; background: #fff7ed; }
-        .response-box.hidden { display: none; }
-        .response-box h4 { 
-            font-size: 14px; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-        }
-        .response-box pre { 
-            font-size: 11px; 
-            margin: 0; 
-            overflow-x: auto; 
-            white-space: pre-wrap; 
-            word-break: break-all; 
-            max-height: 200px; 
-            overflow-y: auto;
-            background: rgba(0,0,0,0.03);
-            padding: 10px;
-            border-radius: 6px;
-        }
-        .response-box .empty-state { 
-            color: #94a3b8; 
-            font-size: 13px; 
-            text-align: center; 
-            padding: 20px 0; 
-        }
-
-        /* ===== LOG CONTAINER ===== */
-        .log-container { 
-            height: 120px; 
-            overflow-y: auto; 
-            background: #0f172a; 
-            color: #94a3b8; 
-            padding: 12px 16px; 
-            border-radius: 10px; 
-            font-family: 'JetBrains Mono', monospace; 
-            font-size: 11px; 
-            margin-top: 12px; 
-            line-height: 1.6;
-            scroll-behavior: smooth;
-        }
-        .log-container .log-real { color: #34d399; }
-        .log-container .log-fallback { color: #fb923c; }
-        .log-container .log-info { color: #60a5fa; }
-        .log-container .log-error { color: #f87171; }
-
-        /* ===== TRIGGER BADGE ===== */
-        .trigger-badge { 
-            display: inline-block; 
-            padding: 2px 10px; 
-            border-radius: 20px; 
-            font-size: 10px; 
-            font-weight: 600; 
-            background: #e0e7ff; 
-            color: #4f46e5; 
-            margin-left: 6px; 
-        }
-
-        /* ===== SECTION TITLE ===== */
-        .section-title { 
-            font-size: 14px; 
-            font-weight: 600; 
-            margin: 14px 0 10px; 
-            padding-bottom: 6px; 
-            border-bottom: 2px solid #f1f5f9; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             flex-wrap: wrap;
         }
-        .mode-indicator { 
-            display: inline-block; 
-            padding: 2px 10px; 
-            border-radius: 20px; 
-            font-size: 10px; 
-            font-weight: 700; 
+        .navbar-actions .status-dot {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
         }
-        .mode-real { background: #d1fae5; color: #065f46; }
-        .mode-fallback { background: #fef3c7; color: #92400e; }
-        .mode-offline { background: #fee2e2; color: #991b1b; }
+        .navbar-actions .status-dot .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-green { background: #34d399; box-shadow: 0 0 12px rgba(52, 211, 153, 0.3); }
+        .dot-red { background: #f87171; box-shadow: 0 0 12px rgba(248, 113, 113, 0.3); }
 
-        /* ===== ANIMATIONS ===== */
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        .loading-shimmer {
-            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 8px;
-            min-height: 40px;
-        }
+        .main { max-width: 100%; margin: 0; padding: 12px 16px; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 1024px) {
-            .response-boxes { grid-template-columns: 1fr; }
-            .two-columns { flex-direction: column; }
-            .nav-container { flex-wrap: wrap; height: auto; padding: 12px 16px; gap: 8px; }
-            .nav-tabs { width: 100%; justify-content: center; }
-            .flex-row { width: 100%; justify-content: center; }
-        }
-        @media (max-width: 640px) {
-            .btn-group { flex-direction: column; }
-            .btn { width: 100%; justify-content: center; }
-            .health-grid { flex-direction: column; }
-            .response-boxes { grid-template-columns: 1fr; }
-            .main-content { padding: 12px; }
-            .card-body { padding: 12px 16px 16px; }
-            .token-input, .ip-input { width: 100%; }
-        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
 
-        /* ===== CURL HINT ===== */
-        .curl-hint { 
-            background: #f8fafc; 
-            border-radius: 10px; 
-            padding: 10px 14px; 
-            font-size: 11px; 
-            font-family: 'JetBrains Mono', monospace; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-top: 10px; 
-            border: 1px solid #e2e8f0; 
-            overflow-x: auto;
+        .card { padding: 0; overflow: hidden; }
+        .card-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
         }
-        .curl-hint code { white-space: pre-wrap; word-break: break-all; }
+        .card-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .card-header .badge {
+            font-size: 10px;
+            font-weight: 500;
+            padding: 2px 12px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+        .card-body { padding: 10px 14px; }
 
-        /* ===== SENSOR TEST GRID ===== */
-        .sensor-test-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .status-badge.online { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.12); }
+        .status-badge.online .dot { background: #34d399; }
+        .status-badge.fallback { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.12); }
+        .status-badge.fallback .dot { background: #fbbf24; }
+        .status-badge.real { background: rgba(99, 102, 241, 0.12); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.12); }
+        .status-badge.real .dot { background: #818cf8; }
+
+        .status-row {
+            display: flex;
             gap: 8px;
-            margin-top: 8px;
+            flex-wrap: wrap;
+            padding: 8px 0 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            margin-bottom: 14px;
         }
-        .sensor-test-btn {
-            padding: 8px 12px;
+        .status-row .item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.02);
             border-radius: 8px;
-            border: 1.5px solid #e2e8f0;
-            background: white;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+        .status-row .item .label { font-weight: 500; color: rgba(255,255,255,0.5); }
+
+        .field-group { margin-bottom: 8px; }
+        .field-group label {
+            display: block;
             font-size: 11px;
             font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
+            color: rgba(255,255,255,0.3);
+            margin-bottom: 3px;
+            letter-spacing: 0.3px;
         }
-        .sensor-test-btn:hover {
-            border-color: #f97316;
-            background: #fff7ed;
-            transform: translateY(-1px);
-        }
-        .sensor-test-btn .status-label {
-            display: block;
-            font-size: 10px;
-            font-weight: 600;
-            margin-top: 2px;
-        }
-        .sensor-test-btn .status-normal .status-label { color: #166534; }
-        .sensor-test-btn .status-warning .status-label { color: #92400e; }
-        .sensor-test-btn .status-danger .status-label { color: #991b1b; }
-        .sensor-test-btn .status-invalid .status-label { color: #475569; }
-        .sensor-test-btn .status-error .status-label { color: #92400e; }
 
-        /* ===== CAMERA TEST GRID ===== */
-        .camera-test-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
-            margin-top: 8px;
-        }
-        .camera-test-btn {
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1.5px solid #e2e8f0;
-            background: white;
-            font-size: 10px;
+        .btn {
+            padding: 6px 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 12px;
             font-weight: 500;
             cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #818cf8);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .btn-sm { padding: 4px 10px; font-size: 10px; }
+        .btn-xs { padding: 2px 8px; font-size: 9px; }
+        .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
+        .w-full { width: 100%; }
+        .mt-6 { margin-top: 6px; }
+        .mb-6 { margin-bottom: 6px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .sensor-btn {
+            padding: 4px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+            font-size: 10px;
+            cursor: pointer;
             transition: all 0.2s;
             text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
         }
-        .camera-test-btn:hover {
-            border-color: #f97316;
-            background: #fff7ed;
+        .sensor-btn:hover {
+            border-color: rgba(99, 102, 241, 0.25);
+            background: rgba(99, 102, 241, 0.06);
             transform: translateY(-1px);
         }
-        .camera-test-btn .status-label {
-            display: block;
+        .sensor-btn .sub { font-size: 8px; color: rgba(255,255,255,0.2); display: block; font-weight: 400; }
+
+        .response-box {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid rgba(255,255,255,0.03);
+            margin-top: 4px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .resp-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        .resp-grid .item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.04);
+            min-height: 70px;
+        }
+        .resp-grid .item .label {
             font-size: 9px;
             font-weight: 600;
-            margin-top: 2px;
+            color: rgba(255,255,255,0.25);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
         }
-        /* ===== REQUEST LOGS ===== */
-.request-log-item {
-    background: white;
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin-bottom: 8px;
-    border-left: 4px solid #e2e8f0;
-    transition: all 0.3s ease;
-    animation: slideIn 0.3s ease;
-}
-.request-log-item:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-.request-log-item .log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-.request-log-item .log-service {
-    font-weight: 600;
-    font-size: 13px;
-}
-.request-log-item .log-status {
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-}
-.log-status-200 { background: #dcfce7; color: #166534; }
-.log-status-202 { background: #dbeafe; color: #1e40af; }
-.log-status-400 { background: #fef3c7; color: #92400e; }
-.log-status-401 { background: #fef3c7; color: #92400e; }
-.log-status-403 { background: #fee2e2; color: #991b1b; }
-.log-status-404 { background: #fee2e2; color: #991b1b; }
-.log-status-429 { background: #fef3c7; color: #92400e; }
-.log-status-500 { background: #fee2e2; color: #991b1b; }
-.request-log-item .log-body {
-    font-size: 12px;
-    color: #475569;
-    margin-top: 6px;
-}
-.request-log-item .log-body pre {
-    background: #f8fafc;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    overflow-x: auto;
-    max-height: 150px;
-}
-.request-log-item .log-explanation {
-    background: #f1f5f9;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    margin-top: 6px;
-}
-.log-explanation .highlight {
-    color: #ea580c;
-    font-weight: 600;
-}
-.log-time {
-    font-size: 11px;
-    color: #94a3b8;
-}
-.log-filter {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-}
-.log-filter select, .log-filter input {
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    font-size: 12px;
-    background: white;
-}
+        .resp-grid .item .content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            max-height: 80px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: rgba(255,255,255,0.4);
+            line-height: 1.5;
+        }
+        @media (max-width: 768px) { .resp-grid { grid-template-columns: 1fr; } }
+
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        @media (max-width: 600px) { .form-grid-3 { grid-template-columns: 1fr 1fr; } .form-grid-2 { grid-template-columns: 1fr; } }
+
+        .curl-box {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: rgba(255,255,255,0.25);
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid rgba(255,255,255,0.03);
+            margin-top: 4px;
+            max-height: 45px;
+        }
+        .text-muted { color: rgba(255,255,255,0.2); font-size: 11px; }
+        .border-top { border-top: 1px solid rgba(255,255,255,0.03); padding-top: 8px; margin-top: 8px; }
+
+        .b-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            margin-right: 4px;
+        }
+        .b-badge.b1 { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+        .b-badge.b2 { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+        .b-badge.b3 { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+        .b-badge.b4 { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+        .b-badge.b5 { background: rgba(244, 114, 182, 0.15); color: #f472b6; }
+        .b-badge.b6 { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .b-badge.b7 { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
+        .b-badge.health { background: rgba(52, 211, 153, 0.1); color: #34d399; }
+
+        .ip-badge {
+            display: inline-block;
+            padding: 1px 7px;
+            border-radius: 3px;
+            font-size: 9px;
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.3);
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        /* ============================================================ */
+        /* REALTIME LAYOUT - TĂNG KHOẢNG CÁCH VÀ KÍCH THƯỚC CHỮ */
+        /* ============================================================ */
+        .realtime-container {
+            display: flex;
+            gap: 16px;
+            min-height: 550px;
+            max-height: 72vh;
+        }
+
+        .realtime-left {
+            flex: 0 0 36%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .realtime-left .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            flex: 1;
+        }
+        .realtime-left .row .b-card {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .realtime-left .row .b-card .b-header {
+            padding: 5px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+        }
+        .realtime-left .row .b-card .b-header .b-count {
+            font-size: 9px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.15);
+        }
+        .realtime-left .row .b-card .b-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.35);
+            min-height: 80px;
+            max-height: 180px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .realtime-left .row .b-card .b-body .entry {
+            border-bottom: 1px solid rgba(255,255,255,0.015);
+            padding: 3px 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .realtime-left .row .b-card .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .status-ok { color: #34d399; }
+        .realtime-left .row .b-card .b-body .entry .status-err { color: #f87171; }
+        .realtime-left .row .b-card .b-body .entry .path { color: rgba(255,255,255,0.12); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .method { color: rgba(255,255,255,0.15); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .resp-detail { color: rgba(52, 211, 153, 0.3); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .empty { color: rgba(255,255,255,0.08); font-size: 9px; }
+
+        .realtime-center {
+            flex: 0 0 28%;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+            overflow: hidden;
+            min-height: 0;
+        }
+        .realtime-center .b-header {
+            padding: 5px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+        }
+        .realtime-center .b-header .b-count {
+            font-size: 9px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.15);
+        }
+        .realtime-center .b-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.35);
+            min-height: 120px;
+            max-height: 400px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .realtime-center .b-body .entry {
+            border-bottom: 1px solid rgba(255,255,255,0.015);
+            padding: 4px 0;
+        }
+        .realtime-center .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
+        .realtime-center .b-body .entry .b6-from { color: #818cf8; font-weight: 500; }
+        .realtime-center .b-body .entry .b6-ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
+        .realtime-center .b-body .entry .b6-status-ok { color: #34d399; }
+        .realtime-center .b-body .entry .b6-status-err { color: #f87171; }
+        .realtime-center .b-body .entry .b6-detail { color: rgba(255,255,255,0.2); }
+        .realtime-center .b-body .entry .b6-send { color: rgba(251, 191, 36, 0.4); }
+        .realtime-center .b-body .entry .b6-response { color: rgba(52, 211, 153, 0.3); }
+        .realtime-center .b-body .empty { color: rgba(255,255,255,0.08); font-size: 9px; }
+
+        .realtime-right {
+            flex: 0 0 36%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .realtime-right .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            flex: 1;
+        }
+        .realtime-right .row .b-card {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+        .realtime-right .row .b-card .b-header {
+            padding: 5px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+        }
+        .realtime-right .row .b-card .b-header .b-count {
+            font-size: 9px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.15);
+        }
+        .realtime-right .row .b-card .b-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.35);
+            min-height: 80px;
+            max-height: 180px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .realtime-right .row .b-card .b-body .entry {
+            border-bottom: 1px solid rgba(255,255,255,0.015);
+            padding: 3px 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .realtime-right .row .b-card .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
+        .realtime-right .row .b-card .b-body .entry .ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
+        .realtime-right .row .b-card .b-body .entry .status-ok { color: #34d399; }
+        .realtime-right .row .b-card .b-body .entry .status-err { color: #f87171; }
+        .realtime-right .row .b-card .b-body .entry .b-detail { color: rgba(255,255,255,0.2); }
+        .realtime-right .row .b-card .b-body .entry .b-request { color: rgba(251, 191, 36, 0.3); font-size: 8px; }
+        .realtime-right .row .b-card .b-body .entry .b-response { color: rgba(52, 211, 153, 0.3); }
+        .realtime-right .row .b-card .b-body .empty { color: rgba(255,255,255,0.08); font-size: 9px; }
+
+        .realtime-bottom {
+            margin-top: 8px;
+            flex-shrink: 0;
+        }
+        .realtime-bottom .b-card {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: 85px;
+        }
+        .realtime-bottom .b-card .b-header {
+            padding: 3px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            flex-shrink: 0;
+        }
+        .realtime-bottom .b-card .b-body {
+            overflow-y: auto;
+            padding: 4px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.3);
+            max-height: 55px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            align-items: center;
+        }
+        .realtime-bottom .b-card .b-body .health-ip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(52, 211, 153, 0.06);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(52, 211, 153, 0.08);
+            font-size: 10px;
+        }
+        .realtime-bottom .b-card .b-body .health-ip .ip { color: rgba(255,255,255,0.4); }
+        .realtime-bottom .b-card .b-body .health-ip .time { color: rgba(255,255,255,0.15); font-size: 8px; }
+        .realtime-bottom .b-card .b-body .health-ip .status { color: #34d399; }
+
+        @media (max-width: 1024px) {
+            .realtime-container { flex-direction: column; max-height: none; min-height: auto; }
+            .realtime-left { flex: 1; }
+            .realtime-left .row { grid-template-columns: 1fr 1fr; }
+            .realtime-center { flex: 1; min-height: 200px; }
+            .realtime-center .b-body { max-height: 200px; }
+            .realtime-right { flex: 1; }
+            .realtime-right .row { grid-template-columns: 1fr 1fr; }
+            .realtime-bottom .b-card { max-height: 65px; }
+            .realtime-bottom .b-card .b-body { max-height: 40px; }
+        }
+        @media (max-width: 600px) {
+            .realtime-left .row { grid-template-columns: 1fr; }
+            .realtime-right .row { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .navbar { height: auto; padding: 8px 12px; }
+            .navbar-inner { flex-direction: column; align-items: stretch; gap: 6px; }
+            .tabs { width: 100%; justify-content: center; }
+            .tabs .tab { flex: 1; text-align: center; padding: 5px 10px; font-size: 10px; }
+            .navbar-actions { width: 100%; justify-content: center; }
+            .main { padding: 6px; }
+            .card-body { padding: 8px 10px; }
+        }
     </style>
 </head>
 <body>
-<div class="app">
-    <!-- ===== NAVBAR ===== -->
-    <div class="nav-header">
-        <div class="nav-container">
-            <div class="logo-area">
-                <div class="logo-icon">B6</div>
-                <span class="logo-text">Core Business · Decision Engine</span>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+    <div class="navbar-inner">
+        <a class="navbar-brand" href="#">
+            <span class="logo-dot"></span>
+            B6 Core
+            <span class="badge">v1.5</span>
+        </a>
+        <div class="tabs">
+            <button class="tab active" data-tab="provider">📤 Provider</button>
+            <button class="tab" data-tab="consumer">📥 Consumer</button>
+            <button class="tab" data-tab="realtime">📡 Realtime</button>
+        </div>
+        <div class="navbar-actions">
+            <div class="status-dot">
+                <span class="dot dot-green" id="statusDot"></span>
+                <span id="statusText">Online</span>
             </div>
-            <div class="nav-tabs">
-                <button class="tab active" data-tab="provider">📤 Provider</button>
-                <button class="tab" data-tab="consumer">📥 Consumer</button>
-                <button class="tab" data-tab="health">💚 Health</button>
+            <input type="text" id="apiBaseInput" class="glass-input" style="width:200px; font-size:11px; padding:5px 12px;" placeholder="http://localhost:8000" value="http://localhost:8000">
+        </div>
+    </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: PROVIDER -->
+    <!-- ============================================================ -->
+    <div id="providerTab" class="tab-content active">
+        <div class="grid-2">
+            <div class="glass card">
+                <div class="card-header"><h3>⚡ Provider Tests</h3><span class="badge">Các B → B6</span></div>
+                <div class="card-body">
+                    <!-- B1 -->
+                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
+                        <div class="flex-between" style="margin-bottom:4px;">
+                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b1">B1</span> IoT Sensor</span>
+                            <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="sensor-grid">
+                            <button class="sensor-btn" data-device="sensor_01" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">🟢 Normal<span class="sub">25°C</span></button>
+                            <button class="sensor-btn" data-device="sensor_02" data-temp="37.5" data-humidity="45.0" data-co2="600" data-smoke="0.02" data-battery="77" data-motion="true">🟡 Warning<span class="sub">37.5°C</span></button>
+                            <button class="sensor-btn" data-device="sensor_03" data-temp="28.0" data-humidity="55.0" data-co2="1900" data-smoke="0.01" data-battery="77" data-motion="false">🔴 CO₂<span class="sub">1900ppm</span></button>
+                            <button class="sensor-btn" data-device="sensor_04" data-temp="45.0" data-humidity="30.0" data-co2="800" data-smoke="1.5" data-battery="77" data-motion="false">🔥 Fire<span class="sub">Smoke 1.5</span></button>
+                            <button class="sensor-btn" data-device="sensor_05" data-temp="30.0" data-humidity="80.0" data-co2="450" data-smoke="0.01" data-battery="15" data-motion="false">🔋 Battery<span class="sub">15%</span></button>
+                            <button class="sensor-btn" data-device="sensor_06" data-temp="22.0" data-humidity="50.0" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="true" data-time="23:30">🌙 Motion<span class="sub">23:30</span></button>
+                            <button class="sensor-btn" data-device="invalid-device" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">❌ Invalid<span class="sub">Device</span></button>
+                            <button class="sensor-btn" data-device="sensor_01" data-temp="null" data-humidity="null" data-co2="null" data-smoke="null" data-battery="null" data-motion="false">⚠️ Error<span class="sub">No Data</span></button>
+                        </div>
+                        <div class="form-grid-3">
+                            <div class="field-group" style="margin-bottom:0;"><label>Device</label><input type="text" id="sensorDeviceId" class="glass-input" value="sensor_01"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="sensorLocation" class="glass-input" value="LAB_01"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Motion</label><select id="sensorMotion" class="glass-select"><option value="false">false</option><option value="true">true</option></select></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Temp °C</label><input type="number" id="sensorTemp" class="glass-input" value="25.5" step="0.1"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Humidity %</label><input type="number" id="sensorHumidity" class="glass-input" value="60.2" step="0.1"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>CO₂ ppm</label><input type="number" id="sensorCo2" class="glass-input" value="450"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Smoke ppm</label><input type="number" id="sensorSmoke" class="glass-input" value="0.01" step="0.01"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Battery %</label><input type="number" id="sensorBattery" class="glass-input" value="77"></div>
+                        </div>
+                        <button id="sendSensorBtn" class="btn btn-primary w-full mt-6">🚀 POST /internal/evaluate-sensor</button>
+                    </div>
+
+                    <!-- B2 -->
+                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
+                        <div class="flex-between" style="margin-bottom:4px;">
+                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b2">B2</span> Camera Stream</span>
+                            <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="btn-group mb-6">
+                            <button id="camMotionBtn" class="btn btn-secondary btn-sm">🟢 Normal</button>
+                            <button id="camSensitiveBtn" class="btn btn-danger btn-sm">🔴 Sensitive</button>
+                            <button id="camOfflineBtn" class="btn btn-warning btn-sm">🔶 Offline</button>
+                            <button id="camObstructBtn" class="btn btn-warning btn-sm">🔶 Obstruction</button>
+                            <button id="camNightBtn" class="btn btn-info btn-sm">🌙 Night</button>
+                        </div>
+                        <div class="form-grid-3">
+                            <div class="field-group" style="margin-bottom:0;"><label>Camera ID</label><input type="text" id="cameraId" class="glass-input" value="cam-lobby-01"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Event Type</label><select id="cameraEventType" class="glass-select"><option value="motion_detected">motion_detected</option><option value="camera_offline">camera_offline</option><option value="obstruction">obstruction</option></select></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="cameraLocation" class="glass-input" value="LOBBY"></div>
+                        </div>
+                        <button id="sendCameraBtn" class="btn btn-primary w-full mt-6">🚀 POST /policies/evaluate-camera-event</button>
+                    </div>
+
+                    <!-- B3 -->
+                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
+                        <div class="flex-between" style="margin-bottom:4px;">
+                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b3">B3</span> Access Gate</span>
+                            <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="form-grid-3">
+                            <div class="field-group" style="margin-bottom:0;"><label>Card ID</label><input type="text" id="cardId" class="glass-input" value="STU001"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Gate ID</label><input type="text" id="gateId" class="glass-input" value="LAB_01"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Direction</label><select id="direction" class="glass-select"><option>IN</option><option>OUT</option></select></div>
+                        </div>
+                        <div class="btn-group mt-6">
+                            <button id="sendAccessBtn" class="btn btn-primary">🚀 POST /access/check</button>
+                            <button id="sendAccessStaffBtn" class="btn btn-info btn-sm">👤 Staff</button>
+                        </div>
+                    </div>
+
+                    <!-- B4 -->
+                    <div class="glass" style="padding:8px 12px; border:1px solid rgba(255,255,255,0.04);">
+                        <div class="flex-between" style="margin-bottom:4px;">
+                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b4">B4</span> AI Vision</span>
+                            <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="field-group" style="margin-bottom:0;"><label>Label</label><input type="text" id="aiLabel" class="glass-input" value="person"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Confidence</label><input type="number" id="aiConfidence" class="glass-input" value="0.95" step="0.01" min="0" max="1"></div>
+                        </div>
+                        <div class="btn-group mt-6">
+                            <button id="sendAiBtn" class="btn btn-primary">🚀 POST /policies/evaluate-detection</button>
+                            <button id="sendAiLowBtn" class="btn btn-secondary btn-sm">🔽 Low Conf</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="flex-row">
-                <input type="text" id="authToken" class="token-input" value="mock-token-123" placeholder="Bearer Token">
-                <select id="envSelect" class="env-selector">
-                    <option value="http://localhost:8000">🏠 Local</option>
-                    <option value="http://b6-core-api:8000">🐳 Docker</option>
-                    <option value="custom">🌐 Custom</option>
-                </select>
-                <div id="customIpContainer" style="display: none;">
-                    <input type="text" id="customIp" class="ip-input" placeholder="192.168.1.100:8000">
-                    <button id="applyIpBtn" class="btn btn-secondary btn-sm">Apply</button>
+
+            <div class="glass card">
+                <div class="card-header"><h3>📬 Response</h3><span id="respTime" class="text-muted">Ready</span></div>
+                <div class="card-body">
+                    <div id="responseContainer" style="min-height:80px; color:rgba(255,255,255,0.2); font-size:13px;">▸ Select a test to send...</div>
+                    <div class="border-top">
+                        <div style="color:rgba(255,255,255,0.2); font-weight:500; margin-bottom:3px; font-size:10px;">📋 cURL</div>
+                        <div id="curlPreview" class="curl-box"># cURL will appear here</div>
+                        <button id="copyBtn" class="btn btn-secondary btn-xs mt-6">📋 Copy</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== MAIN CONTENT ===== -->
-    <div class="main-content">
+    <!-- ============================================================ -->
+    <!-- TAB 2: CONSUMER -->
+    <!-- ============================================================ -->
+    <div id="consumerTab" class="tab-content">
+        <div class="status-row">
+            <div class="item"><span class="label">B6</span> <span id="consumerStatusB6" style="color:#34d399;">● Online</span></div>
+            <div class="item"><span class="label">B3</span> <span id="consumerStatusB3" style="color:#fbbf24;">● Fallback</span></div>
+            <div class="item"><span class="label">B4</span> <span id="consumerStatusB4" style="color:#fbbf24;">● Fallback</span></div>
+            <div class="item"><span class="label">B5</span> <span id="consumerStatusB5" style="color:#fbbf24;">● Fallback</span></div>
+            <div class="item"><span class="label">B7</span> <span id="consumerStatusB7" style="color:#fbbf24;">● Fallback</span></div>
+        </div>
 
-        <!-- ===== TAB 1: PROVIDER ===== -->
-        <div id="providerTab" style="display: block;">
-            <div class="two-columns">
-                <div class="left-panel">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>🎯 B6 Provider APIs</h3>
-                            <span class="badge badge-provider">Các B gọi vào B6</span>
+        <div class="grid-2">
+            <div class="glass card">
+                <div class="card-header"><h3>🎮 Consumer Tests</h3><span class="badge">B6 → Các B</span></div>
+                <div class="card-body">
+                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
+                        <div class="flex-between" style="margin-bottom:3px;">
+                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b3">B3</span> Access Gate</span>
+                            <span id="consumerB3Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
-                        <div class="card-body">
-                            <!-- Access Control -->
-                            <div class="section-title">🔐 Access Control <span class="trigger-badge">B3 → B6</span></div>
-                            <div class="field-group"><label>Card ID</label><input type="text" id="cardId" value="CARD_12345"></div>
-                            <div class="field-group"><label>Gate ID</label><input type="text" id="gateId" value="LOBBY_01"></div>
-                            <div class="field-group"><label>Direction</label><select id="direction"><option>IN</option><option>OUT</option></select></div>
-                            <div class="field-group"><label>Correlation ID</label><input type="text" id="corrId" placeholder="auto"></div>
-                            <button id="sendAccessBtn" class="btn btn-secondary">🚀 POST /access/check</button>
-
-                            <!-- Sensor Evaluation -->
-                            <div class="section-title" style="margin-top:20px;">🌡️ Sensor Evaluation <span class="trigger-badge">B1 → B6</span></div>
-                            
-                            <div style="margin-bottom:12px;">
-                                <label style="font-size:11px; font-weight:600; color:#475569;">Quick Test Scenarios:</label>
-                                <div class="sensor-test-grid">
-                                    <button class="sensor-test-btn status-normal" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        🟢 Normal
-                                        <span class="status-label">25°C · 60%</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-warning" data-device="esp32-lab-a101" data-temp="37.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        🟡 Warning (Temp)
-                                        <span class="status-label">37.5°C</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-danger" data-device="esp32-lab-a101" data-temp="42.5" data-humidity="45.2" data-co2="800" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        🔴 Danger (Temp)
-                                        <span class="status-label">42.5°C</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-warning" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="88.0" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        🟡 Warning (Humidity)
-                                        <span class="status-label">88% Humidity</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-warning" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="1500" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        🟡 Warning (CO2)
-                                        <span class="status-label">1500 ppm CO2</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-danger" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="1900" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        🔴 Danger (CO2)
-                                        <span class="status-label">1900 ppm CO2</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-warning" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.8" data-battery="77" data-motion="false">
-                                        🟡 Warning (Smoke)
-                                        <span class="status-label">0.8 ppm Smoke</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-danger" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="1.5" data-battery="77" data-motion="false">
-                                        🔴 Danger (Smoke)
-                                        <span class="status-label">1.5 ppm Smoke</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-warning" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="15" data-motion="false">
-                                        🟡 Warning (Battery)
-                                        <span class="status-label">15% Battery</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-warning" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="true" data-time="23:30">
-                                        🟡 Motion (After Hours)
-                                        <span class="status-label">23:30 Motion</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-invalid" data-device="invalid-device-999" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">
-                                        ❌ Invalid Device
-                                        <span class="status-label">Unknown Device</span>
-                                    </button>
-                                    <button class="sensor-test-btn status-error" data-device="esp32-lab-a101" data-temp="null" data-humidity="null" data-co2="null" data-smoke="null" data-battery="null" data-motion="false">
-                                        ⚠️ Sensor Error
-                                        <span class="status-label">No Data</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Manual Sensor Form -->
-                            <div style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0;">
-                                <label style="font-size:11px; font-weight:600; color:#475569;">Or enter manually:</label>
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;">
-                                    <div class="field-group" style="margin-bottom:0;"><label>Device ID</label><input type="text" id="sensorDeviceId" value="esp32-lab-a101"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="sensorLocation" value="Lab A101"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>Temperature (°C)</label><input type="number" id="sensorTemp" value="25.5" step="0.1"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>Humidity (%)</label><input type="number" id="sensorHumidity" value="60.2" step="0.1"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>CO2 (ppm)</label><input type="number" id="sensorCo2" value="450"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>Smoke (ppm)</label><input type="number" id="sensorSmoke" value="0.01" step="0.01"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>Battery (%)</label><input type="number" id="sensorBattery" value="77"></div>
-                                    <div class="field-group" style="margin-bottom:0;"><label>Motion</label><select id="sensorMotion"><option value="false">false</option><option value="true">true</option></select></div>
-                                </div>
-                                <button id="sendSensorBtn" class="btn btn-secondary" style="margin-top:10px; width:100%;">🌡️ POST /internal/evaluate-sensor</button>
-                            </div>
-
-                            <!-- AI Detection -->
-                            <div class="section-title" style="margin-top:20px;">👁️ AI Detection Result <span class="trigger-badge">B4 → B6</span></div>
-                            <div class="field-group"><label>Detection ID</label><input type="text" id="aiDetectionId" placeholder="Auto-generated UUID" readonly></div>
-                            <div class="field-group"><label>Matched</label><select id="aiMatched"><option>true</option><option>false</option></select></div>
-                            <div class="field-group"><label>Label</label><input type="text" id="aiLabel" value="person"></div>
-                            <div class="field-group"><label>Confidence</label><input type="number" id="aiConfidence" value="0.95" step="0.01" min="0" max="1"></div>
-                            <button id="sendAiResultBtn" class="btn btn-secondary">👁️ POST /policies/evaluate-detection</button>
-                            
-                            <!-- Camera Event -->
-                            <div class="section-title" style="margin-top:20px;">📹 Camera Event <span class="trigger-badge">B2 → B6</span></div>
-                            <div class="field-group"><label>Camera ID</label><input type="text" id="cameraId" value="cam-lobby-01"></div>
-                            <div class="field-group"><label>Event Type</label>
-                                <select id="cameraEventType">
-                                    <option value="motion_detected">Motion Detected</option>
-                                    <option value="camera_offline">Camera Offline</option>
-                                    <option value="obstruction">Obstruction</option>
-                                    <option value="tamper_detected">Tamper Detected</option>
-                                </select>
-                            </div>
-                            <div class="field-group"><label>Motion</label><select id="cameraMotion"><option value="false">false</option><option value="true">true</option></select></div>
-                            <div class="field-group"><label>Location</label><input type="text" id="cameraLocation" value="Lobby 01"></div>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top:8px;">
-                                <button id="sendCameraBtn" class="btn btn-secondary" style="flex:1;">📹 Send Camera Event</button>
-                                <button id="triggerCameraAlertBtn" class="btn btn-red btn-sm" style="flex:1;">🚨 Camera Alert (Sensitive)</button>
-                            </div>
-
-                            <!-- Policy & Audit -->
-                            <div class="section-title" style="margin-top:20px;">📋 Policy & Audit</div>
-                            <div class="btn-group">
-                                <button id="getPolicyBtn" class="btn btn-secondary btn-sm">📋 GET /policies/access/POL_STUDENT_001</button>
-                                <button id="getAlertsBtn" class="btn btn-secondary btn-sm">⚠️ GET /alerts</button>
-                            </div>
+                        <div class="btn-group">
+                            <button id="consumerGetLogsBtn" class="btn btn-secondary btn-sm">📋 Get Logs</button>
+                            <button id="consumerGateStatusBtn" class="btn btn-secondary btn-sm">📊 Gate Status</button>
                         </div>
                     </div>
-                </div>
 
-                <div class="right-panel">
-                    <div class="card">
-                        <div class="card-header"><h3>📬 Response</h3><span id="respTime" style="font-size:12px; color:#94a3b8;"></span></div>
-                        <div class="card-body" id="responseContainer"><div class="result-card" style="text-align:center; color:#94a3b8;">Select an API to test</div></div>
-                        <div class="card-body"><div class="curl-hint" id="curlPreview"><code>cURL will appear here</code><button id="copyBtn" class="btn btn-secondary btn-sm">📋 Copy</button></div></div>
+                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
+                        <div class="flex-between" style="margin-bottom:3px;">
+                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b4">B4</span> AI Vision</span>
+                            <span id="consumerB4Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="field-group" style="margin-bottom:3px;"><label>Image Reference</label><input type="text" id="consumerImageRef" class="glass-input" value="person.jpg"></div>
+                        <button id="consumerCallAiBtn" class="btn btn-primary btn-sm">🔍 Detect Image</button>
+                    </div>
+
+                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
+                        <div class="flex-between" style="margin-bottom:3px;">
+                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b5">B5</span> Analytics</span>
+                            <span id="consumerB5Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="btn-group">
+                            <button id="consumerSendDecisionBtn" class="btn btn-secondary btn-sm">📤 Send Decision</button>
+                            <button id="consumerFallbackDecisionsBtn" class="btn btn-secondary btn-sm">📋 Storage</button>
+                        </div>
+                    </div>
+
+                    <div class="glass" style="padding:8px 10px; border:1px solid rgba(255,255,255,0.03);">
+                        <div class="flex-between" style="margin-bottom:3px;">
+                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b7">B7</span> Notification</span>
+                            <span id="consumerB7Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
+                        </div>
+                        <div class="btn-group">
+                            <button id="consumerSendAlertBtn" class="btn btn-danger btn-sm">🚨 Send Alert</button>
+                            <button id="consumerTriggerSensorAlertBtn" class="btn btn-warning btn-sm">🌡️ Sensor</button>
+                            <button id="consumerTriggerAIAalertBtn" class="btn btn-info btn-sm">🤖 AI</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- ===== TAB 2: CONSUMER ===== -->
-        <div id="consumerTab" style="display: none;">
-            <div class="two-columns">
-                <div class="left-panel">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>🔗 B6 Consumer APIs</h3>
-                            <span class="badge badge-consumer">B6 gọi sang các B khác</span>
+            <div class="glass card">
+                <div class="card-header"><h3>📬 Consumer Response</h3><span id="consumerRespTime" class="text-muted">Ready</span></div>
+                <div class="card-body">
+                    <div class="resp-grid">
+                        <div class="item">
+                            <div class="label">📤 Request → B6</div>
+                            <div class="content" id="consumerReqContent"><span class="text-muted">Waiting...</span></div>
                         </div>
-                        <div class="card-body">
-                            <!-- B4 -->
-                            <div class="section-title">👁️ Call AI Vision <span class="trigger-badge">B4</span> <span id="b4ModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
-                            <div class="field-group"><label>Image Reference</label><input type="text" id="callImageRef" value="person.jpg"></div>
-                            <button id="callAiBtn" class="btn btn-secondary">👁️ POST /evaluate-detection → B4</button>
-
-                            <!-- B3 -->
-                            <div class="section-title" style="margin-top:20px;">🚪 Call Access Gate <span class="trigger-badge">B3</span> <span id="b3ModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
-                            <div class="btn-group">
-                                <button id="callAccessLogsBtn" class="btn btn-secondary btn-sm">📋 GET /internal/access-logs → B3</button>
-                                <button id="callGateStatusBtn" class="btn btn-secondary btn-sm">📊 GET /internal/gates/LAB_01/status → B3</button>
-                            </div>
-
-                            <!-- B7 - Notification -->
-                            <div class="section-title" style="margin-top:20px;">📤 Send to Notification <span class="trigger-badge">B7</span> <span id="b7ModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
-                            <div class="field-group"><label>Severity</label><select id="notifSeverity"><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></div>
-                            <div class="field-group"><label>Message</label><input type="text" id="notifMessage" value="Test alert from B6 dashboard"></div>
-                            <div class="btn-group">
-                                <button id="sendNotificationBtn" class="btn btn-secondary btn-sm">📧 Manual Alert → B7</button>
-                                <button id="triggerSensorAlertBtn" class="btn btn-purple btn-sm">🌡️ Sensor Alert → B7</button>
-                                <button id="triggerAIDetectionAlertBtn" class="btn btn-pink btn-sm">🤖 AI Alert → B7</button>
-                                <button id="triggerAccessAlertBtn" class="btn btn-amber btn-sm">🚪 Access Alert → B7</button>
-                            </div>
-
-                            <!-- B5 - Analytics -->
-                            <div class="section-title" style="margin-top:20px;">📊 Send to Analytics <span class="trigger-badge">B5</span> <span id="b5ModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
-                            <div class="field-group"><label>Decision</label><select id="analyticsDecision"><option>ALLOW</option><option>DENY</option><option>ALERT_CREATED</option><option>AI_DETECTION</option></select></div>
-                            <div class="field-group"><label>Reason</label><input type="text" id="analyticsReason" value="TEST"></div>
-                            <div class="btn-group">
-                                <button id="sendAnalyticsBtn" class="btn btn-secondary btn-sm">📊 Manual Decision → B5</button>
-                                <button id="triggerAccessAnalyticsBtn" class="btn btn-purple btn-sm">🚪 Access Decision → B5</button>
-                                <button id="triggerSensorAnalyticsBtn" class="btn btn-amber btn-sm">🌡️ Sensor Decision → B5</button>
-                                <button id="triggerAIAnalyticsBtn" class="btn btn-pink btn-sm">🤖 AI Decision → B5</button>
-                            </div>
-
-                            <!-- Camera Event - Consumer Trigger -->
-                            <div class="section-title" style="margin-top:20px;">📹 Camera Event Trigger <span class="trigger-badge">B2 → B6</span> <span id="cameraModeIndicator" class="mode-indicator mode-fallback">FALLBACK</span></div>
-                            <div style="margin-bottom:8px;">
-                                <label style="font-size:11px; font-weight:600; color:#475569;">Quick Camera Scenarios:</label>
-                                <div class="camera-test-grid">
-                                    <button id="cameraTestMotionNormal" class="camera-test-btn" style="border-color:#10b981;">
-                                        🟢 Normal Motion
-                                        <span class="status-label" style="color:#166534;">Lobby 01</span>
-                                    </button>
-                                    <button id="cameraTestMotionSensitive" class="camera-test-btn" style="border-color:#ef4444;">
-                                        🔴 Sensitive Area
-                                        <span class="status-label" style="color:#991b1b;">Server Room</span>
-                                    </button>
-                                    <button id="cameraTestOffline" class="camera-test-btn" style="border-color:#f97316;">
-                                        🔶 Camera Offline
-                                        <span class="status-label" style="color:#92400e;">Main Gate</span>
-                                    </button>
-                                    <button id="cameraTestObstruction" class="camera-test-btn" style="border-color:#f97316;">
-                                        🔶 Obstruction
-                                        <span class="status-label" style="color:#92400e;">Lobby 01</span>
-                                    </button>
-                                    <button id="cameraTestRestrictedHours" class="camera-test-btn" style="border-color:#f97316;">
-                                        🔶 Restricted Hours
-                                        <span class="status-label" style="color:#92400e;">23:30</span>
-                                    </button>
-                                    <button id="cameraTestTamper" class="camera-test-btn" style="border-color:#ef4444;">
-                                        🔴 Tamper Detected
-                                        <span class="status-label" style="color:#991b1b;">Critical</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <button id="sendCameraConsumerBtn" class="btn btn-teal btn-sm" style="width:100%;">📹 Send Custom Camera Event → B7 & B5</button>
+                        <div class="item">
+                            <div class="label">⚙️ B6 Decision</div>
+                            <div class="content" id="consumerDecisionContent"><span class="text-muted">Waiting...</span></div>
                         </div>
-                    </div>
-
-                    <!-- Service Status -->
-                    <div class="card">
-                        <div class="card-header"><h3>📊 Service Status</h3></div>
-                        <div class="card-body">
-                            <div class="health-grid">
-                                <div class="health-item"><span class="health-led led-green"></span> B6 Core API: <span id="statusB6">Checking...</span></div>
-                                <div class="health-item"><span class="health-led" id="b3Led" style="background:#f97316;"></span> B3 Access Gate: <span id="statusB3">Unknown</span><span id="b3Mode" class="status-badge status-fallback">Fallback</span></div>
-                                <div class="health-item"><span class="health-led" id="b4Led" style="background:#f97316;"></span> B4 AI Vision: <span id="statusB4">Unknown</span><span id="b4Mode" class="status-badge status-fallback">Fallback</span></div>
-                                <div class="health-item"><span class="health-led" id="b7Led" style="background:#f97316;"></span> B7 Notification: <span id="statusB7">Unknown</span><span id="b7Mode" class="status-badge status-fallback">Fallback</span></div>
-                                <div class="health-item"><span class="health-led" id="b5Led" style="background:#f97316;"></span> B5 Analytics: <span id="statusB5">Unknown</span><span id="b5Mode" class="status-badge status-fallback">Fallback</span></div>
-                            </div>
-                            <button id="refreshStatusBtn" class="btn btn-secondary btn-sm" style="margin-top:12px;">🔄 Refresh Status</button>
-                            <div id="connectionDetails" style="margin-top:10px; font-size:12px; color:#94a3b8;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Request Logs -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>📥 Request Logs (Real-time)</h3>
-                            <button id="refreshLogsBtn" class="btn btn-secondary btn-sm">🔄 Refresh</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="log-filter">
-                                <select id="logServiceFilter">
-                                    <option value="">Tất cả service</option>
-                                    <option value="B1">B1 - IoT Sensor</option>
-                                    <option value="B2">B2 - Camera</option>
-                                    <option value="B3">B3 - Access Gate</option>
-                                    <option value="B4">B4 - AI Vision</option>
-                                    <option value="B5">B5 - Analytics</option>
-                                </select>
-                                <select id="logStatusFilter">
-                                    <option value="">Tất cả status</option>
-                                    <option value="200">✅ 200 OK</option>
-                                    <option value="202">✅ 202 Accepted</option>
-                                    <option value="400">❌ 400 Bad Request</option>
-                                    <option value="401">🔒 401 Unauthorized</option>
-                                    <option value="403">🔒 403 Forbidden</option>
-                                    <option value="404">❌ 404 Not Found</option>
-                                    <option value="429">⚠️ 429 Rate Limit</option>
-                                    <option value="500">❌ 500 Server Error</option>
-                                </select>
-                                <input type="number" id="logLimit" value="20" min="5" max="100" style="width:80px;">
-                                <button id="applyLogFilterBtn" class="btn btn-secondary btn-sm">Apply</button>
-                            </div>
-                            <div id="requestLogsContainer">
-                                <div style="text-align:center; color:#94a3b8; padding:20px;">Loading logs...</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- REAL vs FALLBACK Comparison -->
-                    <div class="card">
-                        <div class="card-header"><h3>📊 REAL vs FALLBACK Comparison</h3></div>
-                        <div class="card-body">
-                            <div class="btn-group" style="margin-bottom:12px;">
-                                <button id="compareB7Btn" class="btn btn-secondary btn-sm" style="flex:1;">📧 Compare B7</button>
-                                <button id="compareB5Btn" class="btn btn-secondary btn-sm" style="flex:1;">📊 Compare B5</button>
-                            </div>
-                            <div class="response-boxes">
-                                <div class="response-box real-box" id="realResponseBox">
-                                    <h4>🟢 REAL Mode <span class="badge badge-real">REAL</span></h4>
-                                    <div id="realResult" class="empty-state">Click Compare button</div>
-                                </div>
-                                <div class="response-box fallback-box" id="fallbackResponseBox">
-                                    <h4>🟡 FALLBACK Mode <span class="badge badge-fallback">FALLBACK</span></h4>
-                                    <div id="fallbackResult" class="empty-state">Click Compare button</div>
-                                </div>
-                            </div>
-                            <div class="log-container" id="compareLog">
-                                <div class="log-info">> Ready. Click Compare B7 or Compare B5 to see difference.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="right-panel">
-                    <div class="card">
-                        <div class="card-header"><h3>📬 Response from External Service</h3></div>
-                        <div class="card-body" id="consumerResponseContainer"><div class="result-card" style="text-align:center; color:#94a3b8;">Click an API to test</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== TAB 3: HEALTH ===== -->
-        <div id="healthTab" style="display: none;">
-            <div class="two-columns">
-                <div class="left-panel">
-                    <div class="card">
-                        <div class="card-header"><h3>🏥 System Health Dashboard</h3></div>
-                        <div class="card-body">
-                            <div class="health-grid" id="fullHealthGrid"></div>
-                            <button id="refreshHealthBtn" class="btn btn-secondary btn-sm" style="margin-top:16px;">🔄 Refresh All</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="right-panel">
-                    <div class="card">
-                        <div class="card-header"><h3>📋 Connection Logs</h3></div>
-                        <div class="card-body">
-                            <div class="log-container" id="connectionLogs" style="height:320px;">
-                                > Ready. Select a service to test connectivity.
-                            </div>
+                        <div class="item">
+                            <div class="label">📬 External Response</div>
+                            <div class="content" id="consumerExtContent"><span class="text-muted">Waiting...</span></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
     </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: REALTIME -->
+    <!-- ============================================================ -->
+    <div id="realtimeTab" class="tab-content">
+        <div class="realtime-container">
+
+            <!-- CỘT TRÁI: B1, B2, B3, B4 -->
+            <div class="realtime-left">
+                <div class="row">
+                    <div class="b-card b-color-b1">
+                        <div class="b-header">
+                            <span><span class="b-badge b1">B1</span> IoT Sensor</span>
+                            <span class="b-count" id="countB1">0</span>
+                        </div>
+                        <div class="b-body" id="realtimeB1"><div class="empty">▸ Waiting...</div></div>
+                    </div>
+                    <div class="b-card b-color-b2">
+                        <div class="b-header">
+                            <span><span class="b-badge b2">B2</span> Camera</span>
+                            <span class="b-count" id="countB2">0</span>
+                        </div>
+                        <div class="b-body" id="realtimeB2"><div class="empty">▸ Waiting...</div></div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="b-card b-color-b3">
+                        <div class="b-header">
+                            <span><span class="b-badge b3">B3</span> Access Gate</span>
+                            <span class="b-count" id="countB3">0</span>
+                        </div>
+                        <div class="b-body" id="realtimeB3"><div class="empty">▸ Waiting...</div></div>
+                    </div>
+                    <div class="b-card b-color-b4">
+                        <div class="b-header">
+                            <span><span class="b-badge b4">B4</span> AI Vision</span>
+                            <span class="b-count" id="countB4">0</span>
+                        </div>
+                        <div class="b-body" id="realtimeB4"><div class="empty">▸ Waiting...</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CỘT GIỮA: B6 -->
+            <div class="realtime-center b-color-b6">
+                <div class="b-header">
+                    <span><span class="b-badge b6">B6</span> Core Processing</span>
+                    <span class="b-count" id="countB6">0</span>
+                </div>
+                <div class="b-body" id="realtimeB6">
+                    <div class="empty">▸ Waiting for B6 processing...</div>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: B5, B7 -->
+            <div class="realtime-right">
+                <div class="row">
+                    <div class="b-card b-color-b5">
+                        <div class="b-header">
+                            <span><span class="b-badge b5">B5</span> Analytics</span>
+                            <span class="b-count" id="countB5">0</span>
+                        </div>
+                        <div class="b-body" id="realtimeB5"><div class="empty">▸ Waiting...</div></div>
+                    </div>
+                    <div class="b-card b-color-b7">
+                        <div class="b-header">
+                            <span><span class="b-badge b7">B7</span> Notification</span>
+                            <span class="b-count" id="countB7">0</span>
+                        </div>
+                        <div class="b-body" id="realtimeB7"><div class="empty">▸ Waiting...</div></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BOTTOM: Health IP -->
+        <div class="realtime-bottom">
+            <div class="b-card">
+                <div class="b-header">
+                    <span><span class="b-badge health">🟢</span> Health Check IPs</span>
+                    <span class="b-count" id="countHealth">0</span>
+                </div>
+                <div class="b-body" id="realtimeHealth">
+                    <span style="color:rgba(255,255,255,0.1); font-size:10px;">▸ No health checks yet...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    // ===== CONFIG =====
-    let API_BASE = "http://localhost:8000";
-    let currentCurl = "";
-    let connectionStatus = { b3: "fallback", b4: "fallback", b7: "fallback", b5: "fallback" };
-    let compareLogs = [];
+// ============================================================
+// CONFIG
+// ============================================================
+function getApiBase() { return document.getElementById('apiBaseInput').value.trim() || 'http://localhost:8000'; }
+function getToken() { return "mock-token-123"; }
+function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; const v = c==='x'?r:(r&0x3|0x8); return v.toString(16); }); }
 
-    // ===== HELPERS =====
-    function getAuthToken() { return document.getElementById('authToken')?.value || "mock-token-123"; }
-    function getApiBase() {
-        let select = document.getElementById('envSelect');
-        if (select.value === 'custom') {
-            let customIp = document.getElementById('customIp').value;
-            if (customIp && !customIp.startsWith('http://')) return 'http://' + customIp;
-            return customIp || "http://localhost:8000";
-        }
-        return select.value;
-    }
-    function uuidv4() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { const r = Math.random() * 16 | 0; const v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); }); }
-    function escapeHtml(str) { 
-        if (typeof str !== 'string') str = JSON.stringify(str);
-        return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); 
-    }
-    function addLog(msg, type) {
-        const logDiv = document.getElementById('connectionLogs');
-        if(logDiv) {
-            const color = type === 'error' ? '#f87171' : (type === 'success' ? '#34d399' : '#60a5fa');
-            const time = new Date().toLocaleTimeString();
-            logDiv.innerHTML += `<div style="color: ${color};">[${time}] ${msg}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
-    }
-    function addCompareLog(msg, type) {
-        const logDiv = document.getElementById('compareLog');
-        if(logDiv) {
-            const color = type === 'real' ? '#34d399' : (type === 'fallback' ? '#fb923c' : '#60a5fa');
-            const time = new Date().toLocaleTimeString();
-            logDiv.innerHTML += `<div class="log-${type}">[${time}] ${msg}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-            compareLogs.push({ time, msg, type });
-        }
-    }
+let currentCurl = "";
+let connectionStatus = { b3: 'fallback', b4: 'fallback', b5: 'fallback', b7: 'fallback' };
 
-    // ===== API CALL =====
-    async function callApi(method, endpoint, body = null, extraHeaders = {}) {
-        const url = getApiBase() + endpoint;
-        const token = getAuthToken();
-        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...extraHeaders };
-        const options = { method, headers };
-        if (body && method !== 'GET') options.body = JSON.stringify(body);
-        currentCurl = `curl -X ${method} "${url}" -H "Content-Type: application/json" -H "Authorization: Bearer ${token}"${options.body ? ` -d '${JSON.stringify(body)}'` : ''}`;
-        const start = performance.now();
-        try {
-            const resp = await fetch(url, options);
-            let data;
-            const text = await resp.text();
-            try { data = JSON.parse(text); } catch(e) { data = { raw_response: text, message: text }; }
-            return { status: resp.status, data, duration: Math.round(performance.now() - start), curl: currentCurl };
-        } catch (err) {
-            return { status: 0, data: { error: err.message }, duration: Math.round(performance.now() - start), curl: currentCurl };
+// Realtime data stores
+let realtimeData = {
+    b1: [], b2: [], b3: [], b4: [],
+    b6: [],
+    b5: [], b7: [],
+    health: []
+};
+let lastLogId = {};
+let processedLogs = new Set();
+
+function escapeHtml(str) { if (typeof str !== 'string') str = JSON.stringify(str); return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
+// ============================================================
+// API CALL
+// ============================================================
+async function callApi(method, endpoint, body = null) {
+    const base = getApiBase();
+    const url = base + endpoint;
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
+    const options = { method, headers };
+    if (body && method !== 'GET') options.body = JSON.stringify(body);
+    currentCurl = `curl -X ${method} "${url}" -H "Content-Type: application/json" -H "Authorization: Bearer ${getToken()}"${options.body ? ` -d '${JSON.stringify(body)}'` : ''}`;
+    const start = performance.now();
+    try {
+        const resp = await fetch(url, options);
+        const text = await resp.text();
+        let data;
+        try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
+        return { status: resp.status, data, duration: Math.round(performance.now() - start) };
+    } catch(e) {
+        return { status: 0, data: { error: e.message }, duration: Math.round(performance.now() - start) };
+    }
+}
+
+// ============================================================
+// DISPLAY PROVIDER
+// ============================================================
+function displayProvider(status, data, duration) {
+    const container = document.getElementById('responseContainer');
+    const isOk = status >= 200 && status < 300;
+    const icon = isOk ? '✅' : '❌';
+    document.getElementById('respTime').textContent = `${status} · ${duration}ms`;
+    container.innerHTML = `
+        <div style="color:${isOk ? '#34d399' : '#f87171'}; margin-bottom:3px; font-weight:500;">${icon} ${status} · ${duration}ms</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(255,255,255,0.5); white-space:pre-wrap; word-break:break-all;">${escapeHtml(JSON.stringify(data, null, 2))}</div>
+    `;
+    document.getElementById('curlPreview').textContent = currentCurl;
+}
+
+// ============================================================
+// DISPLAY CONSUMER
+// ============================================================
+function displayConsumer(req, decision, ext) {
+    document.getElementById('consumerReqContent').innerHTML = req ? `<pre style="margin:0;color:rgba(255,255,255,0.35);font-size:10px;">${escapeHtml(JSON.stringify(req, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+    document.getElementById('consumerDecisionContent').innerHTML = decision ? `<pre style="margin:0;color:rgba(255,255,255,0.35);font-size:10px;">${escapeHtml(JSON.stringify(decision, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+    document.getElementById('consumerExtContent').innerHTML = ext ? `<pre style="margin:0;color:rgba(255,255,255,0.35);font-size:10px;">${escapeHtml(JSON.stringify(ext, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+}
+
+// ============================================================
+// UPDATE STATUS
+// ============================================================
+async function updateStatus() {
+    try {
+        const res = await callApi('GET', '/connection-status');
+        if (res.status === 200) {
+            const s = res.data;
+            connectionStatus = { b3: s.b3?.status || 'fallback', b4: s.b4?.status || 'fallback', b5: s.b5?.status || 'fallback', b7: s.b7?.status || 'fallback' };
+            const map = { real: '● Online', fallback: '● Fallback', offline: '● Offline' };
+            const colorMap = { real: '#34d399', fallback: '#fbbf24', offline: '#f87171' };
+            const badgeMap = { real: 'real', fallback: 'fallback', offline: 'offline' };
+            ['b3','b4','b5','b7'].forEach(k => {
+                const status = connectionStatus[k] || 'fallback';
+                const elStatus = document.getElementById(`consumerStatus${k.toUpperCase()}`);
+                const elBadge = document.getElementById(`consumer${k.toUpperCase()}Badge`);
+                if (elStatus) { elStatus.textContent = map[status] || '● Fallback'; elStatus.style.color = colorMap[status] || '#fbbf24'; }
+                if (elBadge) { elBadge.className = `status-badge ${badgeMap[status] || 'fallback'}`; elBadge.innerHTML = `<span class="dot"></span> ${(status||'FALLBACK').toUpperCase()}`; }
+            });
         }
-    }
+    } catch(e) { /* ignore */ }
+}
 
-    // ===== DISPLAY =====
-    function displayResponse(containerId, status, data, duration, curl = null, mode = null) {
-        const container = document.getElementById(containerId);
-        const statusClass = status >= 200 && status < 300 ? 'status-success' : (status >= 400 ? 'status-error' : 'status-warning');
-        let displayData = data;
-        if (data && data.raw_response !== undefined) displayData = { message: data.raw_response };
-        let modeClass = mode === 'real' ? 'real' : 'fallback';
-        let modeBadge = mode === 'real' ? '<span class="badge-mode badge-real">REAL</span>' : '<span class="badge-mode badge-fallback">FALLBACK</span>';
-        container.innerHTML = `<div class="result-card ${modeClass}"><div class="result-status ${statusClass}">${status} · ${duration}ms ${modeBadge}</div><pre>${escapeHtml(JSON.stringify(displayData, null, 2))}</pre></div>`;
-        if (curl && document.getElementById('curlPreview')) {
-            document.getElementById('curlPreview').innerHTML = `<code>${escapeHtml(curl)}</code><button id="copyBtn" class="btn btn-secondary btn-sm">📋 Copy</button>`;
-            document.getElementById('copyBtn')?.addEventListener('click', () => navigator.clipboard.writeText(curl));
-        }
-    }
-
-    // ===== MODE INDICATORS =====
-    function updateModeIndicators(status) {
-        const modes = { b3: 'b3ModeIndicator', b4: 'b4ModeIndicator', b7: 'b7ModeIndicator', b5: 'b5ModeIndicator' };
-        const statusMap = { 'real': 'mode-real', 'fallback': 'mode-fallback', 'offline': 'mode-offline' };
-        const labelMap = { 'real': 'REAL', 'fallback': 'FALLBACK', 'offline': 'OFFLINE' };
-        Object.keys(modes).forEach(key => {
-            const el = document.getElementById(modes[key]);
-            if (el && status[key]) {
-                el.className = `mode-indicator ${statusMap[status[key]] || 'mode-fallback'}`;
-                el.textContent = labelMap[status[key]] || 'FALLBACK';
-            }
-        });
-    }
-
-    // ==================== PROVIDER TAB ====================
-    // Access Control
-    document.getElementById('sendAccessBtn').addEventListener('click', async () => {
-        let corrId = document.getElementById('corrId').value || uuidv4();
-        const body = { cardId: document.getElementById('cardId').value, gateId: document.getElementById('gateId').value, direction: document.getElementById('direction').value, correlationId: corrId, timestamp: new Date().toISOString() };
-        const res = await callApi('POST', '/access/check', body);
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-        addLog(`Access check: ${res.data?.decision || 'DENY'} - ${res.duration}ms`, res.status === 200 ? 'success' : 'error');
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
+        if (tab.dataset.tab === 'realtime') refreshRealtime();
+        if (tab.dataset.tab === 'consumer') updateStatus();
     });
+});
+
+// ============================================================
+// PROVIDER FUNCTIONS
+// ============================================================
+async function sendSensor(deviceId, location, temp, humidity, co2, smoke, battery, motion, time = null) {
+    const corrId = uuid();
+    const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
+    const body = {
+        source_service: "team-iot",
+        device_id: deviceId,
+        location: location || "LAB_01",
+        temperature_c: temp === 'null' ? null : parseFloat(temp),
+        humidity_percent: humidity === 'null' ? null : parseFloat(humidity),
+        co2_ppm: co2 === 'null' ? null : parseInt(co2),
+        smoke_ppm: smoke === 'null' ? null : parseFloat(smoke),
+        battery_percent: battery === 'null' ? null : parseInt(battery),
+        motion_detected: motion === 'true' || motion === true,
+        timestamp: timestamp,
+        correlationId: corrId
+    };
+    const res = await callApi('POST', '/internal/evaluate-sensor', body);
+    displayProvider(res.status, res.data, res.duration);
+    return res;
+}
+
+document.querySelectorAll('.sensor-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const d = btn.dataset;
+        document.getElementById('sensorDeviceId').value = d.device;
+        if (d.temp !== undefined && d.temp !== 'null') document.getElementById('sensorTemp').value = d.temp;
+        if (d.humidity !== undefined && d.humidity !== 'null') document.getElementById('sensorHumidity').value = d.humidity;
+        if (d.co2 !== undefined && d.co2 !== 'null') document.getElementById('sensorCo2').value = d.co2;
+        if (d.smoke !== undefined && d.smoke !== 'null') document.getElementById('sensorSmoke').value = d.smoke;
+        if (d.battery !== undefined && d.battery !== 'null') document.getElementById('sensorBattery').value = d.battery;
+        document.getElementById('sensorMotion').value = d.motion || 'false';
+        sendSensor(d.device, 'LAB_01', d.temp, d.humidity, d.co2, d.smoke, d.battery, d.motion, d.time);
+    });
+});
+
+document.getElementById('sendSensorBtn').addEventListener('click', () => {
+    sendSensor(
+        document.getElementById('sensorDeviceId').value,
+        document.getElementById('sensorLocation').value,
+        document.getElementById('sensorTemp').value,
+        document.getElementById('sensorHumidity').value,
+        document.getElementById('sensorCo2').value,
+        document.getElementById('sensorSmoke').value,
+        document.getElementById('sensorBattery').value,
+        document.getElementById('sensorMotion').value
+    );
+});
+
+async function sendCamera(cameraId, eventType, motion, location, time = null) {
+    const corrId = uuid();
+    const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
+    const body = {
+        camera_id: cameraId,
+        event_type: eventType,
+        motion_detected: motion,
+        location: location || "LOBBY",
+        timestamp: timestamp,
+        correlationId: corrId
+    };
+    const res = await callApi('POST', '/policies/evaluate-camera-event', body);
+    displayProvider(res.status, res.data, res.duration);
+    return res;
+}
+
+document.getElementById('sendCameraBtn').addEventListener('click', () => {
+    sendCamera(
+        document.getElementById('cameraId').value,
+        document.getElementById('cameraEventType').value,
+        document.getElementById('cameraEventType').value === 'motion_detected',
+        document.getElementById('cameraLocation').value
+    );
+});
+
+document.getElementById('camMotionBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'motion_detected', true, 'LOBBY'));
+document.getElementById('camSensitiveBtn').addEventListener('click', () => sendCamera('cam-server-01', 'motion_detected', true, 'SERVER_ROOM'));
+document.getElementById('camOfflineBtn').addEventListener('click', () => sendCamera('cam-gate-01', 'camera_offline', false, 'MAIN_GATE'));
+document.getElementById('camObstructBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'obstruction', false, 'LOBBY'));
+document.getElementById('camNightBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'motion_detected', true, 'LOBBY', '23:30'));
+
+async function sendAccess(cardId, gateId, direction) {
+    const corrId = uuid();
+    const body = { cardId, gateId, direction: direction || 'IN', correlationId: corrId, timestamp: new Date().toISOString() };
+    const res = await callApi('POST', '/access/check', body);
+    displayProvider(res.status, res.data, res.duration);
+    return res;
+}
+
+document.getElementById('sendAccessBtn').addEventListener('click', () => {
+    sendAccess(document.getElementById('cardId').value, document.getElementById('gateId').value, document.getElementById('direction').value);
+});
+document.getElementById('sendAccessStaffBtn').addEventListener('click', () => {
+    sendAccess('STAFF001', 'OFFICE_01', 'IN');
+});
+
+async function sendAI(label, confidence) {
+    const detectionId = uuid();
+    const body = { detectionId, matched: true, label, confidence: parseFloat(confidence), status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
+    const res = await callApi('POST', '/policies/evaluate-detection', body);
+    displayProvider(res.status, res.data, res.duration);
+    return res;
+}
+
+document.getElementById('sendAiBtn').addEventListener('click', () => {
+    sendAI(document.getElementById('aiLabel').value, document.getElementById('aiConfidence').value);
+});
+document.getElementById('sendAiLowBtn').addEventListener('click', () => {
+    sendAI('person', 0.65);
+});
+
+// ============================================================
+// CONSUMER FUNCTIONS
+// ============================================================
+document.getElementById('consumerGetLogsBtn').addEventListener('click', async () => {
+    const res = await callApi('GET', '/internal/access-logs?limit=5');
+    displayConsumer(null, null, res.data);
+});
+document.getElementById('consumerGateStatusBtn').addEventListener('click', async () => {
+    const res = await callApi('GET', '/internal/gates/LAB_01/status');
+    displayConsumer(null, null, res.data);
+});
+document.getElementById('consumerCallAiBtn').addEventListener('click', async () => {
+    const corrId = uuid();
+    const body = { correlationId: corrId, imageRef: document.getElementById('consumerImageRef').value, timestamp: new Date().toISOString() };
+    displayConsumer(body, null, null);
+    const res = await callApi('POST', '/evaluate-detection', body);
+    displayConsumer(body, res.data, res.data);
+});
+document.getElementById('consumerSendDecisionBtn').addEventListener('click', async () => {
+    const corrId = uuid();
+    const body = { correlationId: corrId, decision: 'ALLOW', reason: 'TEST_CONSUMER', timestamp: new Date().toISOString() };
+    displayConsumer(body, null, null);
+    const res = await callApi('POST', '/internal/send-test-decision', body);
+    displayConsumer(body, res.data, res.data);
+});
+document.getElementById('consumerFallbackDecisionsBtn').addEventListener('click', async () => {
+    const res = await callApi('GET', '/internal/fallback-decisions?limit=5');
+    displayConsumer(null, null, res.data);
+});
+document.getElementById('consumerSendAlertBtn').addEventListener('click', async () => {
+    const body = { severity: 'CRITICAL', message: 'Test alert from B6 consumer' };
+    displayConsumer(body, null, null);
+    const res = await callApi('POST', '/internal/send-test-alert', body);
+    displayConsumer(body, res.data, res.data);
+});
+document.getElementById('consumerTriggerSensorAlertBtn').addEventListener('click', async () => {
+    const corrId = uuid();
+    const body = { device_id: 'esp32-alert', location: 'LAB_01', temperature_c: 42.5, humidity_percent: 45.2, co2_ppm: 800, smoke_ppm: 0.01, battery_percent: 77, motion_detected: false, correlationId: corrId };
+    displayConsumer(body, null, null);
+    const res = await callApi('POST', '/internal/evaluate-sensor', body);
+    displayConsumer(body, res.data, res.data);
+});
+document.getElementById('consumerTriggerAIAalertBtn').addEventListener('click', async () => {
+    const detectionId = uuid();
+    const body = { detectionId, matched: true, label: 'person', confidence: 0.95, status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
+    displayConsumer(body, null, null);
+    const res = await callApi('POST', '/policies/evaluate-detection', body);
+    displayConsumer(body, res.data, res.data);
+});
+
+// ============================================================
+// REALTIME - CHỈ HIỂN THỊ LOG THỰC SỰ
+// ============================================================
+function getServiceFromPath(path) {
+    if (path.includes('evaluate-sensor')) return 'b1';
+    if (path.includes('evaluate-camera')) return 'b2';
+    if (path.includes('access/check')) return 'b3';
+    if (path.includes('evaluate-detection')) return 'b4';
+    if (path.includes('send-test-decision')) return 'b5';
+    if (path.includes('send-test-alert')) return 'b7';
+    if (path.includes('alerts') && path.includes('GET')) return null;
+    if (path.includes('fallback-decisions') && path.includes('GET')) return null;
+    if (path.includes('health')) return 'health';
+    return null;
+}
+
+function getServiceName(b) {
+    const map = { b1: 'B1', b2: 'B2', b3: 'B3', b4: 'B4', b5: 'B5', b6: 'B6', b7: 'B7', health: 'Health' };
+    return map[b] || b.toUpperCase();
+}
+
+function getStatusClass(status) {
+    return status >= 200 && status < 300 ? 'status-ok' : 'status-err';
+}
+
+// ============================================================
+// ADD LOGS VỚI RESPONSE DETAIL
+// ============================================================
+function addToRealtime(service, log, type = 'incoming') {
+    if (!realtimeData[service]) realtimeData[service] = [];
+    const time = new Date(log.timestamp).toLocaleTimeString();
+    const ip = log.client_ip || 'unknown';
+    let detail = '';
+    let responseDetail = '';
     
-    // Sensor Evaluation
-    async function sendSensorEvent(deviceId, location, temp, humidity, co2, smoke, battery, motion, time = null) {
-        const corrId = uuidv4();
-        const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
-        const body = {
-            source_service: "team-iot",
-            device_id: deviceId,
-            location: location || "Lab A101",
-            temperature_c: temp === null ? null : parseFloat(temp),
-            humidity_percent: humidity === null ? null : parseFloat(humidity),
-            light_lux: 410,
-            co2_ppm: co2 === null ? null : parseInt(co2),
-            smoke_ppm: smoke === null ? null : parseFloat(smoke),
-            battery_percent: battery === null ? null : parseInt(battery),
-            motion_detected: motion === 'true' || motion === true,
-            timestamp: timestamp,
-            correlationId: corrId
-        };
-        const res = await callApi('POST', '/internal/evaluate-sensor', body);
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-        const status = res.data?.status || 'unknown';
-        const alerts = res.data?.alerts_count || 0;
-        addLog(`Sensor event: ${deviceId} - ${status} (${alerts} alerts)`, res.status === 202 ? 'success' : 'error');
-        return res;
+    // Lấy thông tin từ body
+    if (log.body) {
+        if (log.body.status) detail = `status: ${log.body.status}`;
+        if (log.body.alerts_count !== undefined) detail += `, alerts: ${log.body.alerts_count}`;
+        if (log.body.message) responseDetail = log.body.message;
     }
-
-    document.getElementById('sendSensorBtn').addEventListener('click', async () => {
-        const deviceId = document.getElementById('sensorDeviceId').value;
-        const location = document.getElementById('sensorLocation').value;
-        const temp = document.getElementById('sensorTemp').value;
-        const humidity = document.getElementById('sensorHumidity').value;
-        const co2 = document.getElementById('sensorCo2').value;
-        const smoke = document.getElementById('sensorSmoke').value;
-        const battery = document.getElementById('sensorBattery').value;
-        const motion = document.getElementById('sensorMotion').value;
-        await sendSensorEvent(deviceId, location, temp, humidity, co2, smoke, battery, motion);
-    });
-
-    document.querySelectorAll('.sensor-test-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const deviceId = btn.dataset.device;
-            const temp = btn.dataset.temp === 'null' ? null : btn.dataset.temp;
-            const humidity = btn.dataset.humidity === 'null' ? null : btn.dataset.humidity;
-            const co2 = btn.dataset.co2 === 'null' ? null : btn.dataset.co2;
-            const smoke = btn.dataset.smoke === 'null' ? null : btn.dataset.smoke;
-            const battery = btn.dataset.battery === 'null' ? null : btn.dataset.battery;
-            const motion = btn.dataset.motion || 'false';
-            const time = btn.dataset.time || null;
-            
-            document.getElementById('sensorDeviceId').value = deviceId;
-            document.getElementById('sensorLocation').value = 'Lab A101';
-            if (temp !== null) document.getElementById('sensorTemp').value = temp;
-            if (humidity !== null) document.getElementById('sensorHumidity').value = humidity;
-            if (co2 !== null) document.getElementById('sensorCo2').value = co2;
-            if (smoke !== null) document.getElementById('sensorSmoke').value = smoke;
-            if (battery !== null) document.getElementById('sensorBattery').value = battery;
-            
-            await sendSensorEvent(deviceId, 'Lab A101', temp, humidity, co2, smoke, battery, motion, time);
-        });
-    });
-
-    // AI Detection
-    document.getElementById('sendAiResultBtn').addEventListener('click', async () => {
-        const detectionId = uuidv4();
-        document.getElementById('aiDetectionId').value = detectionId;
-        const body = { detectionId, matched: document.getElementById('aiMatched').value === 'true', label: document.getElementById('aiLabel').value, confidence: parseFloat(document.getElementById('aiConfidence').value), status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
-        const res = await callApi('POST', '/policies/evaluate-detection', body);
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-        addLog(`AI Detection result sent: ${detectionId} - ${body.label} (${body.confidence})`, res.status === 200 ? 'success' : 'error');
-    });
     
-    document.getElementById('getPolicyBtn').addEventListener('click', async () => {
-        const res = await callApi('GET', '/policies/access/POL_STUDENT_001');
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-    });
-    
-    document.getElementById('getAlertsBtn').addEventListener('click', async () => {
-        const res = await callApi('GET', '/alerts?limit=20');
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-    });
+    const entry = {
+        time, ip, status: log.status_code, method: log.method, path: log.path,
+        statusClass: getStatusClass(log.status_code),
+        detail: detail,
+        responseDetail: responseDetail || (log.status_code >= 200 && log.status_code < 300 ? '✅ Success' : '❌ Error'),
+        raw: log
+    };
+    realtimeData[service].push(entry);
+    if (realtimeData[service].length > 25) realtimeData[service].shift();
+    renderRealtime(service);
+}
 
-    // ===== CAMERA EVENT (B2 → B6) - PROVIDER =====
-    document.getElementById('sendCameraBtn').addEventListener('click', async () => {
-        const corrId = uuidv4();
-        const body = {
-            camera_id: document.getElementById('cameraId').value,
-            event_type: document.getElementById('cameraEventType').value,
-            motion_detected: document.getElementById('cameraMotion').value === 'true',
-            location: document.getElementById('cameraLocation').value,
-            timestamp: new Date().toISOString(),
-            correlationId: corrId
-        };
-        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-        const alertTriggered = res.data?.alert_triggered || false;
-        addLog(`Camera event: ${body.camera_id} - ${body.event_type} (alert: ${alertTriggered})`, alertTriggered ? 'success' : 'info');
-    });
+function addB6LogEntry(from, ip, status, detail, sendTo = '', response = '') {
+    if (!realtimeData['b6']) realtimeData['b6'] = [];
+    const time = new Date().toLocaleTimeString();
+    const entry = {
+        time, from, ip, status, detail, sendTo, response,
+        statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err'
+    };
+    realtimeData['b6'].push(entry);
+    if (realtimeData['b6'].length > 30) realtimeData['b6'].shift();
+    renderRealtime('b6');
+}
 
-    document.getElementById('triggerCameraAlertBtn').addEventListener('click', async () => {
-        const corrId = uuidv4();
-        const body = {
-            camera_id: 'cam-server-room-01',
-            event_type: 'motion_detected',
-            motion_detected: true,
-            location: 'SERVER_ROOM - Critical Area',
-            timestamp: new Date().toISOString(),
-            correlationId: corrId
-        };
-        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
-        displayResponse('responseContainer', res.status, res.data, res.duration, res.curl);
-        addLog(`🔴 Camera alert triggered: ${body.location}`, 'success');
-    });
+function addOutgoingRealtime(service, ip, status, request, response) {
+    if (!realtimeData[service]) realtimeData[service] = [];
+    const time = new Date().toLocaleTimeString();
+    const entry = {
+        time, ip, status,
+        statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err',
+        request: request || '',
+        response: response || ''
+    };
+    realtimeData[service].push(entry);
+    if (realtimeData[service].length > 25) realtimeData[service].shift();
+    renderRealtime(service);
+}
 
-    // ==================== CONSUMER TAB ====================
-    // B4
-    document.getElementById('callAiBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b4 === 'real' ? 'REAL' : 'FALLBACK';
-        addLog(`Calling AI Vision (B4) - Mode: ${mode}`, 'info');
-        const body = { correlationId: uuidv4(), imageRef: document.getElementById('callImageRef').value, timestamp: new Date().toISOString() };
-        const res = await callApi('POST', '/evaluate-detection', body);
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, mode.toLowerCase());
-        if (res.data && res.data.matched) addLog(`AI Detection: ${res.data.label} (${Math.round(res.data.confidence*100)}%)`, 'success');
-        else addLog(`AI Detection: No match`, 'warning');
-    });
-    
-    // B3
-    document.getElementById('callAccessLogsBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b3 === 'real' ? 'REAL' : 'FALLBACK';
-        addLog(`Calling Access Gate (B3) - Mode: ${mode}`, 'info');
-        const res = await callApi('GET', '/internal/access-logs?limit=10');
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, mode.toLowerCase());
-        const count = Array.isArray(res.data) ? res.data.length : 0;
-        addLog(`Retrieved ${count} access logs`, res.status === 200 ? 'success' : 'error');
-    });
-    
-    document.getElementById('callGateStatusBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b3 === 'real' ? 'REAL' : 'FALLBACK';
-        addLog(`Calling Gate Status (B3) - Mode: ${mode}`, 'info');
-        const res = await callApi('GET', '/internal/gates/LAB_01/status');
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, mode.toLowerCase());
-    });
-
-    // ===== B7 - NOTIFICATION =====
-    document.getElementById('sendNotificationBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Sending manual alert to Notification (B7) - Mode: ${mode}`, 'info');
-        const body = { severity: document.getElementById('notifSeverity').value, message: document.getElementById('notifMessage').value };
-        const res = await callApi('POST', '/internal/send-test-alert', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Direct connection to B7</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Stored locally (queued)</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 200 || res.status === 202 ? `✅ Manual alert sent` : `❌ Manual alert failed: ${res.status}`, res.status === 200 || res.status === 202 ? 'success' : 'error');
-    });
-
-    document.getElementById('triggerSensorAlertBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Triggering sensor alert to B7 - Mode: ${mode}`, 'info');
-        const corrId = uuidv4();
-        const body = { 
-            source_service: "team-iot",
-            device_id: "esp32-lab-a101",
-            location: "Lab A101",
-            temperature_c: 42.5,
-            humidity_percent: 45.2,
-            co2_ppm: 800,
-            smoke_ppm: 0.01,
-            battery_percent: 77,
-            motion_detected: false,
-            timestamp: new Date().toISOString(),
-            correlationId: corrId
-        };
-        const res = await callApi('POST', '/internal/evaluate-sensor', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Alert sent to B7</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Alert stored locally</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 202 ? `✅ Sensor alert triggered - CRITICAL (temp: 42.5°C)` : `❌ Sensor alert failed: ${res.status}`, res.status === 202 ? 'success' : 'error');
-    });
-
-    document.getElementById('triggerAIDetectionAlertBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Triggering AI detection alert to B7 - Mode: ${mode}`, 'info');
-        const detectionId = uuidv4();
-        const body = { detectionId, matched: true, label: 'person', confidence: 0.95, status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
-        const res = await callApi('POST', '/policies/evaluate-detection', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - AI alert sent to B7</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - AI alert stored locally</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 200 ? `✅ AI detection alert triggered - Person detected (95%)` : `❌ AI detection alert failed: ${res.status}`, res.status === 200 ? 'success' : 'error');
-    });
-
-    document.getElementById('triggerAccessAlertBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Triggering access alert to B7 - Mode: ${mode}`, 'info');
-        const corrId = uuidv4();
-        const body = { cardId: 'INVALID_CARD_ALERT', gateId: 'RESTRICTED_ZONE', direction: 'IN', correlationId: corrId, timestamp: new Date().toISOString() };
-        const res = await callApi('POST', '/access/check', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Access alert sent to B7</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Access alert stored locally</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 403 ? `✅ Access alert triggered - Gate not authorized` : `❌ Access alert failed: ${res.status}`, res.status === 403 ? 'success' : 'error');
-    });
-
-    // ===== B5 - ANALYTICS =====
-    document.getElementById('sendAnalyticsBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b5 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Sending manual decision to Analytics (B5) - Mode: ${mode}`, 'info');
-        const corrId = uuidv4();
-        const body = { correlationId: corrId, decision: document.getElementById('analyticsDecision').value, reason: document.getElementById('analyticsReason').value || 'TEST', timestamp: new Date().toISOString() };
-        const res = await callApi('POST', '/internal/send-test-decision', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Decision sent to B5</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Stored in fallback_storage</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 200 || res.status === 202 ? `✅ Manual decision sent: ${body.decision} - ${body.reason}` : `❌ Manual decision failed: ${res.status}`, res.status === 200 || res.status === 202 ? 'success' : 'error');
-    });
-
-    document.getElementById('triggerAccessAnalyticsBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b5 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Triggering access decision to Analytics (B5) - Mode: ${mode}`, 'info');
-        const corrId = uuidv4();
-        const body = { cardId: 'CARD_ACCESS_TEST', gateId: 'LOBBY_01', direction: 'IN', correlationId: corrId, timestamp: new Date().toISOString() };
-        const res = await callApi('POST', '/access/check', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Access decision sent to B5</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Access decision stored locally</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 200 ? `✅ Access decision sent: ${res.data?.decision || 'UNKNOWN'}` : `❌ Access decision failed: ${res.status}`, res.status === 200 ? 'success' : 'error');
-    });
-
-    document.getElementById('triggerSensorAnalyticsBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b5 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Triggering sensor decision to Analytics (B5) - Mode: ${mode}`, 'info');
-        const corrId = uuidv4();
-        const body = { 
-            source_service: "team-iot",
-            device_id: "esp32-lab-a101",
-            location: "Lab A101",
-            temperature_c: 42.5,
-            humidity_percent: 45.2,
-            co2_ppm: 800,
-            smoke_ppm: 0.01,
-            battery_percent: 77,
-            motion_detected: false,
-            timestamp: new Date().toISOString(),
-            correlationId: corrId
-        };
-        const res = await callApi('POST', '/internal/evaluate-sensor', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Sensor decision sent to B5</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Sensor decision stored locally</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 202 ? `✅ Sensor decision sent - ALERT_CREATED (CRITICAL)` : `❌ Sensor decision failed: ${res.status}`, res.status === 202 ? 'success' : 'error');
-    });
-
-    document.getElementById('triggerAIAnalyticsBtn').addEventListener('click', async () => {
-        const mode = connectionStatus.b5 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        addLog(`Triggering AI detection decision to Analytics (B5) - Mode: ${mode}`, 'info');
-        const detectionId = uuidv4();
-        const body = { detectionId, matched: true, label: 'person', confidence: 0.95, status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
-        const res = await callApi('POST', '/policies/evaluate-detection', body);
-        if (modeLower === 'real') {
-            document.getElementById('realResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - AI decision sent to B5</span>`;
-            document.getElementById('realResponseBox').classList.remove('hidden');
-            document.getElementById('fallbackResponseBox').classList.add('hidden');
-        } else {
-            document.getElementById('fallbackResult').innerHTML = `<pre>${escapeHtml(JSON.stringify(res.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - AI decision stored locally</span>`;
-            document.getElementById('fallbackResponseBox').classList.remove('hidden');
-            document.getElementById('realResponseBox').classList.add('hidden');
-        }
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(res.status === 200 ? `✅ AI decision sent - AI_DETECTION (Person 95%)` : `❌ AI decision failed: ${res.status}`, res.status === 200 ? 'success' : 'error');
-    });
-
-    // ===== CAMERA EVENT - CONSUMER TRIGGER =====
-    // Function to send camera event from consumer tab
-    async function sendCameraEventConsumer(cameraId, eventType, motion, location, time = null) {
-        const corrId = uuidv4();
-        const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
-        const body = {
-            camera_id: cameraId,
-            event_type: eventType,
-            motion_detected: motion,
-            location: location,
-            timestamp: timestamp,
-            correlationId: corrId
-        };
-        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        const alertTriggered = res.data?.alert_triggered || false;
-        addLog(`📹 Camera: ${cameraId} - ${eventType} (alert: ${alertTriggered})`, alertTriggered ? 'success' : 'info');
-        return res;
+function addHealthIP(ip) {
+    if (!realtimeData['health']) realtimeData['health'] = [];
+    const time = new Date().toLocaleTimeString();
+    const existing = realtimeData['health'].find(e => e.ip === ip);
+    if (existing) {
+        existing.time = time;
+        existing.count = (existing.count || 1) + 1;
+    } else {
+        realtimeData['health'].push({ time, ip, count: 1 });
     }
+    if (realtimeData['health'].length > 20) realtimeData['health'].shift();
+    renderRealtime('health');
+}
 
-    // Camera test buttons
-    document.getElementById('cameraTestMotionNormal').addEventListener('click', async () => {
-        await sendCameraEventConsumer('cam-lobby-01', 'motion_detected', true, 'Lobby 01 - Main Entrance');
-    });
+function renderRealtime(service) {
+    const el = document.getElementById(`realtime${service.toUpperCase()}`);
+    const countEl = document.getElementById(`count${service.toUpperCase()}`);
+    if (!el) return;
+    
+    const data = realtimeData[service] || [];
+    if (countEl) countEl.textContent = data.length;
+    
+    if (data.length === 0) {
+        const names = { b1: 'B1', b2: 'B2', b3: 'B3', b4: 'B4', b5: 'B5', b6: 'B6', b7: 'B7', health: 'Health' };
+        el.innerHTML = `<div class="empty">▸ Waiting for ${names[service] || service}...</div>`;
+        return;
+    }
+    
+    const recent = data.slice(-20).reverse();
+    
+    if (service === 'b6') {
+        // B6: Hiển thị request từ B + response trả về + gửi cho B5/B7
+        el.innerHTML = recent.map(e => `
+            <div class="entry">
+                <span class="time">[${e.time}]</span>
+                <span class="b6-from">${e.from}</span>
+                <span class="b6-ip">${e.ip}</span>
+                <span class="${e.statusClass}">${e.status}</span>
+                <span class="b6-detail">📥 ${e.detail || ''}</span>
+                ${e.response ? `<span class="b6-response">📤 ${e.response}</span>` : ''}
+                ${e.sendTo ? `<span class="b6-send">→ ${e.sendTo}</span>` : ''}
+            </div>
+        `).join('');
+    } else if (service === 'health') {
+        el.innerHTML = data.slice(-20).reverse().map(e => `
+            <span class="health-ip">
+                <span class="ip">${e.ip}</span>
+                <span class="time">${e.time}</span>
+                <span class="status">●</span>
+                <span style="color:rgba(255,255,255,0.1);font-size:8px;">${e.count || 1}</span>
+            </span>
+        `).join('');
+    } else if (service === 'b5' || service === 'b7') {
+        // B5 và B7: Hiển thị request từ B6 + response
+        el.innerHTML = recent.map(e => `
+            <div class="entry">
+                <span class="time">[${e.time}]</span>
+                <span class="ip">${e.ip}</span>
+                <span class="${e.statusClass}">${e.status}</span>
+                ${e.request ? `<span class="b-request">📤 ${e.request}</span>` : ''}
+                ${e.response ? `<span class="b-response">📬 ${e.response}</span>` : ''}
+            </div>
+        `).join('');
+    } else {
+        // B1-B4: Hiển thị request từ B + response B6 trả về
+        el.innerHTML = recent.map(e => `
+            <div class="entry">
+                <span class="time">[${e.time}]</span>
+                <span class="ip">${e.ip || 'local'}</span>
+                <span class="${e.statusClass}">${e.status}</span>
+                ${e.method ? `<span class="method">${e.method}</span>` : ''}
+                ${e.path ? `<span class="path">${e.path}</span>` : ''}
+                ${e.detail ? `<span style="color:rgba(255,255,255,0.15);font-size:8px;">📊 ${e.detail}</span>` : ''}
+                ${e.responseDetail ? `<span class="resp-detail">📤 ${e.responseDetail}</span>` : ''}
+            </div>
+        `).join('');
+    }
+}
 
-    document.getElementById('cameraTestMotionSensitive').addEventListener('click', async () => {
-        await sendCameraEventConsumer('cam-server-room-01', 'motion_detected', true, 'SERVER_ROOM - Critical Area');
-    });
-
-    document.getElementById('cameraTestOffline').addEventListener('click', async () => {
-        await sendCameraEventConsumer('cam-gate-01', 'camera_offline', false, 'Main Gate');
-    });
-
-    document.getElementById('cameraTestObstruction').addEventListener('click', async () => {
-        await sendCameraEventConsumer('cam-lobby-01', 'obstruction', false, 'Lobby 01');
-    });
-
-    document.getElementById('cameraTestRestrictedHours').addEventListener('click', async () => {
-        await sendCameraEventConsumer('cam-lobby-01', 'motion_detected', true, 'Lobby 01', '23:30');
-    });
-
-    document.getElementById('cameraTestTamper').addEventListener('click', async () => {
-        await sendCameraEventConsumer('cam-vault-01', 'tamper_detected', true, 'VAULT - High Security');
-    });
-
-    // Custom camera event from consumer tab
-    document.getElementById('sendCameraConsumerBtn').addEventListener('click', async () => {
-        const corrId = uuidv4();
-        const body = {
-            camera_id: document.getElementById('cameraId').value || 'cam-custom-01',
-            event_type: document.getElementById('cameraEventType').value || 'motion_detected',
-            motion_detected: document.getElementById('cameraMotion').value === 'true',
-            location: document.getElementById('cameraLocation').value || 'Custom Location',
-            timestamp: new Date().toISOString(),
-            correlationId: corrId
-        };
-        const mode = connectionStatus.b7 === 'real' ? 'REAL' : 'FALLBACK';
-        const modeLower = mode.toLowerCase();
-        const res = await callApi('POST', '/policies/evaluate-camera-event', body);
-        displayResponse('consumerResponseContainer', res.status, res.data, res.duration, null, modeLower);
-        addLog(`📹 Custom camera event: ${body.camera_id} - ${body.event_type}`, res.status === 200 ? 'success' : 'error');
-    });
-
-    // ==================== REAL vs FALLBACK COMPARISON ====================
-    document.getElementById('compareB7Btn').addEventListener('click', async () => {
-        const logDiv = document.getElementById('compareLog');
-        logDiv.innerHTML = '';
-        addCompareLog('🔄 Starting B7 Comparison...', 'info');
-        
-        addCompareLog('🟢 REAL Mode: B7 is online, sending alert directly...', 'real');
-        const realBody = { severity: 'CRITICAL', message: 'REAL mode test alert' };
-        const realRes = await callApi('POST', '/internal/send-test-alert', realBody);
-        document.getElementById('realResult').innerHTML = `<strong>Status:</strong> ${realRes.status} · ${realRes.duration}ms<br><strong>Response:</strong><br><pre>${escapeHtml(JSON.stringify(realRes.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Direct connection to B7</span>`;
-        document.getElementById('realResponseBox').classList.remove('hidden');
-        addCompareLog(`✅ REAL: ${realRes.status} - ${realRes.data?.message || 'sent'}`, 'real');
-
-        addCompareLog('🟡 FALLBACK Mode: B7 is offline, storing alert locally...', 'fallback');
-        const fallbackBody = { severity: 'HIGH', message: 'FALLBACK mode test alert' };
-        const fallbackRes = await callApi('POST', '/internal/send-test-alert', fallbackBody);
-        document.getElementById('fallbackResult').innerHTML = `<strong>Status:</strong> ${fallbackRes.status} · ${fallbackRes.duration}ms<br><strong>Response:</strong><br><pre>${escapeHtml(JSON.stringify(fallbackRes.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Stored locally (queued)</span>`;
-        document.getElementById('fallbackResponseBox').classList.remove('hidden');
-        addCompareLog(`✅ FALLBACK: ${fallbackRes.status} - ${fallbackRes.data?.message || 'queued'}`, 'fallback');
-
-        addCompareLog('✅ B7 Comparison completed!', 'info');
-    });
-
-    document.getElementById('compareB5Btn').addEventListener('click', async () => {
-        const logDiv = document.getElementById('compareLog');
-        logDiv.innerHTML = '';
-        addCompareLog('🔄 Starting B5 Comparison...', 'info');
-        
-        const corrId = uuidv4();
-
-        addCompareLog('🟢 REAL Mode: B5 is online, sending decision directly...', 'real');
-        const realBody = { correlationId: corrId, decision: 'ALLOW', reason: 'REAL_MODE_TEST' };
-        const realRes = await callApi('POST', '/internal/send-test-decision', realBody);
-        document.getElementById('realResult').innerHTML = `<strong>Status:</strong> ${realRes.status} · ${realRes.duration}ms<br><strong>Response:</strong><br><pre>${escapeHtml(JSON.stringify(realRes.data, null, 2))}</pre><span style="color:#10b981; font-weight:600;">✅ REAL Mode - Decision sent to B5</span>`;
-        document.getElementById('realResponseBox').classList.remove('hidden');
-        addCompareLog(`✅ REAL: ${realRes.status} - ${realRes.data?.message || 'sent'}`, 'real');
-
-        addCompareLog('🟡 FALLBACK Mode: B5 is offline, storing decision in fallback storage...', 'fallback');
-        const fallbackCorrId = uuidv4();
-        const fallbackBody = { correlationId: fallbackCorrId, decision: 'DENY', reason: 'FALLBACK_MODE_TEST' };
-        const fallbackRes = await callApi('POST', '/internal/send-test-decision', fallbackBody);
-        document.getElementById('fallbackResult').innerHTML = `<strong>Status:</strong> ${fallbackRes.status} · ${fallbackRes.duration}ms<br><strong>Response:</strong><br><pre>${escapeHtml(JSON.stringify(fallbackRes.data, null, 2))}</pre><span style="color:#f97316; font-weight:600;">🟡 FALLBACK Mode - Stored in fallback_storage</span>`;
-        document.getElementById('fallbackResponseBox').classList.remove('hidden');
-        addCompareLog(`✅ FALLBACK: ${fallbackRes.status} - ${fallbackRes.data?.message || 'queued'}`, 'fallback');
-
-        addCompareLog('📊 Checking fallback storage...', 'info');
-        const storageRes = await callApi('GET', '/internal/fallback-decisions?limit=5');
-        if (storageRes.status === 200) {
-            const count = Array.isArray(storageRes.data) ? storageRes.data.length : 0;
-            addCompareLog(`📊 Fallback storage size: ${count}`, 'info');
-        }
-
-        addCompareLog('✅ B5 Comparison completed!', 'info');
-    });
-
-    // ==================== CONNECTION STATUS ====================
-    async function updateConnectionStatus() {
-        try {
-            const res = await callApi('GET', '/connection-status');
-            if (res.status === 200 && res.data) {
-                connectionStatus = {
-                    b3: res.data.b3?.status || 'fallback',
-                    b4: res.data.b4?.status || 'fallback',
-                    b7: res.data.b7?.status || 'fallback',
-                    b5: res.data.b5?.status || 'fallback'
-                };
-                updateModeIndicators(connectionStatus);
-                const elements = {
-                    b3: { status: document.getElementById('statusB3'), mode: document.getElementById('b3Mode'), led: document.getElementById('b3Led') },
-                    b4: { status: document.getElementById('statusB4'), mode: document.getElementById('b4Mode'), led: document.getElementById('b4Led') },
-                    b7: { status: document.getElementById('statusB7'), mode: document.getElementById('b7Mode'), led: document.getElementById('b7Led') },
-                    b5: { status: document.getElementById('statusB5'), mode: document.getElementById('b5Mode'), led: document.getElementById('b5Led') }
-                };
-                const statusMap = {
-                    'real': { text: '🟢 Connected', class: 'status-real', led: 'led-green', modeText: 'Real' },
-                    'fallback': { text: '🟡 Fallback', class: 'status-fallback', led: 'led-orange', modeText: 'Fallback' },
-                    'offline': { text: '🔴 Offline', class: 'status-offline', led: 'led-red', modeText: 'Offline' }
-                };
-                Object.keys(elements).forEach(key => {
-                    const el = elements[key];
-                    const status = connectionStatus[key] || 'fallback';
-                    const info = statusMap[status] || statusMap['fallback'];
-                    if (el.status) el.innerHTML = info.text;
-                    if (el.mode) {
-                        el.mode.className = `status-badge ${info.class}`;
-                        el.mode.textContent = info.modeText;
+// ============================================================
+// REFRESH REALTIME - CHỈ LẤY LOG MỚI
+// ============================================================
+async function refreshRealtime() {
+    try {
+        const res = await callApi('GET', '/internal/request-logs?limit=50');
+        if (res.status === 200 && res.data?.logs) {
+            const logs = res.data.logs;
+            logs.forEach(log => {
+                const service = getServiceFromPath(log.path);
+                if (service && service !== 'health') {
+                    const key = log.timestamp + log.path + log.method + log.client_ip;
+                    if (!processedLogs.has(key)) {
+                        processedLogs.add(key);
+                        addToRealtime(service, log);
+                        
+                        // Thêm vào B6 với response chi tiết
+                        const serviceName = getServiceName(service);
+                        let detail = `${log.method} ${log.path}`;
+                        let responseDetail = '';
+                        let sendTo = '';
+                        
+                        // Lấy response body nếu có
+                        if (log.body) {
+                            if (log.body.status) responseDetail += `status: ${log.body.status}`;
+                            if (log.body.alerts_count !== undefined) responseDetail += `, ${log.body.alerts_count} alerts`;
+                            if (log.body.message) responseDetail += `, ${log.body.message}`;
+                        }
+                        
+                        if (log.data && log.data.message) {
+                            responseDetail += log.data.message;
+                        }
+                        
+                        if (service === 'b1' || service === 'b2' || service === 'b3' || service === 'b4') {
+                            if (log.status_code >= 200 && log.status_code < 300) {
+                                if (log.path.includes('evaluate-sensor') || log.path.includes('evaluate-camera') || 
+                                    log.path.includes('access/check') || log.path.includes('evaluate-detection')) {
+                                    sendTo = 'B5 + B7';
+                                }
+                            }
+                        }
+                        
+                        // Response từ B6
+                        let b6Response = log.status_code >= 200 && log.status_code < 300 ? 
+                            (responseDetail || '✅ Processed successfully') : 
+                            '❌ Error: ' + log.status_code;
+                        
+                        addB6LogEntry(
+                            serviceName,
+                            log.client_ip || 'unknown',
+                            log.status_code,
+                            detail,
+                            sendTo,
+                            b6Response
+                        );
                     }
-                    if (el.led) {
-                        el.led.className = `health-led ${info.led}`;
-                    }
-                });
-                addLog(`Connection status updated`, 'info');
-            }
-        } catch (e) {
-            addLog(`Failed to get connection status: ${e.message}`, 'error');
+                } else if (service === 'health') {
+                    addHealthIP(log.client_ip || 'unknown');
+                }
+            });
         }
+        
+    } catch(e) {
+        /* ignore */
     }
-    
-    async function updateServiceStatus() {
+}
+
+// ============================================================
+// COPY
+// ============================================================
+document.getElementById('copyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('curlPreview').textContent);
+});
+
+// ============================================================
+// STATUS B6
+// ============================================================
+async function updateB6Status() {
+    try {
         const res = await callApi('GET', '/health');
-        document.getElementById('statusB6').innerHTML = res.status === 200 ? '✅ Healthy' : '❌ Down';
-        await updateConnectionStatus();
-    }
-    
-    document.getElementById('refreshStatusBtn').addEventListener('click', updateServiceStatus);
-
-    async function refreshHealthDashboard() {
-        const res = await callApi('GET', '/health');
-        const grid = document.getElementById('fullHealthGrid');
-        if (grid && res.data && res.data.components) {
-            const statusMap = {
-                'real': { class: 'status-real', text: 'Real' },
-                'fallback': { class: 'status-fallback', text: 'Fallback' },
-                'offline': { class: 'status-offline', text: 'Offline' }
-            };
-            const b3Info = statusMap[connectionStatus.b3] || statusMap['fallback'];
-            const b4Info = statusMap[connectionStatus.b4] || statusMap['fallback'];
-            grid.innerHTML = `<div class="health-item">🟢 System: ${res.data.status}</div>
-                              <div class="health-item">🗄️ Database: ${res.data.components.database || 'UP'}</div>
-                              <div class="health-item">⚙️ Rule Engine: ${res.data.components.rule_engine?.status || 'UP'} (${Math.round(res.data.components.rule_engine?.avg_latency_ms || 0)}ms)</div>
-                              <div class="health-item">🤖 AI Vision: ${res.data.components.ai_vision?.status || 'UP'} <span class="status-badge ${b4Info.class}">${b4Info.text}</span></div>
-                              <div class="health-item">🚪 Access Gate: ${res.data.components.access_gate?.url || 'Not configured'} <span class="status-badge ${b3Info.class}">${b3Info.text}</span></div>`;
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('statusText');
+        if (res.status === 200) {
+            dot.className = 'dot dot-green';
+            text.textContent = 'Online';
+        } else {
+            dot.className = 'dot dot-red';
+            text.textContent = 'Offline';
         }
-        await updateServiceStatus();
-    }
-    document.getElementById('refreshHealthBtn')?.addEventListener('click', refreshHealthDashboard);
-
-    // ==================== TAB SWITCHING ====================
-    const tabs = document.querySelectorAll('.tab');
-    const providerTab = document.getElementById('providerTab');
-    const consumerTab = document.getElementById('consumerTab');
-    const healthTab = document.getElementById('healthTab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            const target = tab.dataset.tab;
-            providerTab.style.display = target === 'provider' ? 'block' : 'none';
-            consumerTab.style.display = target === 'consumer' ? 'block' : 'none';
-            healthTab.style.display = target === 'health' ? 'block' : 'none';
-            if (target === 'health') refreshHealthDashboard();
-        });
-    });
-
-    // ==================== REQUEST LOGS ====================
-    async function fetchRequestLogs() {
-        const service = document.getElementById('logServiceFilter').value;
-        const status = document.getElementById('logStatusFilter').value;
-        const limit = document.getElementById('logLimit').value || 20;
-        
-        let url = `/internal/request-logs?limit=${limit}`;
-        if (service) url += `&service=${service}`;
-        if (status) url += `&status_code=${status}`;
-        
-        try {
-            const res = await callApi('GET', url);
-            if (res.status === 200 && res.data) {
-                renderRequestLogs(res.data.logs);
-            }
-        } catch (e) {
-            document.getElementById('requestLogsContainer').innerHTML = 
-                `<div style="text-align:center; color:#ef4444; padding:20px;">❌ Failed to load logs: ${e.message}</div>`;
+        if (res.data && res.data.client_ip) {
+            addHealthIP(res.data.client_ip);
         }
+    } catch(e) {
+        document.getElementById('statusDot').className = 'dot dot-red';
+        document.getElementById('statusText').textContent = 'Offline';
     }
+}
 
-    function renderRequestLogs(logs) {
-        const container = document.getElementById('requestLogsContainer');
-        if (!logs || logs.length === 0) {
-            container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">📭 No requests yet</div>`;
-            return;
-        }
-        
-        container.innerHTML = logs.map(log => {
-            const exp = log.explanation || {};
-            const statusClass = `log-status-${log.status_code}`;
-            const time = new Date(log.timestamp).toLocaleTimeString();
-            
-            // Dữ liệu hiển thị
-            let bodyHtml = '';
-            if (log.body && Object.keys(log.body).length > 0) {
-                bodyHtml = `<pre>${escapeHtml(JSON.stringify(log.body, null, 2))}</pre>`;
-            }
-            
-            // Giải thích dữ liệu
-            let summaryHtml = '';
-            if (exp.data_summary && Object.keys(exp.data_summary).length > 0) {
-                summaryHtml = Object.entries(exp.data_summary)
-                    .map(([key, value]) => `<span><strong>${key}:</strong> ${value}</span>`)
-                    .join(' · ');
-            }
-            
-            // Status code with label
-            const statusLabels = {
-                200: '200 OK',
-                202: '202 Accepted',
-                400: '400 Bad Request',
-                401: '401 Unauthorized',
-                403: '403 Forbidden',
-                404: '404 Not Found',
-                429: '429 Rate Limit',
-                500: '500 Server Error'
-            };
-            
-            return `
-                <div class="request-log-item">
-                    <div class="log-header">
-                        <span class="log-service">${exp.service || 'Unknown'}</span>
-                        <span class="log-status ${statusClass}">${statusLabels[log.status_code] || log.status_code}</span>
-                        <span class="log-time">${time}</span>
-                    </div>
-                    <div style="font-size:12px; color:#64748b;">
-                        <strong>${log.method}</strong> ${log.path}
-                        <span style="color:#94a3b8;">· ${log.duration_ms}ms</span>
-                        <span style="color:#94a3b8; margin-left:8px;">${exp.meaning || ''}</span>
-                    </div>
-                    ${summaryHtml ? `<div style="font-size:12px; color:#475569; margin-top:4px;">📊 ${summaryHtml}</div>` : ''}
-                    ${bodyHtml}
-                    <div class="log-explanation">
-                        <span class="highlight">📤 Response:</span> ${exp.status_meaning || 'Unknown'}
-                        ${log.status_code === 202 ? ' (Async - đang xử lý)' : ''}
-                        ${log.status_code === 200 ? ' (Xử lý thành công)' : ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
+// ============================================================
+// INIT
+// ============================================================
+updateStatus();
+updateB6Status();
+setInterval(updateStatus, 30000);
+setInterval(updateB6Status, 10000);
+
+// Refresh realtime mỗi 3 giây
+setInterval(() => {
+    if (document.getElementById('realtimeTab').classList.contains('active')) {
+        refreshRealtime();
     }
+}, 3000);
 
-    // Auto-refresh logs
-    document.getElementById('refreshLogsBtn').addEventListener('click', fetchRequestLogs);
-    document.getElementById('applyLogFilterBtn').addEventListener('click', fetchRequestLogs);
+// Refresh khi tab được chọn
+document.querySelector('[data-tab="realtime"]').addEventListener('click', () => {
+    setTimeout(refreshRealtime, 500);
+});
 
-    // Refresh mỗi 5 giây
-    setInterval(fetchRequestLogs, 5000);
+setTimeout(refreshRealtime, 1000);
 
-    // ==================== ENVIRONMENT SELECTOR ====================
-    const envSelect = document.getElementById('envSelect');
-    const customIpContainer = document.getElementById('customIpContainer');
-    envSelect.addEventListener('change', (e) => {
-        if (e.target.value === 'custom') customIpContainer.style.display = 'flex';
-        else { customIpContainer.style.display = 'none'; API_BASE = e.target.value; addLog(`Switched to: ${API_BASE}`); }
-    });
-    document.getElementById('applyIpBtn').addEventListener('click', () => {
-        let ip = document.getElementById('customIp').value;
-        API_BASE = ip.startsWith('http://') ? ip : 'http://' + ip;
-        addLog(`Switched to custom IP: ${API_BASE}`);
-        setTimeout(updateConnectionStatus, 1000);
-    });
-
-    // ==================== INIT ====================
-    updateServiceStatus();
-    setInterval(updateServiceStatus, 30000);
-    setInterval(updateConnectionStatus, 60000);
+// Khi đổi API Base
+document.getElementById('apiBaseInput').addEventListener('change', () => {
+    updateStatus();
+    updateB6Status();
+    Object.keys(realtimeData).forEach(k => { realtimeData[k] = []; });
+    processedLogs = new Set();
+    lastLogId = {};
+    ['b1','b2','b3','b4','b5','b6','b7','health'].forEach(s => renderRealtime(s));
+});
 </script>
 </body>
 </html>

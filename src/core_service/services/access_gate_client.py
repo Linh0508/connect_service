@@ -5,6 +5,7 @@ Access Gate Client - Gọi B3 (Access Gate Service)
 import httpx
 import os
 import logging
+import asyncio
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from src.core_service.services.connection_manager import connection_manager
@@ -19,6 +20,10 @@ class AccessGateClient:
         self.timeout = float(os.getenv("ACCESS_GATE_TIMEOUT", "3.0"))
         self.client = httpx.AsyncClient(timeout=self.timeout)
         self.service_name = "b3"
+        
+        # Đọc trạng thái từ connection_manager
+        self._use_real = connection_manager.should_use_real(self.service_name)
+        logger.info(f"🚪 AccessGateClient initialized: use_real={self._use_real}")
     
     async def get_access_logs(
         self, 
@@ -42,6 +47,7 @@ class AccessGateClient:
                 if self.api_key:
                     headers["X-API-Key"] = self.api_key
                 
+                logger.debug(f"🚪 Calling B3 access logs: {url}")
                 response = await self.client.get(url, params=params, headers=headers)
                 
                 if response.status_code == 200:
@@ -49,6 +55,8 @@ class AccessGateClient:
                     return response.json()
                 else:
                     logger.warning(f"⚠️ [B3_WARNING] B3 returned {response.status_code} -> FALLBACK")
+            except httpx.TimeoutException:
+                logger.warning(f"⏰ [B3_TIMEOUT] B3 timeout after {self.timeout}s -> FALLBACK")
             except Exception as e:
                 logger.warning(f"⚠️ [B3_ERROR] B3 call failed: {e} -> FALLBACK")
         
@@ -64,6 +72,7 @@ class AccessGateClient:
                 url = f"{self.base_url}/v1/gates/{gate_id}/status"
                 headers = {"X-API-Key": self.api_key} if self.api_key else {}
                 
+                logger.debug(f"🚪 Calling B3 gate status: {url}")
                 response = await self.client.get(url, headers=headers)
                 
                 if response.status_code == 200:
@@ -71,6 +80,8 @@ class AccessGateClient:
                     return response.json()
                 else:
                     logger.warning(f"⚠️ [B3_WARNING] B3 gate status returned {response.status_code} -> FALLBACK")
+            except httpx.TimeoutException:
+                logger.warning(f"⏰ [B3_TIMEOUT] B3 gate status timeout after {self.timeout}s -> FALLBACK")
             except Exception as e:
                 logger.warning(f"⚠️ [B3_ERROR] B3 gate status failed: {e} -> FALLBACK")
         

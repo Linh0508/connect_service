@@ -3,6 +3,7 @@ Sensor Evaluator - Phân tích và đánh giá dữ liệu sensor
 """
 
 import logging
+import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime, time
 from src.core_service.models import (
@@ -38,33 +39,29 @@ class SensorEvaluator:
 
     async def evaluate(self, event: SensorEvent) -> SensorEvaluationResult:
         """Đánh giá dữ liệu sensor"""
-        # 1. Kiểm tra device registry
-        device_registry = await device_registry_service.get_device(event.device_id)
+        logger.info(f"🔍 Evaluating sensor {event.device_id}")
         
+        # 1. Kiểm tra device registry
+        device_registry = None
+        try:
+            device_registry = await device_registry_service.get_device(event.device_id)
+            logger.debug(f"Device registry result: {device_registry}")
+        except Exception as e:
+            logger.warning(f"⚠️ Device registry error: {e}")
+            device_registry = None
+        
+        # 2. Nếu không có device registry, tạo fallback device dict
         if not device_registry:
-            return SensorEvaluationResult(
-                device_id=event.device_id,
-                device_registry=None,
-                status=SensorStatus.INVALID_DEVICE,
-                alerts=[{
-                    "rule_id": "INVALID_DEVICE",
-                    "message": f"Device {event.device_id} not found in registry",
-                    "severity": "CRITICAL"
-                }],
-                readings=SensorReading(
-                    temperature_c=event.temperature_c,
-                    humidity_percent=event.humidity_percent,
-                    light_lux=event.light_lux,
-                    co2_ppm=event.co2_ppm,
-                    smoke_ppm=event.smoke_ppm,
-                    battery_percent=event.battery_percent,
-                    motion_detected=event.motion_detected
-                ),
-                timestamp=event.timestamp or datetime.now(),
-                correlation_id=event.correlationId or uuid4()
-            )
+            logger.info(f"🟡 Using fallback for device {event.device_id}")
+            device_registry = {
+                "device_id": event.device_id,
+                "device_type": "sensor",
+                "location": event.location or "UNKNOWN",
+                "room": event.location or "UNKNOWN",
+                "status": "active"
+            }
 
-        # 2. Kiểm tra lỗi sensor (null values)
+        # 3. Kiểm tra lỗi sensor (null values)
         if event.temperature_c is None and event.humidity_percent is None:
             return SensorEvaluationResult(
                 device_id=event.device_id,
@@ -88,10 +85,10 @@ class SensorEvaluator:
                 correlation_id=event.correlationId or uuid4()
             )
 
-        # 3. Phân loại trạng thái
+        # 4. Phân loại trạng thái
         status, alerts = self._classify_status(event, device_registry)
         
-        # 4. Kiểm tra motion + time (nếu có motion_detected)
+        # 5. Kiểm tra motion + time (nếu có motion_detected)
         if event.motion_detected:
             motion_alerts = self._check_motion_time(event, device_registry)
             alerts.extend(motion_alerts)
@@ -205,12 +202,10 @@ class SensorEvaluator:
         if not event.motion_detected:
             return alerts
 
-        # Khung giờ bất thường: 22:00 - 06:00
         current_time = event.timestamp or datetime.now()
         hour = current_time.hour
-        minute = current_time.minute
 
-        # Kiểm tra nếu trong khung giờ bất thường (22:00-06:00)
+        # Khung giờ bất thường: 22:00 - 06:00
         if hour >= 22 or hour < 6:
             alerts.append({
                 "rule_id": "MOTION_ABNORMAL_TIME",
@@ -218,7 +213,7 @@ class SensorEvaluator:
                 "severity": "HIGH"
             })
 
-        # Kiểm tra nếu trong khung giờ đóng cửa (ví dụ: Lab đóng cửa sau 18:00)
+        # Kiểm tra nếu trong khung giờ đóng cửa (Lab đóng cửa sau 18:00)
         room = device.get("room", "")
         if room.startswith("LAB") and (hour >= 18 or hour < 7):
             alerts.append({

@@ -4,13 +4,15 @@ from datetime import datetime
 from uuid import uuid4
 from enum import Enum
 
+
 class AccessCheckRequest(BaseModel):
     cardId: str = Field(..., min_length=1, max_length=50)
     gateId: str = Field(..., pattern=r'^[A-Z0-9_]{3,20}$')
     correlationId: UUID4
     direction: Optional[str] = Field("IN", pattern=r'^(IN|OUT)$')
     timestamp: Optional[datetime] = None
-    client_ip: Optional[str] = Field(None, alias="clientIp")  # THÊM DÒNG NÀY
+    client_ip: Optional[str] = Field(None, alias="clientIp")
+
 
 class AccessDecision(BaseModel):
     decision: str
@@ -20,11 +22,13 @@ class AccessDecision(BaseModel):
     isDuplicate: bool = False
     expiresAt: Optional[datetime] = None
 
+
 class AIDetectionRequest(BaseModel):
     correlationId: UUID4
     imageRef: str
     faceEmbedding: Optional[List[float]] = None
     detectionId: Optional[UUID4] = None
+
 
 class AIDetectionResponse(BaseModel):
     detectionId: UUID4
@@ -34,17 +38,20 @@ class AIDetectionResponse(BaseModel):
     status: str
     modelVersion: str
     processedAt: datetime
-    traceId: Optional[UUID4] = None  # ← THÊM DÒNG NÀY
+    traceId: Optional[UUID4] = None
+
 
 class HealthResponse(BaseModel):
     status: str
     components: Dict[str, Any]
     timestamp: datetime
 
+
 class ProblemDetails(BaseModel):
     title: str
     status: int
     detail: Optional[str] = None
+
 
 class AlertEvent(BaseModel):
     eventId: UUID4
@@ -56,6 +63,7 @@ class AlertEvent(BaseModel):
     alertDetails: Dict[str, Any]
     timestamp: datetime
 
+
 class AnalyticsEvent(BaseModel):
     correlationId: UUID4
     decision: str
@@ -65,8 +73,9 @@ class AnalyticsEvent(BaseModel):
     quotaAfter: int
     rulesTriggered: List[str]
     timestamp: Optional[datetime] = None
-    policyId: Optional[str] = None      # ← THÊM DÒNG NÀY
-    subjectId: Optional[str] = None     # ← THÊM DÒNG NÀY (cardId hoặc deviceId)
+    policyId: Optional[str] = None
+    subjectId: Optional[str] = None
+
 
 class AuditRecord(BaseModel):
     decisionId: str
@@ -77,6 +86,7 @@ class AuditRecord(BaseModel):
     reasonCode: Optional[str]
     latencyMs: int
 
+
 # ============================================================
 # DEVICE REGISTRY MODELS
 # ============================================================
@@ -85,6 +95,7 @@ class DeviceStatus(str, Enum):
     INACTIVE = "inactive"
     MAINTENANCE = "maintenance"
     INVALID = "invalid_device"
+
 
 class DeviceRegistry(BaseModel):
     device_id: str
@@ -95,8 +106,9 @@ class DeviceRegistry(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
+
 # ============================================================
-# SENSOR DATA MODELS (CẬP NHẬT)
+# SENSOR DATA MODELS
 # ============================================================
 class SensorReading(BaseModel):
     temperature_c: Optional[float] = None
@@ -107,9 +119,10 @@ class SensorReading(BaseModel):
     battery_percent: Optional[float] = None
     motion_detected: Optional[bool] = False
 
+
 class SensorEvent(BaseModel):
     source_service: str = "team-iot"
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: Optional[datetime] = None
     device_id: str
     location: Optional[str] = None
     temperature_c: Optional[float] = None
@@ -119,13 +132,14 @@ class SensorEvent(BaseModel):
     smoke_ppm: Optional[float] = None
     battery_percent: Optional[float] = None
     motion_detected: Optional[bool] = False
-    correlationId: Optional[UUID4] = None  # Thêm correlationId
-    
-    @validator('correlationId', pre=True, always=True)
-    def set_correlation_id(cls, v):
-        if v is None:
-            return uuid4()
-        return v
+    correlationId: Optional[UUID4] = None
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            UUID4: lambda v: str(v)
+        }
+
 
 # ============================================================
 # SENSOR EVALUATION RESULT
@@ -137,6 +151,7 @@ class SensorStatus(str, Enum):
     SENSOR_ERROR = "sensor_error"
     INVALID_DEVICE = "invalid_device"
 
+
 class SensorEvaluationResult(BaseModel):
     device_id: str
     device_registry: Optional[DeviceRegistry] = None
@@ -146,11 +161,11 @@ class SensorEvaluationResult(BaseModel):
     timestamp: datetime
     correlation_id: UUID4
 
+
 # ============================================================
 # CAMERA EVENT MODELS (TỪ B2)
 # ============================================================
 class CameraEvent(BaseModel):
-    """Sự kiện từ Camera Stream (B2)"""
     camera_id: str = Field(..., description="Định danh camera")
     event_type: str = Field(..., description="Loại sự kiện: motion_detected, camera_offline, obstruction, etc.")
     motion_detected: bool = Field(False, description="Có phát hiện chuyển động không")
@@ -165,8 +180,8 @@ class CameraEvent(BaseModel):
             return uuid4()
         return v
 
+
 class CameraEventResponse(BaseModel):
-    """Phản hồi từ B6 cho B2"""
     status: str = Field(..., description="Trạng thái xử lý: processed, rejected")
     alert_triggered: bool = Field(False, description="Có kích hoạt cảnh báo không")
     message: Optional[str] = Field(None, description="Thông báo chi tiết")

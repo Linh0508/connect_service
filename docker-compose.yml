@@ -1,11 +1,12 @@
+version: '3.8'
+
 networks:
   team-internal:
     driver: bridge
     name: b6-team-network
   class-net:
-    name: class-network
-    external: false
     driver: bridge
+    name: class-network
 
 volumes:
   postgres_data:
@@ -44,7 +45,7 @@ services:
       # Server
       HOST: 0.0.0.0
       PORT: 8000
-      DEBUG: ${DEBUG:-false}
+      DEBUG: ${DEBUG:-true}
       
       # Database
       DATABASE_URL: postgresql://${POSTGRES_USER:-b6_user}:${POSTGRES_PASSWORD:-b6_password}@postgres:5432/${POSTGRES_DB:-b6_core_db}
@@ -52,37 +53,46 @@ services:
       
       # B3 - Access Gate
       ACCESS_GATE_URL: ${ACCESS_GATE_URL:-http://b3-access-gate:8001}
-      ACCESS_GATE_AUTO_DETECT: ${ACCESS_GATE_AUTO_DETECT:-true}
+      ACCESS_GATE_AUTO_DETECT: ${ACCESS_GATE_AUTO_DETECT:-false}  # TẮT AUTO DETECT
       ACCESS_GATE_TIMEOUT: ${ACCESS_GATE_TIMEOUT:-3.0}
+      ACCESS_GATE_RETRY_INTERVAL: ${ACCESS_GATE_RETRY_INTERVAL:-60}
       
       # B4 - AI Vision
       AI_VISION_URL: ${AI_VISION_URL:-http://b4-ai-vision:9000}
-      AI_VISION_AUTO_DETECT: ${AI_VISION_AUTO_DETECT:-true}
+      AI_VISION_AUTO_DETECT: ${AI_VISION_AUTO_DETECT:-false}  # TẮT AUTO DETECT
+      AI_VISION_RETRY_INTERVAL: ${AI_VISION_RETRY_INTERVAL:-60}
       B4_AI_VISION_URL: ${B4_AI_VISION_URL:-http://b4-ai-vision:9000}
       AI_VISION_FALLBACK_URL: ${AI_VISION_FALLBACK_URL:-http://b6-ai-vision:9000}
       
       # B5 - Analytics
-      ANALYTICS_URL: ${ANALYTICS_URL:-http://b5-analytics:8003}
+      ANALYTICS_URL: ${ANALYTICS_URL:-http://26.100.91.226:8000}
       ANALYTICS_WEBHOOK_PATH: ${ANALYTICS_WEBHOOK_PATH:-/webhook/decisions}
-      ANALYTICS_AUTO_DETECT: ${ANALYTICS_AUTO_DETECT:-true}
+      ANALYTICS_AUTO_DETECT: ${ANALYTICS_AUTO_DETECT:-false}  # TẮT AUTO DETECT
       ANALYTICS_TIMEOUT: ${ANALYTICS_TIMEOUT:-5.0}
-      ANALYTICS_MOCK: ${ANALYTICS_MOCK:-false}
+      ANALYTICS_MOCK: ${ANALYTICS_MOCK:-true}
+      ANALYTICS_RETRY_INTERVAL: ${ANALYTICS_RETRY_INTERVAL:-60}
       
-      # B7 - Notification (REAL MODE via RabbitMQ)
-      NOTIFICATION_URL: ${NOTIFICATION_URL:-http://b7-notification:8002}
+      # B7 - Notification
+      NOTIFICATION_URL: ${NOTIFICATION_URL:-http://26.64.54.49:8000}
       NOTIFICATION_WEBHOOK_PATH: ${NOTIFICATION_WEBHOOK_PATH:-/webhook/alerts}
-      NOTIFICATION_AUTO_DETECT: ${NOTIFICATION_AUTO_DETECT:-true}
+      NOTIFICATION_AUTO_DETECT: ${NOTIFICATION_AUTO_DETECT:-false}  # TẮT AUTO DETECT
       NOTIFICATION_TIMEOUT: ${NOTIFICATION_TIMEOUT:-5.0}
-      NOTIFICATION_MOCK: ${NOTIFICATION_MOCK:-false}
+      NOTIFICATION_MOCK: ${NOTIFICATION_MOCK:-true}
+      NOTIFICATION_RETRY_INTERVAL: ${NOTIFICATION_RETRY_INTERVAL:-60}
       
-      # RabbitMQ - Gửi alert REAL đến B7
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      # RabbitMQ
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-localhost}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
       RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-amq.topic}
       RABBITMQ_ROUTING_KEY: ${RABBITMQ_ROUTING_KEY:-notification.alerts}
       RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-notification.alerts}
+      RABBITMQ_CONNECTION_TIMEOUT: ${RABBITMQ_CONNECTION_TIMEOUT:-3.0}
+      
+      # Connection Management
+      CONNECTION_RETRY_ENABLED: ${CONNECTION_RETRY_ENABLED:-false}
+      CONNECTION_CHECK_TIMEOUT: ${CONNECTION_CHECK_TIMEOUT:-2.0}
       
       # Security & Cache
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-mock-secret}
@@ -97,6 +107,7 @@ services:
       - "${API_PORT:-8000}:8000"
     volumes:
       - audit_data:/app/data
+      - ./src:/app/src  # MOUNT SOURCE CODE CHO DEBUG
     networks:
       - team-internal
       - class-net

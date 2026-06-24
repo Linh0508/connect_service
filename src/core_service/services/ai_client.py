@@ -5,6 +5,7 @@ AI Vision Client - Gọi AI Vision Service (B4) hoặc Fallback AI
 import httpx
 import os
 import logging
+import asyncio
 from datetime import datetime
 import uuid
 import random
@@ -26,13 +27,20 @@ class AIVisionClient:
         # URL của AI fallback nội bộ (container của B6)
         self.fallback_url = os.getenv("AI_VISION_FALLBACK_URL", "http://b6-ai-vision:9000")
         
-        self.client = httpx.AsyncClient(timeout=5.0)
-        self.mode = AIMode.FALLBACK  # Mặc định là fallback
-        self.b4_available = False
-        self.last_check = None
+        self.client = httpx.AsyncClient(timeout=3.0)
+        self.mode = AIMode.FALLBACK
+        
+        # Đọc trạng thái từ connection_manager
+        self._use_real = connection_manager.should_use_real("b4")
+        if self._use_real:
+            self.mode = AIMode.REAL
+        logger.info(f"👁️ AIVisionClient initialized: mode={self.mode.value}")
     
     async def _check_b4_health(self) -> bool:
         """Kiểm tra xem B4 thật có đang chạy không"""
+        if not connection_manager.should_use_real("b4"):
+            return False
+        
         try:
             response = await self.client.get(f"{self.b4_url}/health", timeout=2.0)
             if response.status_code == 200:
@@ -41,6 +49,9 @@ class AIVisionClient:
             else:
                 logger.debug(f"B4 health check failed: {response.status_code}")
                 return False
+        except httpx.TimeoutException:
+            logger.debug(f"⏰ B4 health check timeout")
+            return False
         except Exception as e:
             logger.debug(f"B4 not reachable: {e}")
             return False
@@ -52,8 +63,9 @@ class AIVisionClient:
         use_real = connection_manager.should_use_real("b4")
         
         if use_real:
-            # Gọi B4 thật
+            # Gọi B4 thật với timeout
             try:
+                logger.debug(f"👁️ Calling B4 AI Vision: {self.b4_url}/predict")
                 response = await self.client.post(
                     f"{self.b4_url}/predict",
                     json=request.dict()
@@ -66,17 +78,20 @@ class AIVisionClient:
                 else:
                     logger.warning(f"B4 returned {response.status_code}, switching to FALLBACK")
                     self.mode = AIMode.FALLBACK
+            except httpx.TimeoutException:
+                logger.warning(f"⏰ B4 timeout, switching to FALLBACK")
+                self.mode = AIMode.FALLBACK
             except Exception as e:
                 logger.warning(f"B4 call failed: {e}, switching to FALLBACK")
                 self.mode = AIMode.FALLBACK
         
-        # FALLBACK MODE - Sử dụng URL fallback từ connection_manager
+        # FALLBACK MODE
         fallback_url = connection_manager.get_fallback_url("b4")
         logger.info(f"🟡 AI Vision: FALLBACK mode - calling internal AI at {fallback_url}")
         return await self._fallback_detect(request, fallback_url)
     
     async def _fallback_detect(self, request, fallback_url: str = None):
-        """Gọi AI container nội bộ của B6"""
+        """Gọi AI container nội bộ của B6 với timeout"""
         if fallback_url is None:
             fallback_url = self.fallback_url
         
@@ -84,7 +99,7 @@ class AIVisionClient:
             response = await self.client.post(
                 f"{fallback_url}/predict",
                 json=request.dict(),
-                timeout=5.0
+                timeout=3.0
             )
             if response.status_code == 200:
                 data = response.json()
@@ -93,10 +108,13 @@ class AIVisionClient:
                 return AIDetectionResponse(**data)
             else:
                 raise Exception(f"Fallback AI returned {response.status_code}")
+        except httpx.TimeoutException:
+            logger.warning(f"⏰ Fallback AI timeout, using ultimate mock")
         except Exception as e:
             logger.error(f"Fallback AI also failed: {e}")
-            # Ultimate fallback - mock response
-            return self._mock_response(request)
+        
+        # Ultimate fallback - mock response
+        return self._mock_response(request)
     
     def _mock_response(self, request):
         """Mock response cuối cùng khi mọi thứ đều lỗi"""
