@@ -7,14 +7,112 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ===== ANIMATED BACKGROUND ===== */
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
             min-height: 100vh;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            background-attachment: fixed;
+            background: #0f0c29;
             color: #e0e0e0;
+            overflow-x: hidden;
+            position: relative;
         }
 
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.10) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.05) 0%, transparent 50%),
+                linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            animation: backgroundMove 20s ease-in-out infinite alternate;
+            z-index: -2;
+        }
+
+        /* Floating particles */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.05), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.03), transparent),
+                radial-gradient(2px 2px at 50px 160px, rgba(255,255,255,0.04), transparent),
+                radial-gradient(2px 2px at 90px 40px, rgba(255,255,255,0.03), transparent),
+                radial-gradient(2px 2px at 130px 80px, rgba(255,255,255,0.05), transparent),
+                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.02), transparent);
+            background-size: 200px 200px;
+            z-index: -1;
+            animation: particleFloat 30s linear infinite;
+        }
+
+        @keyframes backgroundMove {
+            0% { transform: rotate(0deg) scale(1); }
+            33% { transform: rotate(5deg) scale(1.05); }
+            66% { transform: rotate(-3deg) scale(0.95); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-10px, -10px); }
+            50% { transform: translate(10px, 5px); }
+            75% { transform: translate(-5px, 10px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Animated glow orb */
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            z-index: -1;
+            animation: orbFloat 8s ease-in-out infinite alternate;
+        }
+        .glow-orb-1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(99, 102, 241, 0.2);
+            top: -100px;
+            right: -100px;
+            animation-delay: 0s;
+        }
+        .glow-orb-2 {
+            width: 300px;
+            height: 300px;
+            background: rgba(236, 72, 153, 0.15);
+            bottom: -50px;
+            left: -50px;
+            animation-delay: -3s;
+        }
+        .glow-orb-3 {
+            width: 250px;
+            height: 250px;
+            background: rgba(52, 211, 153, 0.1);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -5s;
+        }
+
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -20px) scale(1.1); }
+            66% { transform: translate(-20px, 30px) scale(0.9); }
+            100% { transform: translate(10px, -10px) scale(1.05); }
+        }
+
+        /* ===== GLASSMORPHISM ===== */
         .glass {
             background: rgba(255, 255, 255, 0.04);
             backdrop-filter: blur(20px);
@@ -22,7 +120,20 @@
             border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: cardFadeIn 0.6s ease-out;
         }
+        .glass:hover {
+            border-color: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 8px 40px rgba(99, 102, 241, 0.08);
+            transform: translateY(-2px);
+        }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         .glass-input {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -37,8 +148,9 @@
         .glass-input:focus {
             outline: none;
             border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.05);
         }
+        .glass-input::placeholder { color: rgba(255,255,255,0.25); }
         .glass-select {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -73,7 +185,14 @@
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            animation: slideDown 0.5s ease-out;
         }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
         .navbar-inner {
             max-width: 1440px;
             margin: 0 auto;
@@ -100,7 +219,14 @@
             background: linear-gradient(135deg, #818cf8, #6366f1);
             display: inline-block;
             box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            animation: pulseGlow 2s ease-in-out infinite;
         }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+        }
+
         .navbar-brand .badge {
             background: rgba(99, 102, 241, 0.2);
             color: #818cf8;
@@ -130,12 +256,30 @@
             cursor: pointer;
             transition: all 0.3s;
             font-family: 'Inter', sans-serif;
+            position: relative;
         }
         .tabs .tab:hover { color: rgba(255, 255, 255, 0.7); background: rgba(255,255,255,0.03); }
         .tabs .tab.active {
             background: rgba(99, 102, 241, 0.15);
             color: #818cf8;
             box-shadow: 0 0 20px rgba(99, 102, 241, 0.05);
+        }
+        .tabs .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 2px;
+            background: #818cf8;
+            border-radius: 2px;
+            animation: tabUnderline 0.3s ease-out;
+        }
+
+        @keyframes tabUnderline {
+            from { width: 0; }
+            to { width: 20px; }
         }
 
         .navbar-actions {
@@ -156,14 +300,25 @@
             height: 8px;
             border-radius: 50%;
             display: inline-block;
+            animation: statusPulse 1.5s ease-in-out infinite;
         }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .dot-green { background: #34d399; box-shadow: 0 0 12px rgba(52, 211, 153, 0.3); }
         .dot-red { background: #f87171; box-shadow: 0 0 12px rgba(248, 113, 113, 0.3); }
 
         .main { max-width: 100%; margin: 0; padding: 12px 16px; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease-out; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -202,7 +357,14 @@
             border-radius: 20px;
             font-size: 10px;
             font-weight: 600;
+            animation: badgePop 0.3s ease-out;
         }
+
+        @keyframes badgePop {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
         .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
         .status-badge.online { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.12); }
         .status-badge.online .dot { background: #34d399; }
@@ -249,24 +411,65 @@
             font-size: 12px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
             gap: 5px;
             font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
         }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .btn:hover::after { opacity: 1; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
+
         .btn-primary {
             background: linear-gradient(135deg, #6366f1, #818cf8);
             color: #fff;
             box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); }
+        .btn-primary:hover { box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); }
+
         .btn-secondary {
             background: rgba(255, 255, 255, 0.05);
             color: rgba(255, 255, 255, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.06);
         }
         .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+        .btn-success {
+            background: linear-gradient(135deg, #34d399, #6ee7b7);
+            color: #0f0c29;
+        }
+        .btn-success:hover { box-shadow: 0 8px 24px rgba(52, 211, 153, 0.25); }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f87171, #fca5a5);
+            color: #0f0c29;
+        }
+        .btn-danger:hover { box-shadow: 0 8px 24px rgba(248, 113, 113, 0.25); }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #fbbf24, #fcd34d);
+            color: #0f0c29;
+        }
+        .btn-warning:hover { box-shadow: 0 8px 24px rgba(251, 191, 36, 0.25); }
+
+        .btn-info {
+            background: linear-gradient(135deg, #60a5fa, #93bbfc);
+            color: #0f0c29;
+        }
+        .btn-info:hover { box-shadow: 0 8px 24px rgba(96, 165, 250, 0.25); }
+
         .btn-sm { padding: 4px 10px; font-size: 10px; }
         .btn-xs { padding: 2px 8px; font-size: 9px; }
         .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -297,7 +500,8 @@
         .sensor-btn:hover {
             border-color: rgba(99, 102, 241, 0.25);
             background: rgba(99, 102, 241, 0.06);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
         }
         .sensor-btn .sub { font-size: 8px; color: rgba(255,255,255,0.2); display: block; font-weight: 400; }
 
@@ -315,6 +519,12 @@
             border: 1px solid rgba(255,255,255,0.03);
             margin-top: 4px;
             color: rgba(255,255,255,0.5);
+            animation: responseSlide 0.3s ease-out;
+        }
+
+        @keyframes responseSlide {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
         .resp-grid {
@@ -328,6 +538,11 @@
             padding: 10px 12px;
             border: 1px solid rgba(255,255,255,0.04);
             min-height: 70px;
+            transition: all 0.3s;
+        }
+        .resp-grid .item:hover {
+            border-color: rgba(99, 102, 241, 0.1);
+            background: rgba(0, 0, 0, 0.3);
         }
         .resp-grid .item .label {
             font-size: 9px;
@@ -398,7 +613,7 @@
         }
 
         /* ============================================================ */
-        /* REALTIME LAYOUT - TĂNG KHOẢNG CÁCH VÀ KÍCH THƯỚC CHỮ */
+        /* REALTIME LAYOUT */
         /* ============================================================ */
         .realtime-container {
             display: flex;
@@ -427,6 +642,11 @@
             flex-direction: column;
             overflow: hidden;
             min-height: 0;
+            transition: all 0.3s;
+        }
+        .realtime-left .row .b-card:hover {
+            border-color: rgba(99, 102, 241, 0.1);
+            background: rgba(0, 0, 0, 0.2);
         }
         .realtime-left .row .b-card .b-header {
             padding: 5px 10px;
@@ -464,7 +684,14 @@
             flex-wrap: wrap;
             align-items: baseline;
             gap: 4px;
+            animation: entrySlide 0.2s ease-out;
         }
+
+        @keyframes entrySlide {
+            from { opacity: 0; transform: translateX(-5px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
         .realtime-left .row .b-card .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
         .realtime-left .row .b-card .b-body .entry .ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
         .realtime-left .row .b-card .b-body .entry .status-ok { color: #34d399; }
@@ -483,6 +710,11 @@
             border: 1px solid rgba(255,255,255,0.04);
             overflow: hidden;
             min-height: 0;
+            transition: all 0.3s;
+        }
+        .realtime-center:hover {
+            border-color: rgba(99, 102, 241, 0.1);
+            background: rgba(0, 0, 0, 0.2);
         }
         .realtime-center .b-header {
             padding: 5px 10px;
@@ -516,6 +748,7 @@
         .realtime-center .b-body .entry {
             border-bottom: 1px solid rgba(255,255,255,0.015);
             padding: 4px 0;
+            animation: entrySlide 0.2s ease-out;
         }
         .realtime-center .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
         .realtime-center .b-body .entry .b6-from { color: #818cf8; font-weight: 500; }
@@ -547,6 +780,11 @@
             flex-direction: column;
             overflow: hidden;
             min-height: 0;
+            transition: all 0.3s;
+        }
+        .realtime-right .row .b-card:hover {
+            border-color: rgba(99, 102, 241, 0.1);
+            background: rgba(0, 0, 0, 0.2);
         }
         .realtime-right .row .b-card .b-header {
             padding: 5px 10px;
@@ -584,6 +822,7 @@
             flex-wrap: wrap;
             align-items: baseline;
             gap: 4px;
+            animation: entrySlide 0.2s ease-out;
         }
         .realtime-right .row .b-card .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
         .realtime-right .row .b-card .b-body .entry .ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
@@ -606,6 +845,11 @@
             flex-direction: column;
             overflow: hidden;
             max-height: 85px;
+            transition: all 0.3s;
+        }
+        .realtime-bottom .b-card:hover {
+            border-color: rgba(99, 102, 241, 0.1);
+            background: rgba(0, 0, 0, 0.2);
         }
         .realtime-bottom .b-card .b-header {
             padding: 3px 10px;
@@ -640,6 +884,7 @@
             border-radius: 12px;
             border: 1px solid rgba(52, 211, 153, 0.08);
             font-size: 10px;
+            animation: badgePop 0.3s ease-out;
         }
         .realtime-bottom .b-card .b-body .health-ip .ip { color: rgba(255,255,255,0.4); }
         .realtime-bottom .b-card .b-body .health-ip .time { color: rgba(255,255,255,0.15); font-size: 8px; }
@@ -674,13 +919,18 @@
 </head>
 <body>
 
+<!-- ===== GLOW ORBS ===== -->
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+<div class="glow-orb glow-orb-3"></div>
+
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar">
     <div class="navbar-inner">
         <a class="navbar-brand" href="#">
             <span class="logo-dot"></span>
             B6 Core
-            <span class="badge">v1.5</span>
+            <span class="badge">v2.0</span>
         </a>
         <div class="tabs">
             <button class="tab active" data-tab="provider">📤 Provider</button>
@@ -697,7 +947,7 @@
     </div>
 </nav>
 
-<!-- ===== MAIN ===== -->
+<!-- ===== MAIN CONTENT ===== -->
 <div class="main">
 
     <!-- ============================================================ -->
@@ -705,28 +955,30 @@
     <!-- ============================================================ -->
     <div id="providerTab" class="tab-content active">
         <div class="grid-2">
+            <!-- LEFT: Controls -->
             <div class="glass card">
                 <div class="card-header"><h3>⚡ Provider Tests</h3><span class="badge">Các B → B6</span></div>
                 <div class="card-body">
-                    <!-- B1 -->
+
+                    <!-- ===== B1: IoT Sensor ===== -->
                     <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
                             <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b1">B1</span> IoT Sensor</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="sensor-grid">
-                            <button class="sensor-btn" data-device="sensor_01" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">🟢 Normal<span class="sub">25°C</span></button>
-                            <button class="sensor-btn" data-device="sensor_02" data-temp="37.5" data-humidity="45.0" data-co2="600" data-smoke="0.02" data-battery="77" data-motion="true">🟡 Warning<span class="sub">37.5°C</span></button>
-                            <button class="sensor-btn" data-device="sensor_03" data-temp="28.0" data-humidity="55.0" data-co2="1900" data-smoke="0.01" data-battery="77" data-motion="false">🔴 CO₂<span class="sub">1900ppm</span></button>
-                            <button class="sensor-btn" data-device="sensor_04" data-temp="45.0" data-humidity="30.0" data-co2="800" data-smoke="1.5" data-battery="77" data-motion="false">🔥 Fire<span class="sub">Smoke 1.5</span></button>
-                            <button class="sensor-btn" data-device="sensor_05" data-temp="30.0" data-humidity="80.0" data-co2="450" data-smoke="0.01" data-battery="15" data-motion="false">🔋 Battery<span class="sub">15%</span></button>
-                            <button class="sensor-btn" data-device="sensor_06" data-temp="22.0" data-humidity="50.0" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="true" data-time="23:30">🌙 Motion<span class="sub">23:30</span></button>
-                            <button class="sensor-btn" data-device="invalid-device" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">❌ Invalid<span class="sub">Device</span></button>
-                            <button class="sensor-btn" data-device="sensor_01" data-temp="null" data-humidity="null" data-co2="null" data-smoke="null" data-battery="null" data-motion="false">⚠️ Error<span class="sub">No Data</span></button>
+                            <button class="sensor-btn" data-device="esp32-lab-a101" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">🟢 Normal<span class="sub">25°C</span></button>
+                            <button class="sensor-btn" data-device="esp32-lab-a102" data-temp="37.5" data-humidity="45.0" data-co2="600" data-smoke="0.02" data-battery="77" data-motion="true">🟡 Warning<span class="sub">37.5°C</span></button>
+                            <button class="sensor-btn" data-device="esp32-hall-b201" data-temp="28.0" data-humidity="55.0" data-co2="1900" data-smoke="0.01" data-battery="77" data-motion="false">🔴 CO₂<span class="sub">1900ppm</span></button>
+                            <button class="sensor-btn" data-device="esp32-lab-b202" data-temp="45.0" data-humidity="30.0" data-co2="800" data-smoke="1.5" data-battery="77" data-motion="false">🔥 Fire<span class="sub">Smoke 1.5</span></button>
+                            <button class="sensor-btn" data-device="esp32-gate-a" data-temp="30.0" data-humidity="80.0" data-co2="450" data-smoke="0.01" data-battery="15" data-motion="false">🔋 Battery<span class="sub">15%</span></button>
+                            <button class="sensor-btn" data-device="esp32-office-01" data-temp="22.0" data-humidity="50.0" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="true" data-time="23:30">🌙 Motion<span class="sub">23:30</span></button>
+                            <button class="sensor-btn" data-device="invalid-device-999" data-temp="25.5" data-humidity="60.2" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">❌ Invalid<span class="sub">Device</span></button>
+                            <button class="sensor-btn" data-device="esp32-lab-a101" data-temp="null" data-humidity="null" data-co2="450" data-smoke="0.01" data-battery="77" data-motion="false">⚠️ Error<span class="sub">No Data</span></button>
                         </div>
                         <div class="form-grid-3">
-                            <div class="field-group" style="margin-bottom:0;"><label>Device</label><input type="text" id="sensorDeviceId" class="glass-input" value="sensor_01"></div>
-                            <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="sensorLocation" class="glass-input" value="LAB_01"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Device</label><input type="text" id="sensorDeviceId" class="glass-input" value="esp32-lab-a101"></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="sensorLocation" class="glass-input" value="Lab A101"></div>
                             <div class="field-group" style="margin-bottom:0;"><label>Motion</label><select id="sensorMotion" class="glass-select"><option value="false">false</option><option value="true">true</option></select></div>
                             <div class="field-group" style="margin-bottom:0;"><label>Temp °C</label><input type="number" id="sensorTemp" class="glass-input" value="25.5" step="0.1"></div>
                             <div class="field-group" style="margin-bottom:0;"><label>Humidity %</label><input type="number" id="sensorHumidity" class="glass-input" value="60.2" step="0.1"></div>
@@ -737,7 +989,7 @@
                         <button id="sendSensorBtn" class="btn btn-primary w-full mt-6">🚀 POST /internal/evaluate-sensor</button>
                     </div>
 
-                    <!-- B2 -->
+                    <!-- ===== B2: Camera Stream ===== -->
                     <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
                             <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b2">B2</span> Camera Stream</span>
@@ -749,16 +1001,24 @@
                             <button id="camOfflineBtn" class="btn btn-warning btn-sm">🔶 Offline</button>
                             <button id="camObstructBtn" class="btn btn-warning btn-sm">🔶 Obstruction</button>
                             <button id="camNightBtn" class="btn btn-info btn-sm">🌙 Night</button>
+                            <button id="camTamperBtn" class="btn btn-danger btn-sm">🔴 Tamper</button>
                         </div>
                         <div class="form-grid-3">
                             <div class="field-group" style="margin-bottom:0;"><label>Camera ID</label><input type="text" id="cameraId" class="glass-input" value="cam-lobby-01"></div>
-                            <div class="field-group" style="margin-bottom:0;"><label>Event Type</label><select id="cameraEventType" class="glass-select"><option value="motion_detected">motion_detected</option><option value="camera_offline">camera_offline</option><option value="obstruction">obstruction</option></select></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Event Type</label>
+                                <select id="cameraEventType" class="glass-select">
+                                    <option value="motion_detected">motion_detected</option>
+                                    <option value="camera_offline">camera_offline</option>
+                                    <option value="obstruction">obstruction</option>
+                                    <option value="tamper_detected">tamper_detected</option>
+                                </select>
+                            </div>
                             <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="cameraLocation" class="glass-input" value="LOBBY"></div>
                         </div>
                         <button id="sendCameraBtn" class="btn btn-primary w-full mt-6">🚀 POST /policies/evaluate-camera-event</button>
                     </div>
 
-                    <!-- B3 -->
+                    <!-- ===== B3: Access Gate ===== -->
                     <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
                             <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b3">B3</span> Access Gate</span>
@@ -767,15 +1027,18 @@
                         <div class="form-grid-3">
                             <div class="field-group" style="margin-bottom:0;"><label>Card ID</label><input type="text" id="cardId" class="glass-input" value="STU001"></div>
                             <div class="field-group" style="margin-bottom:0;"><label>Gate ID</label><input type="text" id="gateId" class="glass-input" value="LAB_01"></div>
-                            <div class="field-group" style="margin-bottom:0;"><label>Direction</label><select id="direction" class="glass-select"><option>IN</option><option>OUT</option></select></div>
+                            <div class="field-group" style="margin-bottom:0;"><label>Direction</label>
+                                <select id="direction" class="glass-select"><option>IN</option><option>OUT</option></select>
+                            </div>
                         </div>
                         <div class="btn-group mt-6">
                             <button id="sendAccessBtn" class="btn btn-primary">🚀 POST /access/check</button>
                             <button id="sendAccessStaffBtn" class="btn btn-info btn-sm">👤 Staff</button>
+                            <button id="sendAccessOutBtn" class="btn btn-warning btn-sm">⏰ Ngoài giờ</button>
                         </div>
                     </div>
 
-                    <!-- B4 -->
+                    <!-- ===== B4: AI Vision ===== -->
                     <div class="glass" style="padding:8px 12px; border:1px solid rgba(255,255,255,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
                             <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b4">B4</span> AI Vision</span>
@@ -788,11 +1051,14 @@
                         <div class="btn-group mt-6">
                             <button id="sendAiBtn" class="btn btn-primary">🚀 POST /policies/evaluate-detection</button>
                             <button id="sendAiLowBtn" class="btn btn-secondary btn-sm">🔽 Low Conf</button>
+                            <button id="sendAiObjectBtn" class="btn btn-secondary btn-sm">📦 Object</button>
                         </div>
                     </div>
+
                 </div>
             </div>
 
+            <!-- RIGHT: Response -->
             <div class="glass card">
                 <div class="card-header"><h3>📬 Response</h3><span id="respTime" class="text-muted">Ready</span></div>
                 <div class="card-body">
@@ -823,6 +1089,8 @@
             <div class="glass card">
                 <div class="card-header"><h3>🎮 Consumer Tests</h3><span class="badge">B6 → Các B</span></div>
                 <div class="card-body">
+
+                    <!-- ===== B3: Access Gate ===== -->
                     <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
                         <div class="flex-between" style="margin-bottom:3px;">
                             <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b3">B3</span> Access Gate</span>
@@ -834,6 +1102,7 @@
                         </div>
                     </div>
 
+                    <!-- ===== B4: AI Vision ===== -->
                     <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
                         <div class="flex-between" style="margin-bottom:3px;">
                             <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b4">B4</span> AI Vision</span>
@@ -843,6 +1112,7 @@
                         <button id="consumerCallAiBtn" class="btn btn-primary btn-sm">🔍 Detect Image</button>
                     </div>
 
+                    <!-- ===== B5: Analytics ===== -->
                     <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
                         <div class="flex-between" style="margin-bottom:3px;">
                             <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b5">B5</span> Analytics</span>
@@ -854,6 +1124,7 @@
                         </div>
                     </div>
 
+                    <!-- ===== B7: Notification ===== -->
                     <div class="glass" style="padding:8px 10px; border:1px solid rgba(255,255,255,0.03);">
                         <div class="flex-between" style="margin-bottom:3px;">
                             <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b7">B7</span> Notification</span>
@@ -863,11 +1134,14 @@
                             <button id="consumerSendAlertBtn" class="btn btn-danger btn-sm">🚨 Send Alert</button>
                             <button id="consumerTriggerSensorAlertBtn" class="btn btn-warning btn-sm">🌡️ Sensor</button>
                             <button id="consumerTriggerAIAalertBtn" class="btn btn-info btn-sm">🤖 AI</button>
+                            <button id="consumerTriggerCameraAlertBtn" class="btn btn-purple btn-sm">📹 Camera</button>
                         </div>
                     </div>
+
                 </div>
             </div>
 
+            <!-- RIGHT: Response -->
             <div class="glass card">
                 <div class="card-header"><h3>📬 Consumer Response</h3><span id="consumerRespTime" class="text-muted">Ready</span></div>
                 <div class="card-body">
@@ -896,7 +1170,7 @@
     <div id="realtimeTab" class="tab-content">
         <div class="realtime-container">
 
-            <!-- CỘT TRÁI: B1, B2, B3, B4 -->
+            <!-- LEFT: B1, B2, B3, B4 -->
             <div class="realtime-left">
                 <div class="row">
                     <div class="b-card b-color-b1">
@@ -932,7 +1206,7 @@
                 </div>
             </div>
 
-            <!-- CỘT GIỮA: B6 -->
+            <!-- CENTER: B6 -->
             <div class="realtime-center b-color-b6">
                 <div class="b-header">
                     <span><span class="b-badge b6">B6</span> Core Processing</span>
@@ -943,7 +1217,7 @@
                 </div>
             </div>
 
-            <!-- CỘT PHẢI: B5, B7 -->
+            <!-- RIGHT: B5, B7 -->
             <div class="realtime-right">
                 <div class="row">
                     <div class="b-card b-color-b5">
@@ -992,14 +1266,12 @@ function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,
 let currentCurl = "";
 let connectionStatus = { b3: 'fallback', b4: 'fallback', b5: 'fallback', b7: 'fallback' };
 
-// Realtime data stores
 let realtimeData = {
     b1: [], b2: [], b3: [], b4: [],
     b6: [],
     b5: [], b7: [],
     health: []
 };
-let lastLogId = {};
 let processedLogs = new Set();
 
 function escapeHtml(str) { if (typeof str !== 'string') str = JSON.stringify(str); return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
@@ -1121,7 +1393,7 @@ document.querySelectorAll('.sensor-btn').forEach(btn => {
         if (d.smoke !== undefined && d.smoke !== 'null') document.getElementById('sensorSmoke').value = d.smoke;
         if (d.battery !== undefined && d.battery !== 'null') document.getElementById('sensorBattery').value = d.battery;
         document.getElementById('sensorMotion').value = d.motion || 'false';
-        sendSensor(d.device, 'LAB_01', d.temp, d.humidity, d.co2, d.smoke, d.battery, d.motion, d.time);
+        sendSensor(d.device, d.location || 'LAB_01', d.temp, d.humidity, d.co2, d.smoke, d.battery, d.motion, d.time);
     });
 });
 
@@ -1167,11 +1439,18 @@ document.getElementById('camMotionBtn').addEventListener('click', () => sendCame
 document.getElementById('camSensitiveBtn').addEventListener('click', () => sendCamera('cam-server-01', 'motion_detected', true, 'SERVER_ROOM'));
 document.getElementById('camOfflineBtn').addEventListener('click', () => sendCamera('cam-gate-01', 'camera_offline', false, 'MAIN_GATE'));
 document.getElementById('camObstructBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'obstruction', false, 'LOBBY'));
-document.getElementById('camNightBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'motion_detected', true, 'LOBBY', '23:30'));
+document.getElementById('camNightBtn').addEventListener('click', () => sendCamera('cam-office-01', 'motion_detected', true, 'OFFICE', '23:30'));
+document.getElementById('camTamperBtn').addEventListener('click', () => sendCamera('cam-vault-01', 'tamper_detected', true, 'VAULT'));
 
-async function sendAccess(cardId, gateId, direction) {
+async function sendAccess(cardId, gateId, direction, timestamp = null) {
     const corrId = uuid();
-    const body = { cardId, gateId, direction: direction || 'IN', correlationId: corrId, timestamp: new Date().toISOString() };
+    const body = { 
+        cardId, 
+        gateId, 
+        direction: direction || 'IN', 
+        correlationId: corrId, 
+        timestamp: timestamp || new Date().toISOString() 
+    };
     const res = await callApi('POST', '/access/check', body);
     displayProvider(res.status, res.data, res.duration);
     return res;
@@ -1183,10 +1462,21 @@ document.getElementById('sendAccessBtn').addEventListener('click', () => {
 document.getElementById('sendAccessStaffBtn').addEventListener('click', () => {
     sendAccess('STAFF001', 'OFFICE_01', 'IN');
 });
+document.getElementById('sendAccessOutBtn').addEventListener('click', () => {
+    sendAccess('STU001', 'LAB_01', 'IN', '2026-06-24T23:30:00');
+});
 
 async function sendAI(label, confidence) {
     const detectionId = uuid();
-    const body = { detectionId, matched: true, label, confidence: parseFloat(confidence), status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
+    const body = { 
+        detectionId, 
+        matched: true, 
+        label, 
+        confidence: parseFloat(confidence), 
+        status: 'matched', 
+        modelVersion: 'yolov8n', 
+        processedAt: new Date().toISOString() 
+    };
     const res = await callApi('POST', '/policies/evaluate-detection', body);
     displayProvider(res.status, res.data, res.duration);
     return res;
@@ -1197,6 +1487,9 @@ document.getElementById('sendAiBtn').addEventListener('click', () => {
 });
 document.getElementById('sendAiLowBtn').addEventListener('click', () => {
     sendAI('person', 0.65);
+});
+document.getElementById('sendAiObjectBtn').addEventListener('click', () => {
+    sendAI('car', 0.88);
 });
 
 // ============================================================
@@ -1219,7 +1512,7 @@ document.getElementById('consumerCallAiBtn').addEventListener('click', async () 
 });
 document.getElementById('consumerSendDecisionBtn').addEventListener('click', async () => {
     const corrId = uuid();
-    const body = { correlationId: corrId, decision: 'ALLOW', reason: 'TEST_CONSUMER', timestamp: new Date().toISOString() };
+    const body = { correlationId: corrId, decision: 'ALLOW', reason: 'TEST_CONSUMER' };
     displayConsumer(body, null, null);
     const res = await callApi('POST', '/internal/send-test-decision', body);
     displayConsumer(body, res.data, res.data);
@@ -1236,21 +1529,52 @@ document.getElementById('consumerSendAlertBtn').addEventListener('click', async 
 });
 document.getElementById('consumerTriggerSensorAlertBtn').addEventListener('click', async () => {
     const corrId = uuid();
-    const body = { device_id: 'esp32-alert', location: 'LAB_01', temperature_c: 42.5, humidity_percent: 45.2, co2_ppm: 800, smoke_ppm: 0.01, battery_percent: 77, motion_detected: false, correlationId: corrId };
+    const body = { 
+        device_id: 'esp32-lab-a101', 
+        location: 'Lab A101', 
+        temperature_c: 42.5, 
+        humidity_percent: 45.2, 
+        co2_ppm: 800, 
+        smoke_ppm: 0.01, 
+        battery_percent: 77, 
+        motion_detected: false, 
+        correlationId: corrId 
+    };
     displayConsumer(body, null, null);
     const res = await callApi('POST', '/internal/evaluate-sensor', body);
     displayConsumer(body, res.data, res.data);
 });
 document.getElementById('consumerTriggerAIAalertBtn').addEventListener('click', async () => {
     const detectionId = uuid();
-    const body = { detectionId, matched: true, label: 'person', confidence: 0.95, status: 'matched', modelVersion: 'yolov8n', processedAt: new Date().toISOString() };
+    const body = { 
+        detectionId, 
+        matched: true, 
+        label: 'person', 
+        confidence: 0.95, 
+        status: 'matched', 
+        modelVersion: 'yolov8n', 
+        processedAt: new Date().toISOString() 
+    };
     displayConsumer(body, null, null);
     const res = await callApi('POST', '/policies/evaluate-detection', body);
     displayConsumer(body, res.data, res.data);
 });
+document.getElementById('consumerTriggerCameraAlertBtn').addEventListener('click', async () => {
+    const corrId = uuid();
+    const body = {
+        camera_id: 'cam-server-01',
+        event_type: 'camera_offline',
+        motion_detected: false,
+        location: 'SERVER_ROOM',
+        correlationId: corrId
+    };
+    displayConsumer(body, null, null);
+    const res = await callApi('POST', '/policies/evaluate-camera-event', body);
+    displayConsumer(body, res.data, res.data);
+});
 
 // ============================================================
-// REALTIME - CHỈ HIỂN THỊ LOG THỰC SỰ
+// REALTIME FUNCTIONS
 // ============================================================
 function getServiceFromPath(path) {
     if (path.includes('evaluate-sensor')) return 'b1';
@@ -1274,17 +1598,13 @@ function getStatusClass(status) {
     return status >= 200 && status < 300 ? 'status-ok' : 'status-err';
 }
 
-// ============================================================
-// ADD LOGS VỚI RESPONSE DETAIL
-// ============================================================
-function addToRealtime(service, log, type = 'incoming') {
+function addToRealtime(service, log) {
     if (!realtimeData[service]) realtimeData[service] = [];
     const time = new Date(log.timestamp).toLocaleTimeString();
     const ip = log.client_ip || 'unknown';
     let detail = '';
     let responseDetail = '';
     
-    // Lấy thông tin từ body
     if (log.body) {
         if (log.body.status) detail = `status: ${log.body.status}`;
         if (log.body.alerts_count !== undefined) detail += `, alerts: ${log.body.alerts_count}`;
@@ -1360,7 +1680,6 @@ function renderRealtime(service) {
     const recent = data.slice(-20).reverse();
     
     if (service === 'b6') {
-        // B6: Hiển thị request từ B + response trả về + gửi cho B5/B7
         el.innerHTML = recent.map(e => `
             <div class="entry">
                 <span class="time">[${e.time}]</span>
@@ -1382,7 +1701,6 @@ function renderRealtime(service) {
             </span>
         `).join('');
     } else if (service === 'b5' || service === 'b7') {
-        // B5 và B7: Hiển thị request từ B6 + response
         el.innerHTML = recent.map(e => `
             <div class="entry">
                 <span class="time">[${e.time}]</span>
@@ -1393,7 +1711,6 @@ function renderRealtime(service) {
             </div>
         `).join('');
     } else {
-        // B1-B4: Hiển thị request từ B + response B6 trả về
         el.innerHTML = recent.map(e => `
             <div class="entry">
                 <span class="time">[${e.time}]</span>
@@ -1409,7 +1726,7 @@ function renderRealtime(service) {
 }
 
 // ============================================================
-// REFRESH REALTIME - CHỈ LẤY LOG MỚI
+// REFRESH REALTIME
 // ============================================================
 async function refreshRealtime() {
     try {
@@ -1424,21 +1741,15 @@ async function refreshRealtime() {
                         processedLogs.add(key);
                         addToRealtime(service, log);
                         
-                        // Thêm vào B6 với response chi tiết
                         const serviceName = getServiceName(service);
                         let detail = `${log.method} ${log.path}`;
                         let responseDetail = '';
                         let sendTo = '';
                         
-                        // Lấy response body nếu có
                         if (log.body) {
                             if (log.body.status) responseDetail += `status: ${log.body.status}`;
                             if (log.body.alerts_count !== undefined) responseDetail += `, ${log.body.alerts_count} alerts`;
                             if (log.body.message) responseDetail += `, ${log.body.message}`;
-                        }
-                        
-                        if (log.data && log.data.message) {
-                            responseDetail += log.data.message;
                         }
                         
                         if (service === 'b1' || service === 'b2' || service === 'b3' || service === 'b4') {
@@ -1450,7 +1761,6 @@ async function refreshRealtime() {
                             }
                         }
                         
-                        // Response từ B6
                         let b6Response = log.status_code >= 200 && log.status_code < 300 ? 
                             (responseDetail || '✅ Processed successfully') : 
                             '❌ Error: ' + log.status_code;
@@ -1469,7 +1779,6 @@ async function refreshRealtime() {
                 }
             });
         }
-        
     } catch(e) {
         /* ignore */
     }
@@ -1514,27 +1823,23 @@ updateB6Status();
 setInterval(updateStatus, 30000);
 setInterval(updateB6Status, 10000);
 
-// Refresh realtime mỗi 3 giây
 setInterval(() => {
     if (document.getElementById('realtimeTab').classList.contains('active')) {
         refreshRealtime();
     }
 }, 3000);
 
-// Refresh khi tab được chọn
 document.querySelector('[data-tab="realtime"]').addEventListener('click', () => {
     setTimeout(refreshRealtime, 500);
 });
 
 setTimeout(refreshRealtime, 1000);
 
-// Khi đổi API Base
 document.getElementById('apiBaseInput').addEventListener('change', () => {
     updateStatus();
     updateB6Status();
     Object.keys(realtimeData).forEach(k => { realtimeData[k] = []; });
     processedLogs = new Set();
-    lastLogId = {};
     ['b1','b2','b3','b4','b5','b6','b7','health'].forEach(s => renderRealtime(s));
 });
 </script>

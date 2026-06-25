@@ -29,37 +29,59 @@ class ConnectionManager:
         self._check_in_progress: Dict[str, bool] = {}
         self._initial_checked: Dict[str, bool] = {}
         self._retry_tasks: Dict[str, asyncio.Task] = {}
-        self._check_failed: Dict[str, bool] = {}  # Đánh dấu đã fail
+        self._check_failed: Dict[str, bool] = {}
         
-        # Load URLs từ env
-        self.urls["b3"] = os.getenv("ACCESS_GATE_URL", "http://b3-access-gate:8001")
-        self.urls["b4"] = os.getenv("AI_VISION_URL", "http://b4-ai-vision:9000")
-        self.urls["b5"] = os.getenv("ANALYTICS_URL", "http://26.100.91.226:8000")
-        self.urls["b7"] = os.getenv("NOTIFICATION_URL", "http://26.64.54.49:8000")
+        # ============================================================
+        # MỖI SERVICE CÓ CẤU HÌNH RIÊNG
+        # ============================================================
+        self.services_config = {
+            "b3": {
+                "url": os.getenv("ACCESS_GATE_URL", "http://b3-access-gate:8001"),
+                "auto_detect": os.getenv("ACCESS_GATE_AUTO_DETECT", "false").lower() == "true",
+                "timeout": float(os.getenv("ACCESS_GATE_TIMEOUT", "3.0")),
+                "retry_interval": int(os.getenv("ACCESS_GATE_RETRY_INTERVAL", "60")),
+                "retry_enabled": os.getenv("ACCESS_GATE_RETRY_ENABLED", "false").lower() == "true",
+                "fallback_url": None
+            },
+            "b4": {
+                "url": os.getenv("B4_AI_VISION_URL", "http://b4-ai-vision:9000"),
+                "auto_detect": os.getenv("AI_VISION_AUTO_DETECT", "false").lower() == "true",
+                "timeout": float(os.getenv("AI_VISION_TIMEOUT", "3.0")),
+                "retry_interval": int(os.getenv("AI_VISION_RETRY_INTERVAL", "60")),
+                "retry_enabled": os.getenv("AI_VISION_RETRY_ENABLED", "false").lower() == "true",
+                "fallback_url": os.getenv("AI_VISION_FALLBACK_URL", "http://b6-ai-vision:9000")
+            },
+            "b5": {
+                "url": os.getenv("ANALYTICS_URL", "http://26.100.91.226:8000"),
+                "auto_detect": os.getenv("ANALYTICS_AUTO_DETECT", "false").lower() == "true",
+                "timeout": float(os.getenv("ANALYTICS_TIMEOUT", "3.0")),
+                "retry_interval": int(os.getenv("ANALYTICS_RETRY_INTERVAL", "60")),
+                "retry_enabled": os.getenv("ANALYTICS_RETRY_ENABLED", "false").lower() == "true",
+                "fallback_url": None
+            },
+            "b7": {
+                "url": os.getenv("NOTIFICATION_URL", "http://26.64.54.49:8000"),
+                "auto_detect": os.getenv("NOTIFICATION_AUTO_DETECT", "false").lower() == "true",
+                "timeout": float(os.getenv("NOTIFICATION_TIMEOUT", "3.0")),
+                "retry_interval": int(os.getenv("NOTIFICATION_RETRY_INTERVAL", "60")),
+                "retry_enabled": os.getenv("NOTIFICATION_RETRY_ENABLED", "false").lower() == "true",
+                "fallback_url": None
+            }
+        }
+        
+        # ============================================================
+        # LƯU URL VÀ FLAGS VÀO PROPERTIES ĐỂ TƯƠNG THÍCH CODE CŨ
+        # ============================================================
+        self.urls = {k: v["url"] for k, v in self.services_config.items()}
+        self.auto_detect = {k: v["auto_detect"] for k, v in self.services_config.items()}
+        self.retry_intervals = {k: v["retry_interval"] for k, v in self.services_config.items()}
+        self.connection_timeout = float(os.getenv("CONNECTION_CHECK_TIMEOUT", "2.0"))
+        self.retry_enabled = os.getenv("CONNECTION_RETRY_ENABLED", "false").lower() == "true"
         
         # Fallback URLs
         self.fallback_urls = {
-            "b4": os.getenv("AI_VISION_FALLBACK_URL", "http://b6-ai-vision:9000")
+            "b4": self.services_config["b4"]["fallback_url"]
         }
-        
-        # Auto-detect flags
-        self.auto_detect = {
-            "b3": os.getenv("ACCESS_GATE_AUTO_DETECT", "true").lower() == "true",
-            "b4": os.getenv("AI_VISION_AUTO_DETECT", "true").lower() == "true",
-            "b5": os.getenv("ANALYTICS_AUTO_DETECT", "true").lower() == "true",
-            "b7": os.getenv("NOTIFICATION_AUTO_DETECT", "true").lower() == "true"
-        }
-        
-        # Retry interval
-        self.retry_intervals = {
-            "b3": int(os.getenv("ACCESS_GATE_RETRY_INTERVAL", "60")),
-            "b4": int(os.getenv("AI_VISION_RETRY_INTERVAL", "60")),
-            "b5": int(os.getenv("ANALYTICS_RETRY_INTERVAL", "60")),
-            "b7": int(os.getenv("NOTIFICATION_RETRY_INTERVAL", "60"))
-        }
-        
-        self.connection_timeout = float(os.getenv("CONNECTION_CHECK_TIMEOUT", "2.0"))
-        self.retry_enabled = os.getenv("CONNECTION_RETRY_ENABLED", "false").lower() == "true"
         
         # Khởi tạo status
         for service in ["b3", "b4", "b5", "b7"]:
@@ -67,13 +89,12 @@ class ConnectionManager:
             self._initial_checked[service] = False
             self._check_failed[service] = False
         
-        logger.info("🔍 Connection Manager initialized")
-        logger.info(f"   Connection timeout: {self.connection_timeout}s")
-        logger.info(f"   Retry enabled: {self.retry_enabled}")
-        logger.info(f"   B3: {self.urls['b3']} (auto_detect={self.auto_detect['b3']})")
-        logger.info(f"   B4: {self.urls['b4']} (auto_detect={self.auto_detect['b4']})")
-        logger.info(f"   B5: {self.urls['b5']} (auto_detect={self.auto_detect['b5']})")
-        logger.info(f"   B7: {self.urls['b7']} (auto_detect={self.auto_detect['b7']})")
+        # Log cấu hình từng service
+        logger.info("🔍 Connection Manager initialized with per-service config:")
+        for service, config in self.services_config.items():
+            logger.info(f"   {service}: url={config['url']}, auto_detect={config['auto_detect']}, "
+                       f"timeout={config['timeout']}s, retry={config['retry_enabled']}, "
+                       f"retry_interval={config['retry_interval']}s")
     
     def _is_fallback_url(self, url: str) -> bool:
         fallback_patterns = [
@@ -93,15 +114,34 @@ class ConnectionManager:
         return self.fallback_urls.get(service_name, self.urls.get(service_name, ""))
     
     async def check_connection(self, service_name: str, url: str = None, timeout: float = None) -> ConnectionStatus:
-        """Kiểm tra kết nối - CHỈ GỌI 1 LẦN, KHÔNG RETRY"""
+        """Kiểm tra kết nối - CHỈ GỌI 1 LẦN KHI KHỞI ĐỘNG"""
         
         # Nếu đã fail trước đó, không thử lại
         if self._check_failed.get(service_name, False):
             logger.debug(f"⚠️ {service_name} already failed, skipping")
             return self.status.get(service_name, ConnectionStatus.FALLBACK)
         
+        config = self.services_config.get(service_name, {})
+        if url is None:
+            url = config.get("url", "")
         if timeout is None:
-            timeout = self.connection_timeout
+            timeout = config.get("timeout", self.connection_timeout)
+        
+        # Nếu auto_detect = false, dùng FALLBACK luôn
+        if not config.get("auto_detect", False):
+            logger.info(f"🔵 {service_name} auto_detect disabled, using FALLBACK")
+            self.status[service_name] = ConnectionStatus.FALLBACK
+            self._initial_checked[service_name] = True
+            self._check_failed[service_name] = True
+            return ConnectionStatus.FALLBACK
+        
+        # Nếu URL là internal, dùng FALLBACK luôn
+        if self._is_fallback_url(url):
+            logger.info(f"🟡 {service_name} using internal URL: {url} -> FALLBACK mode")
+            self.status[service_name] = ConnectionStatus.FALLBACK
+            self._initial_checked[service_name] = True
+            self._check_failed[service_name] = True
+            return ConnectionStatus.FALLBACK
         
         if self._check_in_progress.get(service_name, False):
             logger.debug(f"⚠️ {service_name} check already in progress")
@@ -110,24 +150,9 @@ class ConnectionManager:
         self._check_in_progress[service_name] = True
         
         try:
-            if url is None:
-                url = self.urls.get(service_name, "")
-            
-            # Nếu auto_detect = false, dùng FALLBACK luôn
-            if not self.auto_detect.get(service_name, True):
-                logger.info(f"🔵 {service_name} auto_detect disabled, using FALLBACK")
-                self.status[service_name] = ConnectionStatus.FALLBACK
-                self._initial_checked[service_name] = True
-                self._check_failed[service_name] = True  # Đánh dấu đã fail
-                return ConnectionStatus.FALLBACK
-            
-            # Nếu URL là internal, dùng FALLBACK luôn
-            if self._is_fallback_url(url):
-                logger.info(f"🟡 {service_name} using internal URL: {url} -> FALLBACK mode")
-                self.status[service_name] = ConnectionStatus.FALLBACK
-                self._initial_checked[service_name] = True
-                self._check_failed[service_name] = True
-                return ConnectionStatus.FALLBACK
+            # Đặc biệt cho B4 (AI Vision) - kiểm tra health khác
+            if service_name == "b4":
+                return await self._check_b4_connection(url, timeout)
             
             # Kiểm tra health
             try:
@@ -167,21 +192,86 @@ class ConnectionManager:
             self._check_in_progress[service_name] = False
             self.last_check[service_name] = datetime.now()
     
+    async def _check_b4_connection(self, url: str, timeout: float = 2.0) -> ConnectionStatus:
+        """Kiểm tra kết nối đến B4 (AI Vision)"""
+        config = self.services_config.get("b4", {})
+        fallback_url = config.get("fallback_url", "http://b6-ai-vision:9000")
+        
+        if "b6-ai-vision" in url or "localhost" in url or "127.0.0.1" in url:
+            logger.info(f"🟡 B4 using internal AI container: {url} -> FALLBACK mode")
+            self.status["b4"] = ConnectionStatus.FALLBACK
+            self.fallback_urls["b4"] = url
+            self._initial_checked["b4"] = True
+            return ConnectionStatus.FALLBACK
+        
+        try:
+            health_url = f"{url.rstrip('/')}/health"
+            logger.debug(f"Checking B4 health at: {health_url} (timeout={timeout}s)")
+            
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.get(health_url)
+                
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        if "model_loaded" in data or "model_version" in data:
+                            self.status["b4"] = ConnectionStatus.REAL
+                            self._initial_checked["b4"] = True
+                            logger.info(f"✅ B4 connected to REAL external AI service: {url}")
+                            return ConnectionStatus.REAL
+                        else:
+                            logger.warning(f"⚠️ B4 response doesn't match expected schema -> FALLBACK")
+                            self.status["b4"] = ConnectionStatus.FALLBACK
+                            self._initial_checked["b4"] = True
+                            return ConnectionStatus.FALLBACK
+                    except:
+                        logger.warning(f"⚠️ B4 health response not JSON -> FALLBACK")
+                        self.status["b4"] = ConnectionStatus.FALLBACK
+                        self._initial_checked["b4"] = True
+                        return ConnectionStatus.FALLBACK
+                else:
+                    logger.warning(f"⚠️ B4 health check returned {response.status_code} -> FALLBACK")
+                    self.status["b4"] = ConnectionStatus.FALLBACK
+                    self._initial_checked["b4"] = True
+                    return ConnectionStatus.FALLBACK
+                    
+        except httpx.TimeoutException:
+            logger.warning(f"⏰ B4 timeout after {timeout}s -> FALLBACK mode")
+            self.status["b4"] = ConnectionStatus.FALLBACK
+            self._initial_checked["b4"] = True
+            return ConnectionStatus.FALLBACK
+        except Exception as e:
+            logger.warning(f"🟡 B4 connection failed: {e} -> FALLBACK mode")
+            self.status["b4"] = ConnectionStatus.FALLBACK
+            self._initial_checked["b4"] = True
+            return ConnectionStatus.FALLBACK
+    
     async def initial_check_all(self):
-        """Kiểm tra tất cả service - CHỈ 1 LẦN DUY NHẤT"""
+        """Kiểm tra tất cả service - CHỈ 1 LẦN DUY NHẤT KHI KHỞI ĐỘNG"""
         logger.info("🔵 Performing ONE-TIME connection checks...")
         
         for service in ["b3", "b4", "b5", "b7"]:
-            url = self.urls.get(service, "")
+            config = self.services_config.get(service, {})
+            url = config.get("url", "")
+            timeout = config.get("timeout", self.connection_timeout)
+            
             if not url:
                 self.status[service] = ConnectionStatus.FALLBACK
                 self._initial_checked[service] = True
                 self._check_failed[service] = True
                 continue
             
-            # Nếu auto_detect = false hoặc URL internal → FALLBACK luôn
-            if not self.auto_detect.get(service, True) or self._is_fallback_url(url):
-                logger.info(f"🟡 {service}: auto_detect=false or internal URL → FALLBACK")
+            # Nếu auto_detect = false → FALLBACK luôn
+            if not config.get("auto_detect", False):
+                logger.info(f"🟡 {service}: auto_detect=false → FALLBACK")
+                self.status[service] = ConnectionStatus.FALLBACK
+                self._initial_checked[service] = True
+                self._check_failed[service] = True
+                continue
+            
+            # Nếu URL internal → FALLBACK luôn
+            if self._is_fallback_url(url):
+                logger.info(f"🟡 {service}: internal URL → FALLBACK")
                 self.status[service] = ConnectionStatus.FALLBACK
                 self._initial_checked[service] = True
                 self._check_failed[service] = True
@@ -189,12 +279,11 @@ class ConnectionManager:
             
             # THỬ CHECK 1 LẦN DUY NHẤT
             try:
-                logger.info(f"🔍 Checking {service} at {url} (timeout={self.connection_timeout}s)...")
+                logger.info(f"🔍 Checking {service} at {url} (timeout={timeout}s)...")
                 
-                # Gọi check_connection với timeout
                 status = await asyncio.wait_for(
-                    self.check_connection(service, url),
-                    timeout=self.connection_timeout + 0.5
+                    self.check_connection(service, url, timeout),
+                    timeout=timeout + 0.5
                 )
                 
                 if status == ConnectionStatus.REAL:
@@ -205,7 +294,7 @@ class ConnectionManager:
                     self._check_failed[service] = True
                     
             except asyncio.TimeoutError:
-                logger.info(f"⏱️ {service} check timeout after {self.connection_timeout}s → FALLBACK (no retry)")
+                logger.info(f"⏱️ {service} check timeout after {timeout}s → FALLBACK (no retry)")
                 self.status[service] = ConnectionStatus.FALLBACK
                 self._initial_checked[service] = True
                 self._check_failed[service] = True
@@ -255,17 +344,58 @@ class ConnectionManager:
             self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
     
     async def start_retry_tasks(self):
-        """Khởi động retry tasks - CHỈ KHI retry_enabled = true"""
-        if not self.retry_enabled:
-            logger.info("🔵 Connection retry disabled, no retry tasks started")
-            return
+        """Khởi động retry tasks - CHỈ CHO CÁC SERVICE CÓ RETRY_ENABLED=true"""
+        logger.info("🔄 Starting connection retry tasks (per-service config)...")
         
-        logger.info("🔄 Starting connection retry tasks...")
-        # Implement retry logic nếu cần
-        # (Hiện tại đang disabled)
+        for service in ["b3", "b4", "b5", "b7"]:
+            config = self.services_config.get(service, {})
+            
+            # Chỉ retry nếu:
+            # 1. retry_enabled = true
+            # 2. service đang ở FALLBACK
+            # 3. auto_detect = true (đã từng thử kết nối)
+            if (config.get("retry_enabled", False) and 
+                self.status.get(service) == ConnectionStatus.FALLBACK and
+                config.get("auto_detect", False)):
+                
+                interval = config.get("retry_interval", 60)
+                task = asyncio.create_task(self._retry_connection(service, interval))
+                self._retry_tasks[service] = task
+                logger.info(f"🔄 Retry task started for {service} (interval: {interval}s)")
+            else:
+                logger.info(f"🔵 {service} retry disabled (retry_enabled={config.get('retry_enabled', False)}, "
+                           f"status={self.status.get(service).value})")
+    
+    async def _retry_connection(self, service_name: str, interval: int):
+        """Retry kết nối định kỳ"""
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                
+                # Chỉ retry nếu đang ở FALLBACK và đã có initial check
+                if (self.status.get(service_name) == ConnectionStatus.FALLBACK and 
+                    self._initial_checked.get(service_name, False)):
+                    
+                    config = self.services_config.get(service_name, {})
+                    url = config.get("url", "")
+                    timeout = config.get("timeout", self.connection_timeout)
+                    
+                    if url:
+                        logger.info(f"🔄 Retrying connection to {service_name} at {url}")
+                        await self.check_connection(service_name, url, timeout)
+                        
+                        # Nếu kết nối thành công, dừng retry
+                        if self.status.get(service_name) == ConnectionStatus.REAL:
+                            logger.info(f"✅ {service_name} reconnected successfully!")
+                            break
+            except asyncio.CancelledError:
+                logger.info(f"🔄 Retry task for {service_name} cancelled")
+                break
+            except Exception as e:
+                logger.error(f"❌ Retry error for {service_name}: {e}")
     
     async def stop_retry_tasks(self):
-        """Dừng retry tasks"""
+        """Dừng tất cả retry tasks"""
         for service, task in self._retry_tasks.items():
             if not task.done():
                 task.cancel()
@@ -273,6 +403,7 @@ class ConnectionManager:
                     await task
                 except asyncio.CancelledError:
                     pass
+                logger.info(f"🔄 Retry task stopped for {service}")
         self._retry_tasks.clear()
     
     def get_status(self, service_name: str) -> ConnectionStatus:
@@ -292,17 +423,21 @@ class ConnectionManager:
     
     def log_status_summary(self):
         logger.info("📊 Connection Status Summary:")
-        logger.info(f"   Retry Enabled: {self.retry_enabled}")
         for service in ["b3", "b4", "b5", "b7"]:
+            config = self.services_config.get(service, {})
             status = self.get_status(service)
             failed = self._check_failed.get(service, False)
-            logger.info(f"   {service}: {status.value} (failed={failed})")
+            retry_enabled = config.get("retry_enabled", False)
+            logger.info(f"   {service}: {status.value} (failed={failed}, retry_enabled={retry_enabled})")
         logger.info(f"   b7_rabbitmq: {self.get_status('b7_rabbitmq').value}")
     
     def get_status_display(self) -> Dict[str, str]:
         displays = {}
         for service in ["b3", "b4", "b5", "b7"]:
             status = self.get_status(service)
+            config = self.services_config.get(service, {})
+            retry_enabled = config.get("retry_enabled", False)
+            
             if status == ConnectionStatus.REAL:
                 displays[service] = "🟢 Connected (REAL)"
             elif status == ConnectionStatus.OFFLINE:
@@ -310,7 +445,7 @@ class ConnectionManager:
             elif status == ConnectionStatus.DISABLED:
                 displays[service] = "⚪ Disabled"
             else:
-                displays[service] = "🟡 Fallback"
+                displays[service] = f"🟡 Fallback{' (retry enabled)' if retry_enabled else ''}"
         
         rabbit_status = self.get_status("b7_rabbitmq")
         if rabbit_status == ConnectionStatus.REAL:

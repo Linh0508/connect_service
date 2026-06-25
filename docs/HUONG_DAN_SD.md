@@ -206,13 +206,29 @@ curl -X GET http://localhost:8000/connection-status \
 
 ---
 
-### 5.3. B1 → B6: SENSOR EVALUATION
+## 📋 **5.3. B1 → B6: SENSOR EVALUATION**
 
-**Mục đích:** Kiểm tra endpoint nhận dữ liệu từ IoT Sensor (B1).
+**Mục đích:** Kiểm tra endpoint nhận dữ liệu từ IoT Sensor (B1) với đầy đủ logic VALIDATE, NORMALIZE, ENRICH, CLASSIFY và PRODUCE.
 
-#### TRẠNG THÁI VÀ ĐIỀU KIỆN KÍCH HOẠT
+---
 
-##### NORMAL - Bình thường
+### 🔍 **QUY TRÌNH XỬ LÝ CỦA B6**
+
+| Bước | Mô tả | Đầu ra |
+|------|-------|--------|
+| **1. VALIDATE** | Kiểm tra field bắt buộc, kiểu dữ liệu | Lỗi nếu thiếu field |
+| **2. CHECK DEVICE** | Đối chiếu device_id với registry | Device info hoặc invalid_device |
+| **3. CHECK SENSOR ERROR** | temperature_c hoặc humidity_percent = null | sensor_error |
+| **4. CLASSIFY** | Phân loại theo ngưỡng | status, reason |
+| **5. ASSESS** | Xác định alert_level | alert_level |
+| **6. POLICY** | Áp policy quyết định alert | should_alert, severity |
+| **7. PRODUCE** | Tạo alert + gửi B7/B5 + audit | Response JSON |
+
+---
+
+### 📊 **TRẠNG THÁI VÀ ĐIỀU KIỆN KÍCH HOẠT**
+
+#### NORMAL - Bình thường
 
 | Điều kiện | Giá trị | Mô tả |
 |-----------|---------|-------|
@@ -224,7 +240,9 @@ curl -X GET http://localhost:8000/connection-status \
 
 **✅ KHÔNG TẠO ALERT**
 
-##### WARNING - Cảnh báo
+---
+
+#### WARNING - Cảnh báo
 
 | ID | Điều kiện | Ngưỡng | Severity | Rule ID |
 |----|-----------|--------|----------|---------|
@@ -238,7 +256,9 @@ curl -X GET http://localhost:8000/connection-status \
 
 **🔔 TẠO ALERT - GỬI B7 & B5**
 
-##### DANGER - Nguy hiểm
+---
+
+#### DANGER - Nguy hiểm
 
 | ID | Điều kiện | Ngưỡng | Severity | Rule ID |
 |----|-----------|--------|----------|---------|
@@ -248,15 +268,39 @@ curl -X GET http://localhost:8000/connection-status \
 
 **🔔 TẠO ALERT - GỬI B7 & B5**
 
+---
+
+#### SENSOR_ERROR - Lỗi cảm biến
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| E1 | temperature_c = null AND humidity_percent = null | **HIGH** | SENSOR_ERROR |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+#### INVALID_DEVICE - Thiết bị không hợp lệ
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| I1 | device_id không tồn tại trong device_registry | **CRITICAL** | INVALID_DEVICE |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+### 🧪 **TEST CASES**
+
 #### Test 1: Sensor dữ liệu bình thường (NORMAL)
 
 ```bash
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "device_id": "sensor_01",
-    "location": "LAB_01",
+    "device_id": "esp32-lab-a101",
+    "location": "Lab A101",
     "temperature_c": 25.5,
     "humidity_percent": 60.2,
     "light_lux": 410,
@@ -265,108 +309,121 @@ curl -X POST http://localhost:8000/internal/evaluate-sensor \
     "battery_percent": 77,
     "motion_detected": false,
     "correlationId": "550e8400-e29b-41d4-a716-446655440001"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
-  "device_id": "sensor_01",
+  "message": "Event received and processed",
+  "device_id": "esp32-lab-a101",
   "status": "normal",
-  "alerts_count": 0
+  "alert_level": "low",
+  "reason": "All values within normal range",
+  "alerts_count": 0,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440001"
 }
 ```
+
+---
 
 #### Test 2: Nhiệt độ cao (WARNING)
 
 ```bash
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "device_id": "sensor_02",
-    "location": "SERVER_ROOM",
+    "device_id": "esp32-lab-a102",
+    "location": "Lab A102",
     "temperature_c": 37.5,
     "humidity_percent": 45.0,
     "co2_ppm": 600,
     "smoke_ppm": 0.02,
+    "battery_percent": 77,
     "motion_detected": true,
     "correlationId": "550e8400-e29b-41d4-a716-446655440002"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
-  "device_id": "sensor_02",
+  "message": "Event received and processed",
+  "device_id": "esp32-lab-a102",
   "status": "warning",
-  "alerts_count": 3
+  "alert_level": "high",
+  "reason": "Temperature 37.5°C exceeds warning threshold (35.0°C); Motion detected at abnormal time ...",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440002"
 }
 ```
 
 **Các alert được tạo:**
 - TEMP_WARNING (HIGH): Nhiệt độ 37.5°C vượt ngưỡng 35°C
-- MOTION_ABNORMAL_TIME (HIGH): Phát hiện chuyển động lúc 05:43 (giờ cấm)
+- MOTION_ABNORMAL_TIME (HIGH): Phát hiện chuyển động trong giờ cấm
 - MOTION_AFTER_HOURS_LAB (HIGH): Phát hiện chuyển động trong Lab sau giờ
+
+---
 
 #### Test 3: CO2 cao (DANGER)
 
 ```bash
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "device_id": "sensor_03",
-    "location": "CONFERENCE_ROOM",
+    "device_id": "esp32-hall-b201",
+    "location": "Hall B201",
     "temperature_c": 28.0,
     "humidity_percent": 55.0,
     "co2_ppm": 1900,
     "smoke_ppm": 0.01,
+    "battery_percent": 77,
     "motion_detected": false,
     "correlationId": "550e8400-e29b-41d4-a716-446655440003"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
-  "device_id": "sensor_03",
+  "message": "Event received and processed",
+  "device_id": "esp32-hall-b201",
   "status": "danger",
-  "alerts_count": 1
+  "alert_level": "high",
+  "reason": "CO₂ 1900ppm exceeds danger threshold (1800ppm)",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440003"
 }
 ```
 
 **Alert được tạo:**
 - CO2_DANGER (CRITICAL): CO2 1900ppm vượt ngưỡng 1800ppm
 
+---
+
 #### Test 4: Khói cao (DANGER)
 
 ```bash
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "device_id": "sensor_04",
-    "location": "KITCHEN",
+    "device_id": "esp32-lab-b202",
+    "location": "Lab B202",
     "temperature_c": 45.0,
     "humidity_percent": 30.0,
     "co2_ppm": 800,
     "smoke_ppm": 1.5,
+    "battery_percent": 77,
     "motion_detected": false,
     "correlationId": "550e8400-e29b-41d4-a716-446655440004"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
-  "device_id": "sensor_04",
+  "message": "Event received and processed",
+  "device_id": "esp32-lab-b202",
   "status": "danger",
-  "alerts_count": 2
+  "alert_level": "high",
+  "reason": "Temperature 45.0°C exceeds danger threshold (40.0°C); Smoke 1.5ppm exceeds danger threshold (1.0ppm)",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440004"
 }
 ```
 
@@ -374,60 +431,71 @@ curl -X POST http://localhost:8000/internal/evaluate-sensor \
 - TEMP_DANGER (CRITICAL): Nhiệt độ 45°C vượt ngưỡng 40°C
 - SMOKE_DANGER (CRITICAL): Khói 1.5ppm vượt ngưỡng 1.0ppm
 
+---
+
 #### Test 5: Pin yếu (WARNING)
 
 ```bash
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "device_id": "sensor_05",
-    "location": "GARDEN",
+    "device_id": "esp32-gate-a",
+    "location": "Main Gate A",
     "temperature_c": 30.0,
     "humidity_percent": 80.0,
-    "battery_percent": 15.0,
+    "co2_ppm": 450,
+    "smoke_ppm": 0.01,
+    "battery_percent": 15,
     "motion_detected": false,
     "correlationId": "550e8400-e29b-41d4-a716-446655440005"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
-  "device_id": "sensor_05",
+  "message": "Event received and processed",
+  "device_id": "esp32-gate-a",
   "status": "warning",
-  "alerts_count": 1
+  "alert_level": "medium",
+  "reason": "Battery 15% below warning threshold (20.0%)",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440005"
 }
 ```
 
 **Alert được tạo:**
 - BATTERY_WARNING (MEDIUM): Pin 15% dưới ngưỡng 20%
 
+---
+
 #### Test 6: Motion sau giờ (WARNING)
 
 ```bash
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "device_id": "sensor_06",
-    "location": "LAB_CRITICAL",
+    "device_id": "esp32-office-01",
+    "location": "Office 01",
     "temperature_c": 22.0,
     "humidity_percent": 50.0,
+    "co2_ppm": 450,
+    "smoke_ppm": 0.01,
+    "battery_percent": 77,
     "motion_detected": true,
     "timestamp": "2026-06-24T23:30:00",
     "correlationId": "550e8400-e29b-41d4-a716-446655440006"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
-  "device_id": "sensor_06",
+  "message": "Event received and processed",
+  "device_id": "esp32-office-01",
   "status": "warning",
-  "alerts_count": 1
+  "alert_level": "high",
+  "reason": "Motion detected at abnormal time 23:30 at Office 01",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440006"
 }
 ```
 
@@ -436,214 +504,642 @@ curl -X POST http://localhost:8000/internal/evaluate-sensor \
 
 ---
 
-### 5.4. B2 → B6: CAMERA EVENT EVALUATION
-
-**Mục đích:** Kiểm tra endpoint nhận sự kiện từ Camera Stream (B2).
-
-#### Test 1: Phát hiện chuyển động (trigger alert nếu trong giờ cấm)
+#### Test 7: Độ ẩm cao (WARNING)
 
 ```bash
-curl -X POST http://localhost:8000/policies/evaluate-camera-event \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "camera_id": "CAM_LOBBY_01",
+    "device_id": "esp32-lab-a101",
+    "location": "Lab A101",
+    "temperature_c": 28.0,
+    "humidity_percent": 88.0,
+    "co2_ppm": 450,
+    "smoke_ppm": 0.01,
+    "battery_percent": 77,
+    "motion_detected": false,
+    "correlationId": "550e8400-e29b-41d4-a716-446655440007"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "message": "Event received and processed",
+  "device_id": "esp32-lab-a101",
+  "status": "warning",
+  "alert_level": "medium",
+  "reason": "Humidity 88.0% exceeds warning threshold (85.0%)",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440007"
+}
+```
+
+**Alert được tạo:**
+- HUMIDITY_WARNING (MEDIUM): Độ ẩm 88% vượt ngưỡng 85%
+
+---
+
+#### Test 8: Thiết bị không hợp lệ (INVALID_DEVICE)
+
+```bash
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "device_id": "invalid-device-999",
+    "location": "Unknown",
+    "temperature_c": 25.5,
+    "humidity_percent": 60.2,
+    "co2_ppm": 450,
+    "smoke_ppm": 0.01,
+    "battery_percent": 77,
+    "motion_detected": false,
+    "correlationId": "550e8400-e29b-41d4-a716-446655440008"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "message": "Event received and processed",
+  "device_id": "invalid-device-999",
+  "status": "invalid_device",
+  "alert_level": "critical",
+  "reason": "Device invalid-device-999 not found in registry",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440008"
+}
+```
+
+**Alert được tạo:**
+- INVALID_DEVICE (CRITICAL): Thiết bị không có trong registry
+
+---
+
+#### Test 9: Lỗi cảm biến (SENSOR_ERROR)
+
+```bash
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "device_id": "esp32-lab-a101",
+    "location": "Lab A101",
+    "temperature_c": null,
+    "humidity_percent": null,
+    "co2_ppm": 450,
+    "smoke_ppm": 0.01,
+    "battery_percent": 77,
+    "motion_detected": false,
+    "correlationId": "550e8400-e29b-41d4-a716-446655440009"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "message": "Event received and processed",
+  "device_id": "esp32-lab-a101",
+  "status": "sensor_error",
+  "alert_level": "high",
+  "reason": "Both temperature and humidity are null",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440009"
+}
+```
+
+**Alert được tạo:**
+- SENSOR_ERROR (HIGH): Cảm biến không có dữ liệu
+
+---
+
+#### Test 10: CO2 Warning (WARNING)
+
+```bash
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "device_id": "esp32-library-01",
+    "location": "Library 01",
+    "temperature_c": 25.0,
+    "humidity_percent": 50.0,
+    "co2_ppm": 1500,
+    "smoke_ppm": 0.01,
+    "battery_percent": 77,
+    "motion_detected": false,
+    "correlationId": "550e8400-e29b-41d4-a716-446655440010"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "message": "Event received and processed",
+  "device_id": "esp32-library-01",
+  "status": "warning",
+  "alert_level": "high",
+  "reason": "CO₂ 1500ppm exceeds warning threshold (1200ppm)",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440010"
+}
+```
+
+**Alert được tạo:**
+- CO2_WARNING (HIGH): CO2 1500ppm vượt ngưỡng 1200ppm
+
+---
+
+#### Test 11: Khói Warning (WARNING)
+
+```bash
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "device_id": "esp32-lab-a101",
+    "location": "Lab A101",
+    "temperature_c": 25.0,
+    "humidity_percent": 50.0,
+    "co2_ppm": 450,
+    "smoke_ppm": 0.8,
+    "battery_percent": 77,
+    "motion_detected": false,
+    "correlationId": "550e8400-e29b-41d4-a716-446655440011"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "message": "Event received and processed",
+  "device_id": "esp32-lab-a101",
+  "status": "warning",
+  "alert_level": "high",
+  "reason": "Smoke 0.8ppm exceeds warning threshold (0.5ppm)",
+  "alerts_count": 1,
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440011"
+}
+```
+
+**Alert được tạo:**
+- SMOKE_WARNING (HIGH): Khói 0.8ppm vượt ngưỡng 0.5ppm
+
+---
+
+### 📝 **BẢNG TỔNG HỢP TEST CASES B1**
+
+| Test | Device ID | Status | Alert Level | Alerts | Key Reason |
+|------|-----------|--------|-------------|--------|------------|
+| 1 | esp32-lab-a101 | normal | low | 0 | All values normal |
+| 2 | esp32-lab-a102 | warning | high | 1 | Temp 37.5°C + Motion |
+| 3 | esp32-hall-b201 | danger | high | 1 | CO2 1900ppm |
+| 4 | esp32-lab-b202 | danger | high | 1 | Temp 45°C + Smoke 1.5ppm |
+| 5 | esp32-gate-a | warning | medium | 1 | Battery 15% |
+| 6 | esp32-office-01 | warning | high | 1 | Motion 23:30 |
+| 7 | esp32-lab-a101 | warning | medium | 1 | Humidity 88% |
+| 8 | invalid-device-999 | invalid_device | critical | 1 | Device not found |
+| 9 | esp32-lab-a101 | sensor_error | high | 1 | Temp & Humidity null |
+| 10 | esp32-library-01 | warning | high | 1 | CO2 1500ppm |
+| 11 | esp32-lab-a101 | warning | high | 1 | Smoke 0.8ppm |
+
+---
+
+# 📋 **5.4. B2 → B6: CAMERA EVENT EVALUATION**
+
+**Mục đích:** Kiểm tra endpoint nhận sự kiện từ Camera Stream (B2) và đánh giá có cần tạo cảnh báo hay không.
+
+---
+
+## 🔍 **QUY TRÌNH XỬ LÝ CỦA B6**
+
+| Bước | Mô tả | Đầu ra |
+|------|-------|--------|
+| **1. RECEIVE** | Nhận sự kiện camera từ B2 qua REST | CameraEvent object |
+| **2. VALIDATE** | Kiểm tra field bắt buộc (camera_id, event_type) | Lỗi nếu thiếu field |
+| **3. CLASSIFY** | Phân loại sự kiện theo loại và ngữ cảnh | alert_triggered, severity, message |
+| **4. POLICY** | Áp policy kết hợp với các nguồn khác | should_alert, severity |
+| **5. PRODUCE** | Tạo alert + gửi B7/B5 + audit | Response JSON |
+
+---
+
+## 📊 **TRẠNG THÁI VÀ ĐIỀU KIỆN KÍCH HOẠT**
+
+### Motion Detected - Phát hiện chuyển động
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| M1 | Motion tại khu vực nhạy cảm (SERVER_ROOM, VAULT, etc.) | **CRITICAL** | MOTION_SENSITIVE_AREA |
+| M2 | Motion trong giờ cấm (22:00 - 06:00) | **HIGH** | MOTION_RESTRICTED_HOURS |
+| M3 | Motion tại Lab sau 18:00 | **HIGH** | MOTION_AFTER_HOURS_LAB |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+### Camera Offline - Camera mất kết nối
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| O1 | event_type = camera_offline | **CRITICAL** | CAMERA_OFFLINE |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+### Obstruction - Camera bị che khuất
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| B1 | event_type = obstruction | **HIGH** | CAMERA_OBSTRUCTION |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+### Tamper Detected - Camera bị can thiệp
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| T1 | event_type = tamper_detected | **CRITICAL** | CAMERA_TAMPER |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+## 🧪 **TEST CASES**
+
+### Test 1: Phát hiện chuyển động bình thường (Motion Normal)
+
+**Mô tả:** Camera phát hiện chuyển động tại khu vực bình thường trong giờ cho phép. Không tạo alert.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-lobby-01",
     "event_type": "motion_detected",
     "motion_detected": true,
     "location": "LOBBY",
-    "frame_url": "http://storage/frames/frame_001.jpg"
-  }'
-```
+    "frame_url": "http://storage/frames/frame_001.jpg",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440010"
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
   "status": "processed",
-  "alert_triggered": true,
-  "message": "Motion detected during restricted hours (05:51) at LOBBY - Camera: CAM_LOBBY_01",
-  "correlation_id": "d8ae3c7a-b8f0-4d68-a1a1-5d1cc8c90dff"
-}
-```
-
-#### Test 2: Camera offline (CRITICAL alert)
-
-```bash
-curl -X POST http://localhost:8000/policies/evaluate-camera-event \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer mock-token-123" \
-  -d '{
-    "camera_id": "CAM_SERVER_01",
-    "event_type": "camera_offline",
-    "motion_detected": false,
-    "location": "SERVER_ROOM"
-  }'
-```
-
-**Kết quả mong đợi:**
-```json
-{
-  "status": "processed",
-  "alert_triggered": true,
-  "message": "Camera CAM_SERVER_01 is offline at SERVER_ROOM",
-  "correlation_id": "5c62243c-778c-4b52-ac44-7b33e47a03c2"
-}
-```
-
-#### Test 3: Camera bị che khuất (HIGH alert)
-
-```bash
-curl -X POST http://localhost:8000/policies/evaluate-camera-event \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer mock-token-123" \
-  -d '{
-    "camera_id": "CAM_PARKING_01",
-    "event_type": "obstruction",
-    "motion_detected": false,
-    "location": "PARKING_LOT"
-  }'
-```
-
-**Kết quả mong đợi:**
-```json
-{
-  "status": "processed",
-  "alert_triggered": true,
-  "message": "Camera CAM_PARKING_01 is obstructed at PARKING_LOT",
-  "correlation_id": "c0946655-ca81-4380-9dae-0b32163f6db3"
-}
-```
-
-#### Test 4: Motion ở khu vực nhạy cảm (CRITICAL alert)
-
-```bash
-curl -X POST http://localhost:8000/policies/evaluate-camera-event \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer mock-token-123" \
-  -d '{
-    "camera_id": "CAM_VAULT_01",
-    "event_type": "motion_detected",
-    "motion_detected": true,
-    "location": "VAULT",
-    "frame_url": "http://storage/frames/frame_002.jpg"
-  }'
-```
-
-**Kết quả mong đợi:**
-```json
-{
-  "status": "processed",
-  "alert_triggered": true,
-  "message": "Motion detected in sensitive area: VAULT - Camera: CAM_VAULT_01",
-  "correlation_id": "855bc390-1b2f-46e2-8c21-e3d9b46b679c"
-}
-```
-
-#### Test 5: Motion vào ban đêm (HIGH alert)
-
-```bash
-curl -X POST http://localhost:8000/policies/evaluate-camera-event \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer mock-token-123" \
-  -d '{
-    "camera_id": "CAM_OFFICE_01",
-    "event_type": "motion_detected",
-    "motion_detected": true,
-    "location": "OFFICE",
-    "timestamp": "2026-06-24T02:30:00"
-  }'
-```
-
-**Kết quả mong đợi:**
-```json
-{
-  "status": "processed",
-  "alert_triggered": true,
-  "message": "Motion detected during restricted hours (02:30) at OFFICE - Camera: CAM_OFFICE_01",
-  "correlation_id": "f6bb9496-b7c3-42dc-8923-f0e6b62d7b93"
+  "alert_triggered": false,
+  "message": "Event processed successfully",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440010"
 }
 ```
 
 ---
 
-### 5.5. B3 → B6: ACCESS CHECK
+### Test 2: Camera offline (CRITICAL alert)
 
-**Mục đích:** Kiểm tra endpoint nhận request từ Access Gate (B3).
-
-#### Test 1: Truy cập hợp lệ (ALLOW)
+**Mô tả:** Camera mất kết nối → Tạo alert CRITICAL.
 
 ```bash
-curl -X POST http://localhost:8000/access/check \
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-server-01",
+    "event_type": "camera_offline",
+    "motion_detected": false,
+    "location": "SERVER_ROOM",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440011"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-server-01 is offline at SERVER_ROOM",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440011"
+}
+```
+
+**Alert được tạo:**
+- CAMERA_OFFLINE (CRITICAL): Camera cam-server-01 offline tại SERVER_ROOM
+
+---
+
+### Test 3: Camera bị che khuất (HIGH alert)
+
+**Mô tả:** Camera bị che khuất → Tạo alert HIGH.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-gate-01",
+    "event_type": "obstruction",
+    "motion_detected": false,
+    "location": "MAIN_GATE",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440012"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-gate-01 is obstructed at MAIN_GATE",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440012"
+}
+```
+
+**Alert được tạo:**
+- CAMERA_OBSTRUCTION (HIGH): Camera cam-gate-01 bị che khuất tại MAIN_GATE
+
+---
+
+### Test 4: Motion tại khu vực nhạy cảm (CRITICAL alert)
+
+**Mô tả:** Phát hiện chuyển động tại VAULT → Tạo alert CRITICAL.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-vault-01",
+    "event_type": "motion_detected",
+    "motion_detected": true,
+    "location": "VAULT",
+    "frame_url": "http://storage/frames/frame_002.jpg",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440013"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected in sensitive area: VAULT - Camera: cam-vault-01",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440013"
+}
+```
+
+**Alert được tạo:**
+- MOTION_SENSITIVE_AREA (CRITICAL): Phát hiện chuyển động tại khu vực nhạy cảm VAULT
+
+---
+
+### Test 5: Motion vào ban đêm (HIGH alert)
+
+**Mô tả:** Phát hiện chuyển động lúc 02:30 → Tạo alert HIGH (giờ cấm).
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-office-01",
+    "event_type": "motion_detected",
+    "motion_detected": true,
+    "location": "OFFICE",
+    "timestamp": "2026-06-24T02:30:00",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440014"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected during restricted hours (02:30) at OFFICE - Camera: cam-office-01",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440014"
+}
+```
+
+**Alert được tạo:**
+- MOTION_RESTRICTED_HOURS (HIGH): Phát hiện chuyển động trong giờ cấm 02:30
+
+---
+
+### Test 6: Camera Tamper (CRITICAL alert)
+
+**Mô tả:** Camera bị can thiệp vật lý → Tạo alert CRITICAL.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-vault-01",
+    "event_type": "tamper_detected",
+    "motion_detected": true,
+    "location": "VAULT",
+    "frame_url": "http://storage/frames/frame_003.jpg",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440015"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Camera cam-vault-01 tamper detected at VAULT",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440015"
+}
+```
+
+**Alert được tạo:**
+- CAMERA_TAMPER (CRITICAL): Camera cam-vault-01 bị can thiệp tại VAULT
+
+---
+
+### Test 7: Motion tại Lab sau giờ (HIGH alert)
+
+**Mô tả:** Phát hiện chuyển động trong Lab lúc 23:30 → Tạo alert HIGH.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-camera-event \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "camera_id": "cam-lab-01",
+    "event_type": "motion_detected",
+    "motion_detected": true,
+    "location": "LAB_01",
+    "timestamp": "2026-06-24T23:30:00",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440016"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "processed",
+  "alert_triggered": true,
+  "message": "Motion detected during restricted hours (23:30) at LAB_01 - Camera: cam-lab-01",
+  "correlation_id": "550e8400-e29b-41d4-a716-446655440016"
+}
+```
+
+**Alert được tạo:**
+- MOTION_RESTRICTED_HOURS (HIGH): Phát hiện chuyển động trong giờ cấm 23:30
+
+---
+
+# 📋 **5.5. B3 → B6: ACCESS CHECK**
+
+**Mục đích:** Kiểm tra endpoint nhận request từ Access Gate (B3) để kiểm tra quyền ra vào real-time với đầy đủ logic VALIDATE, LOOKUP, DECIDE, ENRICH.
+
+---
+
+## 🔍 **QUY TRÌNH XỬ LÝ CỦA B6**
+
+| Bước | Mô tả | Đầu ra |
+|------|-------|--------|
+| **1. RECEIVE** | Nhận request từ B3 qua REST | AccessCheckRequest |
+| **2. VALIDATE** | Kiểm tra field bắt buộc (cardId, gateId, correlationId) | Lỗi nếu thiếu field |
+| **3. RATE LIMIT** | Kiểm tra giới hạn request theo IP | 429 nếu quá limit |
+| **4. IDEMPOTENCY** | Kiểm tra correlationId đã xử lý chưa | Cache response nếu có |
+| **5. GATE AUTH** | Kiểm tra gate có trong token không | 403 nếu không |
+| **6. POLICY** | Áp policy: time window, gate allowed | Policy result |
+| **7. QUOTA** | Kiểm tra và giảm quota | Quota result |
+| **8. DECIDE** | Quyết định ALLOW/DENY | Decision |
+| **9. ENRICH** | Bổ sung thông tin (nếu có) | Enriched data |
+| **10. AUDIT** | Lưu log mọi quyết định | Audit log |
+| **11. PRODUCE** | Gửi decision sang B5, alert sang B7 | Response JSON |
+
+---
+
+## 📊 **TRẠNG THÁI VÀ ĐIỀU KIỆN KÍCH HOẠT**
+
+### ALLOW - Cho phép
+
+| ID | Điều kiện | Mô tả |
+|----|-----------|-------|
+| A1 | Trong giờ cho phép (08:00-22:00) | Student access allowed |
+| A2 | Trong giờ cho phép (06:00-23:59) | Staff access allowed |
+| A3 | Quota còn > 0 | Còn lượt truy cập |
+
+**✅ KHÔNG TẠO ALERT**
+
+---
+
+### DENY - Từ chối
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| D1 | Ngoài giờ cho phép | **CRITICAL** | TIME_WINDOW_VIOLATION |
+| D2 | Gate không được phép | **CRITICAL** | GATE_NOT_ALLOWED |
+| D3 | Hết quota | **WARNING** | QUOTA_EXCEEDED |
+| D4 | Gate không có trong token | **CRITICAL** | GATE_AUTHORIZATION_FAILED |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+### WARNING - Cảnh báo (vẫn ALLOW)
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| W1 | Quota còn <= 1 | **WARNING** | QUOTA_ALMOST_EXHAUSTED |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+## 🧪 **TEST CASES**
+
+### Test 1: Student truy cập hợp lệ (ALLOW)
+
+**Mô tả:** Sinh viên STU001 truy cập LAB_01 trong giờ cho phép (08:00-22:00). Quota còn 5/5.
+
+```bash
+curl -s -X POST http://localhost:8000/access/check \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
     "cardId": "STU001",
     "gateId": "LAB_01",
-    "correlationId": "550e8400-e29b-41d4-a716-446655440001",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440020",
     "direction": "IN"
-  }'
+  }' | jq '.'
+
+# Kết quả mong đợi (trong giờ 08:00-22:00):
+{
+  "decision": "ALLOW",
+  "reasonCode": "VALID",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "remainingQuota": 4,
+  "isDuplicate": false,
+  "expiresAt": "2026-06-26T17:30:00Z"
+}
 ```
 
-**Kết quả mong đợi:**
-```json
+---
+
+### Test 2: Student truy cập ngoài giờ (DENY)
+
+**Mô tả:** Sinh viên STU001 truy cập LAB_01 lúc 23:30 (ngoài giờ 08:00-22:00). Quota còn 4/5.
+
+```bash
+curl -s -X POST http://localhost:8000/access/check \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "cardId": "STU001",
+    "gateId": "LAB_01",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440021",
+    "direction": "IN",
+    "timestamp": "2026-06-24T23:30:00"
+  }' | jq '.'
+
+# Kết quả mong đợi:
 {
   "decision": "DENY",
   "reasonCode": "POLICY_VIOLATION",
-  "decisionId": "a6ff647c-7090-4849-be0a-a19340bee8c2",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "remainingQuota": 4,
   "isDuplicate": false,
   "expiresAt": null
 }
 ```
 
-> **Lưu ý:** Nếu test trong giờ 08:00-22:00, kết quả sẽ là `ALLOW`. Nếu ngoài giờ, kết quả là `DENY` với `POLICY_VIOLATION`.
+**Alert được tạo:**
+- ACCESS_ALERT (CRITICAL): Time window violation
 
-#### Test 2: Hết quota (DENY)
+---
+
+### Test 3: Staff truy cập (ALLOW)
+
+**Mô tả:** Nhân viên STAFF001 truy cập OFFICE_01 trong giờ cho phép (06:00-23:59). Quota còn 10/10.
 
 ```bash
-# Gọi 6 lần để hết quota (quota mặc định là 5)
-for i in {1..6}; do
-  echo "Attempt $i:"
-  curl -X POST http://localhost:8000/access/check \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer mock-token-123" \
-    -d "{
-      \"cardId\": \"STU002\",
-      \"gateId\": \"LAB_01\",
-      \"correlationId\": \"550e8400-e29b-41d4-a716-44665544001$i\",
-      \"direction\": \"IN\"
-    }"
-  echo ""
-done
-```
+curl -s -X POST http://localhost:8000/access/check \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "cardId": "STAFF001",
+    "gateId": "OFFICE_01",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440022",
+    "direction": "IN"
+  }' | jq '.'
 
-**Kết quả mong đợi (lần thứ 6):**
-```json
+# Kết quả mong đợi:
 {
-  "decision": "DENY",
-  "reasonCode": "QUOTA_EXCEEDED",
-  "decisionId": "...",
-  "remainingQuota": 0,
+  "decision": "ALLOW",
+  "reasonCode": "VALID",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "remainingQuota": 9,
   "isDuplicate": false,
-  "expiresAt": null
+  "expiresAt": "2026-06-26T17:30:00Z"
 }
 ```
 
-#### Test 3: Không có quyền vào cổng (403 Forbidden)
+---
+
+### Test 4: Student truy cập gate không được phép (DENY)
+
+**Mô tả:** Sinh viên STU001 truy cập OFFICE_01 (không có trong allowed_gate_ids của policy student). Quota còn 4/5.
 
 ```bash
-curl -X POST http://localhost:8000/access/check \
+curl -s -X POST http://localhost:8000/access/check \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
     "cardId": "STU001",
     "gateId": "OFFICE_01",
-    "correlationId": "550e8400-e29b-41d4-a716-446655440007",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440023",
     "direction": "IN"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
   "title": "Gate not authorized",
   "status": 403,
@@ -651,214 +1147,560 @@ curl -X POST http://localhost:8000/access/check \
 }
 ```
 
-#### Test 4: Ngoài giờ cho phép (DENY)
+**Alert được tạo:**
+- SECURITY_BREACH (CRITICAL): Unauthorized gate access attempt
+
+---
+
+### Test 5: Student truy cập - Quota hết (DENY)
+
+**Mô tả:** Sinh viên STU001 đã dùng hết quota 5/5, truy cập lần thứ 6 → Từ chối.
 
 ```bash
-curl -X POST http://localhost:8000/access/check \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer mock-token-123" \
-  -d '{
-    "cardId": "STU001",
-    "gateId": "LAB_01",
-    "correlationId": "550e8400-e29b-41d4-a716-446655440008",
-    "direction": "IN",
-    "timestamp": "2026-06-24T23:30:00"
-  }'
-```
+# Gọi 6 lần để hết quota
+for i in {1..6}; do
+  echo "Attempt $i:"
+  curl -s -X POST http://localhost:8000/access/check \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer mock-token-123" \
+    -d "{
+      \"cardId\": \"STU001\",
+      \"gateId\": \"LAB_01\",
+      \"correlationId\": \"550e8400-e29b-41d4-a716-44665544002$i\",
+      \"direction\": \"IN\"
+    }" | jq '.'
+  echo ""
+done
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi (lần thứ 6):
 {
   "decision": "DENY",
-  "reasonCode": "POLICY_VIOLATION",
-  "decisionId": "8b43ff0b-8f14-4dfe-ac4c-b21392898e9a",
-  "remainingQuota": 4,
+  "reasonCode": "QUOTA_EXCEEDED",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "remainingQuota": 0,
   "isDuplicate": false,
   "expiresAt": null
 }
 ```
 
-#### Test 5: Staff truy cập (ALLOW)
+**Alert được tạo:**
+- ACCESS_ALERT (WARNING): Quota exceeded for card STU001
+
+---
+
+### Test 6: Student truy cập - Quota sắp hết (WARNING, vẫn ALLOW)
+
+**Mô tả:** Sinh viên STU001 quota còn 1/5 → Cảnh báo nhưng vẫn cho phép.
 
 ```bash
-curl -X POST http://localhost:8000/access/check \
+# Giả sử quota đã dùng 4/5, lần này là lần thứ 5
+curl -s -X POST http://localhost:8000/access/check \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "cardId": "STU001",
+    "gateId": "LAB_01",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440027",
+    "direction": "IN"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "decision": "ALLOW",
+  "reasonCode": "VALID",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "remainingQuota": 0,
+  "isDuplicate": false,
+  "expiresAt": "2026-06-26T17:30:00Z"
+}
+```
+
+**Alert được tạo:**
+- ACCESS_ALERT (WARNING): Quota almost exhausted for card STU001
+
+---
+
+### Test 7: Staff truy cập - Gate không được phép (DENY)
+
+**Mô tả:** Nhân viên STAFF001 truy cập VAULT_01 (không có trong allowed_gate_ids của staff policy).
+
+```bash
+curl -s -X POST http://localhost:8000/access/check \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
     "cardId": "STAFF001",
-    "gateId": "OFFICE_01",
-    "correlationId": "550e8400-e29b-41d4-a716-446655440009",
+    "gateId": "VAULT_01",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440028",
     "direction": "IN"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "decision": "ALLOW",
-  "reasonCode": "VALID",
-  "decisionId": "...",
-  "remainingQuota": 9,
-  "isDuplicate": false,
-  "expiresAt": "2026-06-25T...Z"
+  "title": "Gate not authorized",
+  "status": 403,
+  "detail": "Gate not authorized"
 }
 ```
 
-> **Lưu ý:** Staff có quota 10 và được phép vào OFFICE_01.
+**Alert được tạo:**
+- SECURITY_BREACH (CRITICAL): Unauthorized gate access attempt: STAFF001 -> VAULT_01
 
 ---
 
-### 5.6. B4 → B6: AI DETECTION RESULT
+### Test 8: Student truy cập - Trùng correlationId (Idempotency)
 
-**Mục đích:** Kiểm tra endpoint nhận kết quả từ AI Vision (B4).
-
-#### Test 1: Phát hiện người với độ tin cậy cao (tạo alert)
+**Mô tả:** Gửi cùng correlationId trong vòng 60 giây → Trả về response cache.
 
 ```bash
-curl -X POST http://localhost:8000/policies/evaluate-detection \
+# Lần 1
+curl -s -X POST http://localhost:8000/access/check \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "detectionId": "550e8400-e29b-41d4-a716-446655440010",
+    "cardId": "STU001",
+    "gateId": "LAB_01",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440030",
+    "direction": "IN"
+  }' | jq '.'
+
+# Lần 2 (trong vòng 60 giây)
+curl -s -X POST http://localhost:8000/access/check \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "cardId": "STU001",
+    "gateId": "LAB_01",
+    "correlationId": "550e8400-e29b-41d4-a716-446655440030",
+    "direction": "IN"
+  }' | jq '.'
+
+# Kết quả mong đợi (lần 2):
+{
+  "decision": "ALLOW",
+  "reasonCode": "VALID",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "remainingQuota": 4,
+  "isDuplicate": true,
+  "expiresAt": "2026-06-26T17:30:00Z"
+}
+```
+
+---
+
+# 📋 **5.6. B4 → B6: AI DETECTION RESULT**
+
+**Mục đích:** Kiểm tra endpoint nhận kết quả phân tích từ AI Vision Service (B4) và đánh giá rủi ro.
+
+---
+
+## 🔍 **QUY TRÌNH XỬ LÝ CỦA B6**
+
+| Bước | Mô tả | Đầu ra |
+|------|-------|--------|
+| **1. RECEIVE** | Nhận kết quả detection từ B4 qua REST | AIDetectionResponse |
+| **2. VALIDATE** | Kiểm tra field bắt buộc (detectionId, label, confidence) | Lỗi nếu thiếu field |
+| **3. CLASSIFY** | Phân loại dựa trên label và confidence | alert_triggered |
+| **4. ASSESS** | Đánh giá mức độ rủi ro | risk_level |
+| **5. POLICY** | Áp policy quyết định alert | should_alert, severity |
+| **6. PRODUCE** | Tạo alert + gửi B7/B5 + audit | Response JSON |
+
+---
+
+## 📊 **TRẠNG THÁI VÀ ĐIỀU KIỆN KÍCH HOẠT**
+
+### Person Detected - Phát hiện người
+
+| ID | Điều kiện | Confidence | Severity | Rule ID |
+|----|-----------|------------|----------|---------|
+| P1 | label = "person" AND confidence > 0.7 | > 0.7 | **HIGH** | AI_DETECTION_RULE |
+
+**🔔 TẠO ALERT - GỬI B7 & B5**
+
+---
+
+### Object Detected - Phát hiện vật thể
+
+| ID | Điều kiện | Confidence | Severity | Rule ID |
+|----|-----------|------------|----------|---------|
+| O1 | label != "person" | Bất kỳ | **NONE** | - |
+
+**✅ KHÔNG TẠO ALERT**
+
+---
+
+### Low Confidence - Độ tin cậy thấp
+
+| ID | Điều kiện | Confidence | Severity | Rule ID |
+|----|-----------|------------|----------|---------|
+| L1 | confidence <= 0.7 | ≤ 0.7 | **NONE** | - |
+
+**✅ KHÔNG TẠO ALERT**
+
+---
+
+### No Match - Không khớp
+
+| ID | Điều kiện | Severity | Rule ID |
+|----|-----------|----------|---------|
+| N1 | matched = false | **NONE** | - |
+
+**✅ KHÔNG TẠO ALERT**
+
+---
+
+## 🧪 **TEST CASES**
+
+### Test 1: Phát hiện người với độ tin cậy cao (HIGH alert)
+
+**Mô tả:** AI phát hiện người với confidence 0.95 → Tạo alert HIGH.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "detectionId": "550e8400-e29b-41d4-a716-446655440030",
     "matched": true,
     "label": "person",
     "confidence": 0.95,
     "status": "matched",
-    "modelVersion": "v2.0.1",
-    "processedAt": "2026-06-24T10:30:00Z"
-  }'
+    "modelVersion": "yolov8n",
+    "processedAt": "2026-06-24T17:30:00Z"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
 ```
 
-**Kết quả mong đợi:**
-```json
-{"status": "received"}
-```
+**Alert được tạo:**
+- AI_DETECTION_RULE (HIGH): Person detected with confidence 0.95
 
-#### Test 2: Phát hiện vật thể (không tạo alert)
+---
+
+### Test 2: Phát hiện vật thể (không alert)
+
+**Mô tả:** AI phát hiện car với confidence 0.88 → Không tạo alert.
 
 ```bash
-curl -X POST http://localhost:8000/policies/evaluate-detection \
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "detectionId": "550e8400-e29b-41d4-a716-446655440011",
+    "detectionId": "550e8400-e29b-41d4-a716-446655440031",
     "matched": true,
     "label": "car",
     "confidence": 0.88,
     "status": "matched",
-    "modelVersion": "v2.0.1",
-    "processedAt": "2026-06-24T10:30:00Z"
-  }'
+    "modelVersion": "yolov8n",
+    "processedAt": "2026-06-24T17:30:00Z"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
 ```
 
-**Kết quả mong đợi:**
-```json
-{"status": "received"}
-```
+**✅ KHÔNG TẠO ALERT**
 
-#### Test 3: Không khớp (không tạo alert)
+---
+
+### Test 3: Không khớp (không alert)
+
+**Mô tả:** AI không phát hiện đối tượng → Không tạo alert.
 
 ```bash
-curl -X POST http://localhost:8000/policies/evaluate-detection \
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "detectionId": "550e8400-e29b-41d4-a716-446655440012",
+    "detectionId": "550e8400-e29b-41d4-a716-446655440032",
     "matched": false,
     "label": "unknown",
     "confidence": 0.35,
     "status": "not_matched",
-    "modelVersion": "v2.0.1",
-    "processedAt": "2026-06-24T10:30:00Z"
-  }'
+    "modelVersion": "yolov8n",
+    "processedAt": "2026-06-24T17:30:00Z"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
 ```
 
-**Kết quả mong đợi:**
-```json
-{"status": "received"}
-```
+**✅ KHÔNG TẠO ALERT**
 
-#### Test 4: Phát hiện người với độ tin cậy thấp (không tạo alert)
+---
+
+### Test 4: Phát hiện người với độ tin cậy thấp (không alert)
+
+**Mô tả:** AI phát hiện người nhưng confidence 0.65 (< 0.7) → Không tạo alert.
 
 ```bash
-curl -X POST http://localhost:8000/policies/evaluate-detection \
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
-    "detectionId": "550e8400-e29b-41d4-a716-446655440013",
+    "detectionId": "550e8400-e29b-41d4-a716-446655440033",
     "matched": true,
     "label": "person",
     "confidence": 0.65,
     "status": "low_confidence",
-    "modelVersion": "v2.0.1",
-    "processedAt": "2026-06-24T10:30:00Z"
-  }'
+    "modelVersion": "yolov8n",
+    "processedAt": "2026-06-24T17:30:00Z"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
 ```
 
-**Kết quả mong đợi:**
+**✅ KHÔNG TẠO ALERT**
+
+---
+
+### Test 5: Phát hiện người lạ (HIGH alert)
+
+**Mô tả:** AI phát hiện người lạ với confidence 0.92 → Tạo alert HIGH (unknown_person).
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "detectionId": "550e8400-e29b-41d4-a716-446655440034",
+    "matched": true,
+    "label": "person",
+    "confidence": 0.92,
+    "status": "unknown_person",
+    "modelVersion": "yolov8n",
+    "processedAt": "2026-06-24T17:30:00Z"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
+```
+
+**Alert được tạo:**
+- AI_DETECTION_RULE (HIGH): Person detected with confidence 0.92
+
+---
+
+### Test 6: Phát hiện nhiều người (HIGH alert)
+
+**Mô tả:** AI phát hiện 2 người với confidence cao → Tạo alert HIGH.
+
+```bash
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d '{
+    "detectionId": "550e8400-e29b-41d4-a716-446655440035",
+    "matched": true,
+    "label": "person",
+    "confidence": 0.93,
+    "status": "multiple_persons",
+    "modelVersion": "yolov8n",
+    "processedAt": "2026-06-24T17:30:00Z"
+  }' | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
+```
+
+**Alert được tạo:**
+- AI_DETECTION_RULE (HIGH): Person detected with confidence 0.93
+
+---
+
+# 📋 **5.7. B5 → B6: GET ALERTS**
+
+**Mục đích:** Kiểm tra endpoint cung cấp danh sách cảnh báo cho Analytics Service (B5) để tổng hợp KPI và thống kê.
+
+---
+
+## 🔍 **QUY TRÌNH XỬ LÝ CỦA B6**
+
+| Bước | Mô tả | Đầu ra |
+|------|-------|--------|
+| **1. RECEIVE** | Nhận request GET từ B5 | Request với limit, severity |
+| **2. VALIDATE** | Kiểm tra tham số hợp lệ | limit (1-100), severity (LOW/MEDIUM/HIGH/CRITICAL) |
+| **3. FETCH** | Lấy danh sách alerts từ memory | List alerts |
+| **4. FILTER** | Lọc theo severity nếu có | Filtered list |
+| **5. RESPOND** | Trả về danh sách alerts | JSON response |
+
+---
+
+## 📊 **CẤU TRÚC DỮ LIỆU ALERT**
+
 ```json
-{"status": "received"}
+{
+  "event_id": "alert-xxxxxxxxxxxx",
+  "alert_id": "ALT-XXXXXXXX",
+  "alert_type": "sensor_danger",
+  "severity": "CRITICAL",
+  "target": "security_team",
+  "message": "CO₂ 1900ppm exceeds danger threshold (1800ppm)",
+  "details": {
+    "device_id": "esp32-hall-b201",
+    "status": "danger",
+    "alert_level": "high",
+    "readings": {...},
+    "location": "Hall B201"
+  },
+  "timestamp": "2026-06-24T17:30:00.000000"
+}
 ```
 
 ---
 
-### 5.7. B5 → B6: GET ALERTS
+## 🧪 **TEST CASES**
 
-**Mục đích:** Kiểm tra endpoint lấy danh sách cảnh báo cho Analytics (B5).
+### Test 1: Lấy tất cả alerts
 
-#### Test 1: Lấy tất cả alerts
+**Mô tả:** Lấy toàn bộ danh sách alerts đã được tạo từ các test trước.
 
 ```bash
-curl -X GET "http://localhost:8000/alerts" \
-  -H "Authorization: Bearer mock-token-123"
+curl -s -X GET "http://localhost:8000/alerts" \
+  -H "Authorization: Bearer mock-token-123" | jq '.'
+
+# Kết quả mong đợi:
+[
+  {
+    "event_id": "alert-xxxxxxxxxxxx",
+    "alert_id": "ALT-XXXXXXXX",
+    "alert_type": "sensor_danger",
+    "severity": "CRITICAL",
+    "target": "security_team",
+    "message": "CO₂ 1900ppm exceeds danger threshold (1800ppm)",
+    "details": {...},
+    "timestamp": "2026-06-24T17:30:00.000000"
+  },
+  ...
+]
 ```
 
-**Kết quả mong đợi:** Danh sách 18 alerts (sau khi chạy tất cả các test trên)
+---
 
-#### Test 2: Lọc theo severity CRITICAL
+### Test 2: Lọc theo severity CRITICAL
+
+**Mô tả:** Chỉ lấy các alert có severity = CRITICAL.
 
 ```bash
-curl -X GET "http://localhost:8000/alerts?severity=CRITICAL" \
-  -H "Authorization: Bearer mock-token-123"
+curl -s -X GET "http://localhost:8000/alerts?severity=CRITICAL" \
+  -H "Authorization: Bearer mock-token-123" | jq '.[] | {alert_id: .alert_id, severity: .severity, message: .message}'
+
+# Kết quả mong đợi:
+{
+  "alert_id": "ALT-XXXXXXXX",
+  "severity": "CRITICAL",
+  "message": "CO₂ 1900ppm exceeds danger threshold (1800ppm)"
+}
 ```
 
-**Kết quả mong đợi:** 9 alerts với severity CRITICAL
+---
 
-#### Test 3: Lọc theo severity HIGH
+### Test 3: Lọc theo severity HIGH
+
+**Mô tả:** Chỉ lấy các alert có severity = HIGH.
 
 ```bash
-curl -X GET "http://localhost:8000/alerts?severity=HIGH" \
-  -H "Authorization: Bearer mock-token-123"
+curl -s -X GET "http://localhost:8000/alerts?severity=HIGH" \
+  -H "Authorization: Bearer mock-token-123" | jq '.[] | {alert_id: .alert_id, severity: .severity, message: .message}'
+
+# Kết quả mong đợi:
+{
+  "alert_id": "ALT-XXXXXXXX",
+  "severity": "HIGH",
+  "message": "Person detected with confidence 0.95"
+}
 ```
 
-**Kết quả mong đợi:** 8 alerts với severity HIGH
+---
 
-#### Test 4: Lọc theo severity WARNING
+### Test 4: Lọc theo severity MEDIUM
+
+**Mô tả:** Chỉ lấy các alert có severity = MEDIUM.
 
 ```bash
-curl -X GET "http://localhost:8000/alerts?severity=WARNING" \
-  -H "Authorization: Bearer mock-token-123"
+curl -s -X GET "http://localhost:8000/alerts?severity=MEDIUM" \
+  -H "Authorization: Bearer mock-token-123" | jq '.[] | {alert_id: .alert_id, severity: .severity, message: .message}'
+
+# Kết quả mong đợi:
+{
+  "alert_id": "ALT-XXXXXXXX",
+  "severity": "MEDIUM",
+  "message": "Battery 15% below warning threshold (20.0%)"
+}
 ```
 
-**Kết quả mong đợi:** [] (không có WARNING alerts)
+---
 
-#### Test 5: Giới hạn số lượng
+### Test 5: Giới hạn số lượng alerts
 
-```bash
-curl -X GET "http://localhost:8000/alerts?limit=5" \
-  -H "Authorization: Bearer mock-token-123"
-```
-
-**Kết quả mong đợi:** 5 alerts mới nhất
-
-#### Test 6: Đếm số lượng alerts
+**Mô tả:** Chỉ lấy 5 alert gần nhất.
 
 ```bash
-curl -X GET "http://localhost:8000/alerts" \
+curl -s -X GET "http://localhost:8000/alerts?limit=5" \
   -H "Authorization: Bearer mock-token-123" | jq 'length'
+
+# Kết quả mong đợi:
+5
 ```
 
-**Kết quả mong đợi:** `18`
+---
+
+### Test 6: Lấy alerts với severity không tồn tại
+
+**Mô tả:** Lọc với severity không có trong hệ thống → Trả về danh sách rỗng.
+
+```bash
+curl -s -X GET "http://localhost:8000/alerts?severity=LOW" \
+  -H "Authorization: Bearer mock-token-123" | jq '.'
+
+# Kết quả mong đợi:
+[]
+```
+
+---
+
+### Test 7: Đếm tổng số alerts
+
+**Mô tả:** Đếm tổng số alerts đã được tạo.
+
+```bash
+curl -s -X GET "http://localhost:8000/alerts" \
+  -H "Authorization: Bearer mock-token-123" | jq 'length'
+
+# Kết quả mong đợi:
+[ số lượng alerts đã tạo ]
+```
+
+---
+
+### Test 8: Lấy alerts với limit và severity
+
+**Mô tả:** Kết hợp limit và severity.
+
+```bash
+curl -s -X GET "http://localhost:8000/alerts?severity=CRITICAL&limit=3" \
+  -H "Authorization: Bearer mock-token-123" | jq '.[] | {alert_id: .alert_id, severity: .severity}'
+
+# Kết quả mong đợi:
+{
+  "alert_id": "ALT-XXXXXXXX",
+  "severity": "CRITICAL"
+}
+```
 
 ---
 
@@ -1060,128 +1902,160 @@ curl http://192.168.0.102:8000/health
 
 ---
 
-## 7. TEST CONSUMER: B6 GỌI GIẢ LẬP CÁC B KHÁC
+# 📋 **7. TEST CONSUMER: B6 GỌI GIẢ LẬP CÁC B KHÁC**
 
 > **Mục đích**: Test các endpoint mà B6 gọi sang các service khác (B3, B4, B5, B7) với cơ chế fallback khi chưa kết nối thật.
 
-Trước tiên, kiểm tra trạng thái kết nối đến các B:
+---
+
+## 🔍 **KIỂM TRA TRẠNG THÁI KẾT NỐI**
 
 ```bash
-curl -X GET http://localhost:8000/connection-status \
-  -H "Authorization: Bearer mock-token-123"
+curl -s -X GET http://localhost:8000/connection-status \
+  -H "Authorization: Bearer mock-token-123" | jq '.'
 ```
 
 **Kết quả mong đợi:**
 ```json
 {
-  "b3": {"status": "fallback", "display": "🟡 Fallback"},
-  "b4": {"status": "fallback", "display": "🟡 Fallback"},
-  "b5": {"status": "fallback", "display": "🟡 Fallback"},
-  "b7": {"status": "fallback", "display": "🟡 Fallback"},
-  "rabbitmq": {"status": "disabled", "display": "⚪ Disabled"},
+  "b3": {
+    "status": "fallback",
+    "display": "🟡 Fallback",
+    "auto_detect": false,
+    "retry_interval": 60
+  },
+  "b4": {
+    "status": "fallback",
+    "display": "🟡 Fallback",
+    "fallback_url": "http://b6-ai-vision:9000",
+    "auto_detect": false,
+    "retry_interval": 60
+  },
+  "b5": {
+    "status": "fallback",
+    "display": "🟡 Fallback",
+    "auto_detect": false,
+    "retry_interval": 60
+  },
+  "b7": {
+    "status": "fallback",
+    "display": "🟡 Fallback",
+    "auto_detect": false,
+    "retry_interval": 60
+  },
+  "rabbitmq": {
+    "status": "disabled",
+    "display": "⚪ Disabled",
+    "host": "localhost"
+  },
   "retry_enabled": false
 }
 ```
 
 ---
 
-### 7.1. B6 gọi B3 (Access Gate) - Lấy access logs
+## 7.1. B6 GỌI B3 (ACCESS GATE) - LẤY ACCESS LOGS
+
+### 7.1.1: Lấy danh sách access logs
 
 ```bash
-curl -X GET "http://localhost:8000/internal/access-logs?limit=5" \
-  -H "Authorization: Bearer mock-token-123"
-```
+curl -s -X GET "http://localhost:8000/internal/access-logs?limit=5" \
+  -H "Authorization: Bearer mock-token-123" | jq '.'
 
-**Kết quả mong đợi (FALLBACK mode):**
-```json
+# Kết quả mong đợi (FALLBACK mode):
 [
-    {
-        "logId": "fallback_log_1",
-        "cardId": "CARD_1",
-        "gateId": "LAB_01",
-        "direction": "IN",
-        "status": "GRANTED",
-        "timestamp": "2026-06-24T...",
-        "operatorNote": "Fallback mode - B3 not connected",
-        "mock": true
-    },
-    {
-        "logId": "fallback_log_2",
-        "cardId": "CARD_2",
-        "gateId": "LAB_01",
-        "direction": "IN",
-        "status": "GRANTED",
-        "timestamp": "2026-06-24T...",
-        "operatorNote": "Fallback mode - B3 not connected",
-        "mock": true
-    },
-    {
-        "logId": "fallback_log_3",
-        "cardId": "CARD_3",
-        "gateId": "LAB_01",
-        "direction": "IN",
-        "status": "GRANTED",
-        "timestamp": "2026-06-24T...",
-        "operatorNote": "Fallback mode - B3 not connected",
-        "mock": true
-    }
+  {
+    "logId": "fallback_log_1",
+    "cardId": "CARD_1",
+    "gateId": "LAB_01",
+    "direction": "IN",
+    "status": "GRANTED",
+    "timestamp": "2026-06-24T17:30:00.000000",
+    "operatorNote": "Fallback mode - B3 not connected",
+    "mock": true
+  },
+  {
+    "logId": "fallback_log_2",
+    "cardId": "CARD_2",
+    "gateId": "LAB_01",
+    "direction": "IN",
+    "status": "GRANTED",
+    "timestamp": "2026-06-24T17:30:00.000000",
+    "operatorNote": "Fallback mode - B3 not connected",
+    "mock": true
+  },
+  {
+    "logId": "fallback_log_3",
+    "cardId": "CARD_3",
+    "gateId": "LAB_01",
+    "direction": "IN",
+    "status": "GRANTED",
+    "timestamp": "2026-06-24T17:30:00.000000",
+    "operatorNote": "Fallback mode - B3 not connected",
+    "mock": true
+  }
 ]
 ```
 
-**Lấy trạng thái gate:**
+### 7.1.2: Lấy trạng thái gate
+
 ```bash
-curl -X GET "http://localhost:8000/internal/gates/LAB_01/status" \
-  -H "Authorization: Bearer mock-token-123"
+curl -s -X GET "http://localhost:8000/internal/gates/LAB_01/status" \
+  -H "Authorization: Bearer mock-token-123" | jq '.'
+
+# Kết quả mong đợi (FALLBACK mode):
+{
+  "gateId": "LAB_01",
+  "isOnline": true,
+  "lastHeartbeat": "2026-06-24T17:30:00.000000",
+  "currentMode": "normal",
+  "mock": true,
+  "message": "Fallback mode - B3 not connected"
+}
 ```
 
-**Kết quả mong đợi (FALLBACK mode):**
-```json
-{
-    "gateId": "LAB_01",
-    "isOnline": true,
-    "lastHeartbeat": "2026-06-24T...",
-    "currentMode": "normal",
-    "mock": true,
-    "message": "Fallback mode - B3 not connected"
-}
+### 7.1.3: Kiểm tra log B3
+
+```bash
+docker compose logs api | grep -E "B3|Access Gate|access-gate"
+```
+
+**Kết quả mong đợi:**
+```
+🚪 AccessGateClient initialized: use_real=False
+🟡 [B3_FALLBACK] Using fallback access logs
 ```
 
 ---
 
-### 7.2. B6 gọi B4 (AI Vision) - Phân tích ảnh
+## 7.2. B6 GỌI B4 (AI VISION) - PHÂN TÍCH ẢNH
 
-**Mục đích:** Test luồng B6 gọi AI Vision Service (B4) để phân tích ảnh.
-
-#### Bước 7.2.1: Kiểm tra AI Vision Service đang chạy
+### 7.2.1: Kiểm tra AI Vision Service đang chạy
 
 ```bash
-curl http://localhost:9000/health
-```
+curl -s http://localhost:9000/health | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
   "status": "UP",
   "model_loaded": true,
-  "timestamp": "2026-06-24T..."
+  "timestamp": "2026-06-24T17:30:00.000000"
 }
 ```
 
-#### Bước 7.2.2: B6 gọi AI Vision qua API Gateway (Consumer Test)
+### 7.2.2: B6 gọi AI Vision qua API Gateway
 
 ```bash
 CORR_ID=$(uuidgen)
-curl -X POST http://localhost:8000/evaluate-detection \
+curl -s -X POST http://localhost:8000/evaluate-detection \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d "{
     \"correlationId\": \"${CORR_ID}\",
     \"imageRef\": \"person.jpg\"
-  }"
-```
+  }" | jq '.'
 
-**Kết quả mong đợi (FALLBACK mode):**
-```json
+# Kết quả mong đợi (FALLBACK mode):
 {
   "detectionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "matched": true,
@@ -1189,11 +2063,11 @@ curl -X POST http://localhost:8000/evaluate-detection \
   "confidence": 0.85,
   "status": "matched",
   "modelVersion": "ultimate-fallback",
-  "processedAt": "2026-06-24T..."
+  "processedAt": "2026-06-24T17:30:00.000000"
 }
 ```
 
-#### Bước 7.2.3: Kiểm tra log Consumer
+### 7.2.3: Kiểm tra log Consumer
 
 ```bash
 docker compose logs api | grep -i "AI"
@@ -1208,15 +2082,15 @@ docker compose logs api | grep -i "AI"
 
 ---
 
-### 7.3. B6 gửi decision đến B5 (Analytics) - Consumer
+## 7.3. B6 GỬI DECISION ĐẾN B5 (ANALYTICS)
 
-#### 7.3.1: Trigger Decision từ Access Check
+### 7.3.1: Trigger Decision từ Access Check
 
 Mỗi request `/access/check` đều tự động gửi decision đến B5.
 
 ```bash
 CORR_ID=$(uuidgen)
-curl -X POST http://localhost:8000/access/check \
+curl -s -X POST http://localhost:8000/access/check \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d "{
@@ -1224,7 +2098,17 @@ curl -X POST http://localhost:8000/access/check \
     \"gateId\": \"LOBBY_01\",
     \"direction\": \"IN\",
     \"correlationId\": \"${CORR_ID}\"
-  }"
+  }" | jq '.'
+
+# Kết quả mong đợi:
+{
+  "decision": "ALLOW",
+  "reasonCode": "VALID",
+  "decisionId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "remainingQuota": 4,
+  "isDuplicate": false,
+  "expiresAt": "2026-06-25T17:30:00Z"
+}
 ```
 
 **Kiểm tra log (FALLBACK mode):**
@@ -1238,44 +2122,39 @@ docker compose logs api --tail 30 | grep -E "ANALYTICS_FALLBACK|ANALYTICS_STORAG
 📊 [ANALYTICS_STORAGE] Fallback storage size: 1
 ```
 
-#### 7.3.2: Xem danh sách Fallback Decisions
+### 7.3.2: Xem danh sách Fallback Decisions
 
 ```bash
-curl -X GET "http://localhost:8000/internal/fallback-decisions?limit=10" \
-  -H "Authorization: Bearer mock-token-123"
-```
+curl -s -X GET "http://localhost:8000/internal/fallback-decisions?limit=10" \
+  -H "Authorization: Bearer mock-token-123" | jq '.[] | {correlationId: .correlationId, decision: .decision, reason: .reason}'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 [
   {
     "correlationId": "bd65071b-0a21-4b65-8de5-dc1e4b49c2ff",
     "decision": "ALLOW",
-    "reason": "VALID",
-    "latencyMs": 45,
-    "quotaBefore": 5,
-    "quotaAfter": 4,
-    "rulesTriggered": [],
-    "timestamp": "2026-06-24T...",
-    "mode": "fallback"
+    "reason": "VALID"
+  },
+  {
+    "correlationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "decision": "DENY",
+    "reason": "QUOTA_EXCEEDED"
   }
 ]
 ```
 
-#### 7.3.3: Gửi Decision thủ công (Test Endpoint)
+### 7.3.3: Gửi Decision thủ công (Test Endpoint)
 
 ```bash
-curl -X POST http://localhost:8000/internal/send-test-decision \
+curl -s -X POST http://localhost:8000/internal/send-test-decision \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
     "decision": "ALLOW",
     "reason": "TEST_MANUAL"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
   "status": "sent",
   "correlationId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -1285,16 +2164,30 @@ curl -X POST http://localhost:8000/internal/send-test-decision \
 }
 ```
 
+### 7.3.4: Kiểm tra log B5
+
+```bash
+docker compose logs api | grep -E "ANALYTICS|B5"
+```
+
+**Kết quả mong đợi:**
+```
+📊 AnalyticsClient initialized: use_real=False
+📊 [ANALYTICS_FALLBACK] Decision stored locally: xxxxx... - ALLOW
+📊 [ANALYTICS_STORAGE] Fallback storage size: 5
+```
+
 ---
 
-### 7.4. B6 gửi alert đến B7 (Notification) - Consumer
+## 7.4. B6 GỬI ALERT ĐẾN B7 (NOTIFICATION)
 
-#### 7.4.1: Trigger Alert từ Sensor
+### 7.4.1: Trigger Alert từ Sensor
 
 **Gửi sensor event với nhiệt độ cao (trigger alert):**
+
 ```bash
 CORR_ID=$(uuidgen)
-curl -X POST http://localhost:8000/internal/evaluate-sensor \
+curl -s -X POST http://localhost:8000/internal/evaluate-sensor \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d "{
@@ -1307,16 +2200,17 @@ curl -X POST http://localhost:8000/internal/evaluate-sensor \
     \"battery_percent\": 77,
     \"motion_detected\": false,
     \"correlationId\": \"${CORR_ID}\"
-  }"
-```
+  }" | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
-  "message": "Event received for processing",
+  "message": "Event received and processed",
   "device_id": "esp32-lab-a101",
   "status": "danger",
-  "alerts_count": 1
+  "alert_level": "high",
+  "reason": "Temperature 42.5°C exceeds danger threshold (40.0°C)",
+  "alerts_count": 1,
+  "correlation_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 }
 ```
 
@@ -1331,48 +2225,64 @@ Alert saved: xxxxx... - CRITICAL
 📧 [B7_FALLBACK] Alert stored locally: xxxxx... - CRITICAL
 ```
 
-#### 7.4.2: Gửi Alert thủ công (Test Endpoint)
+### 7.4.2: Trigger Alert từ AI Detection
 
 ```bash
-curl -X POST http://localhost:8000/internal/send-test-alert \
+DETECTION_ID=$(uuidgen)
+curl -s -X POST http://localhost:8000/policies/evaluate-detection \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mock-token-123" \
+  -d "{
+    \"detectionId\": \"${DETECTION_ID}\",
+    \"matched\": true,
+    \"label\": \"person\",
+    \"confidence\": 0.95,
+    \"status\": \"matched\",
+    \"modelVersion\": \"yolov8n\",
+    \"processedAt\": \"2026-06-24T17:30:00Z\"
+  }" | jq '.'
+
+# Kết quả mong đợi:
+{
+  "status": "received"
+}
+```
+
+### 7.4.3: Gửi Alert thủ công (Test Endpoint)
+
+```bash
+curl -s -X POST http://localhost:8000/internal/send-test-alert \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer mock-token-123" \
   -d '{
     "severity": "CRITICAL",
     "message": "Test alert from B6 dashboard"
-  }'
-```
+  }' | jq '.'
 
-**Kết quả mong đợi:**
-```json
+# Kết quả mong đợi:
 {
   "status": "sent",
-  "alertId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "alertId": "ALT-XXXXXXXX",
   "severity": "CRITICAL",
   "mode": "fallback",
   "message": "Alert sent successfully"
 }
 ```
 
-#### 7.4.3: Tóm tắt các trigger gửi B7
+### 7.4.4: Kiểm tra log B7
 
-| Trigger | Endpoint | Điều kiện | Severity |
-|---------|----------|-----------|----------|
-| **Sensor - Nhiệt độ** | `POST /internal/evaluate-sensor` | temp >= 40°C | CRITICAL |
-| **Sensor - Nhiệt độ** | `POST /internal/evaluate-sensor` | temp >= 35°C | HIGH |
-| **Sensor - Khói** | `POST /internal/evaluate-sensor` | smoke >= 1.0ppm | CRITICAL |
-| **Sensor - Khói** | `POST /internal/evaluate-sensor` | smoke >= 0.5ppm | HIGH |
-| **Sensor - CO2** | `POST /internal/evaluate-sensor` | co2 >= 1800ppm | CRITICAL |
-| **Sensor - Pin** | `POST /internal/evaluate-sensor` | battery < 20% | MEDIUM |
-| **Access Check - DENY** | `POST /access/check` | decision = DENY | CRITICAL |
-| **Access Check - Warning** | `POST /access/check` | quota <= 1 | WARNING |
-| **AI Detection** | `POST /policies/evaluate-detection` | person + confidence > 0.7 | HIGH |
-| **Camera - Offline** | `POST /policies/evaluate-camera-event` | event_type = camera_offline | CRITICAL |
-| **Camera - Obstruction** | `POST /policies/evaluate-camera-event` | event_type = obstruction | HIGH |
-| **Camera - Motion Sensitive** | `POST /policies/evaluate-camera-event` | motion + location ∈ sensitive | CRITICAL |
-| **Camera - Motion Restricted** | `POST /policies/evaluate-camera-event` | motion + 22:00-06:00 | HIGH |
+```bash
+docker compose logs api | grep -E "Notification|B7"
+```
+
+**Kết quả mong đợi:**
+```
+📧 NotificationClient initialized:
+📧 [B7_FALLBACK] Alert stored locally: xxxxx... - CRITICAL
+```
 
 ---
+
 
 ## 8. MỞ GIAO DIỆN DASHBOARD
 

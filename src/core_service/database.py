@@ -3,6 +3,7 @@ import os
 import logging
 from typing import Optional, List, Dict, Any
 import asyncio
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -13,27 +14,20 @@ class DatabaseManager:
         self.database_url = os.getenv("DATABASE_URL", "")
         self.disabled = os.getenv("DATABASE_DISABLED", "false").lower() == "true"
         self._connecting = False
-        self._connection_failed = False  # Đánh dấu đã fail để không thử lại
+        self._connection_failed = False
     
     async def connect(self, retry_count=3, retry_delay=2):
-        """Create database connection pool with retry - CHỈ GỌI 1 LẦN KHI STARTUP"""
         if self.disabled:
             logger.info("Database disabled - running in mock mode")
             return True
         
-        # Nếu đã fail trước đó, không thử lại
         if self._connection_failed:
             logger.info("Database connection previously failed, using mock mode")
             self.disabled = True
             return False
         
         if self._connecting:
-            logger.warning("Database connection already in progress, waiting...")
-            # Chờ tối đa 5s
-            for _ in range(10):
-                await asyncio.sleep(0.5)
-                if self.pool is not None:
-                    return True
+            logger.warning("Database connection already in progress")
             return False
         
         self._connecting = True
@@ -46,11 +40,10 @@ class DatabaseManager:
                         self.database_url,
                         min_size=1,
                         max_size=5,
-                        command_timeout=5.0,  # Giảm timeout
+                        command_timeout=5.0,
                         max_inactive_connection_lifetime=60,
-                        timeout=3.0  # Timeout cho create_pool
+                        timeout=3.0
                     )
-                    # Kiểm tra kết nối
                     async with self.pool.acquire() as conn:
                         await conn.execute("SELECT 1")
                     logger.info("✅ Database connected successfully")
@@ -75,23 +68,20 @@ class DatabaseManager:
             self._connecting = False
     
     async def close(self):
-        """Close database connection pool"""
         if self.pool:
             await self.pool.close()
             self.pool = None
             logger.info("Database pool closed")
     
     async def _ensure_connection(self) -> bool:
-        """Ensure database connection is available - NHANH CHÓNG TRẢ VỀ"""
         if self.disabled:
             return False
         if self._connection_failed:
-            self.disabled = True
+            # KHÔNG set disabled ở đây, chỉ trả về False
             return False
         if self.pool is None:
-            # KHÔNG THỬ KẾT NỐI LẠI - trả về False ngay
-            logger.warning("Database pool is None, using mock mode")
-            self.disabled = True
+            # KHÔNG set disabled ở đây, chỉ trả về False
+            logger.warning("Database pool is None")
             return False
         return True
     
@@ -99,16 +89,16 @@ class DatabaseManager:
         if not await self._ensure_connection():
             return "MOCK_OK"
         try:
-            async with asyncio.timeout(3.0):  # Timeout 3s
+            async with asyncio.timeout(3.0):
                 async with self.pool.acquire() as conn:
                     return await conn.execute(query, *args)
         except asyncio.TimeoutError:
             logger.error(f"Database execute timeout")
-            self.disabled = True
+            # ✅ KHÔNG disabled
             return "MOCK_OK"
         except Exception as e:
             logger.error(f"Database execute failed: {e}")
-            self.disabled = True
+            # ✅ KHÔNG disabled
             return "MOCK_OK"
     
     async def fetch(self, query: str, *args) -> List[Dict]:
@@ -121,11 +111,11 @@ class DatabaseManager:
                     return [dict(row) for row in rows]
         except asyncio.TimeoutError:
             logger.error(f"Database fetch timeout")
-            self.disabled = True
+            # ✅ KHÔNG disabled
             return []
         except Exception as e:
             logger.error(f"Database fetch failed: {e}")
-            self.disabled = True
+            # ✅ KHÔNG disabled
             return []
     
     async def fetch_all(self, query: str, *args) -> List[Dict]:
@@ -141,11 +131,11 @@ class DatabaseManager:
                     return dict(row) if row else None
         except asyncio.TimeoutError:
             logger.error(f"Database fetch_one timeout")
-            self.disabled = True
+            # ✅ KHÔNG disabled
             return None
         except Exception as e:
             logger.error(f"Database fetch_one failed: {e}")
-            self.disabled = True
+            # ✅ KHÔNG disabled
             return None
     
     async def is_healthy(self) -> bool:
@@ -162,13 +152,11 @@ class DatabaseManager:
             return False
     
     # ============================================================
-    # DEVICE REGISTRY FUNCTIONS - TRẢ VỀ NONE NHANH CHÓNG
+    # DEVICE REGISTRY FUNCTIONS
     # ============================================================
     async def get_device_registry(self, device_id: str) -> Optional[Dict]:
-        """Lấy thông tin device từ database - TRẢ VỀ NONE NẾU LỖI"""
         if self.disabled or self._connection_failed:
             return None
-        
         try:
             return await self.fetch_one("""
                 SELECT device_id, device_type, location, room, status, created_at, updated_at
@@ -180,10 +168,8 @@ class DatabaseManager:
             return None
 
     async def get_all_device_registry(self) -> List[Dict]:
-        """Lấy tất cả device registry"""
         if self.disabled or self._connection_failed:
             return []
-        
         try:
             return await self.fetch("""
                 SELECT device_id, device_type, location, room, status, created_at, updated_at
@@ -195,10 +181,8 @@ class DatabaseManager:
             return []
 
     async def update_device_registry_status(self, device_id: str, status: str) -> bool:
-        """Cập nhật trạng thái device"""
         if self.disabled or self._connection_failed:
             return False
-        
         try:
             await self.execute("""
                 UPDATE device_registry
@@ -220,10 +204,16 @@ class DatabaseManager:
             await self.execute("""
                 INSERT INTO alerts (alert_id, event_id, severity, user_id, gate_id, 
                                    alert_details, created_at)
-                VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, $6)
-            """, alert_data.get("eventId"), alert_data.get("severity"),
-               alert_data.get("userId"), alert_data.get("gateId"),
-               alert_data.get("alertDetails"), alert_data.get("timestamp"))
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+            """, 
+                alert_data.get("alert_id"),
+                alert_data.get("event_id"),
+                alert_data.get("severity"),
+                alert_data.get("user_id", "SYSTEM"),
+                alert_data.get("gate_id", "UNKNOWN"),
+                alert_data.get("alert_details", {}),
+                alert_data.get("timestamp", datetime.now())
+            )
             return True
         except Exception as e:
             logger.error(f"Failed to save alert: {e}")
