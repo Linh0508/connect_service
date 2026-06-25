@@ -8,138 +8,36 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* ===== ANIMATED BACKGROUND ===== */
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
             min-height: 100vh;
-            background: #0f0c29;
-            color: #e0e0e0;
+            background: #f0f2f5;
+            color: #1a1a2e;
             overflow-x: hidden;
-            position: relative;
         }
 
-        /* Animated gradient background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: 
-                radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
-                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.10) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.05) 0%, transparent 50%),
-                linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            animation: backgroundMove 20s ease-in-out infinite alternate;
-            z-index: -2;
-        }
-
-        /* Floating particles */
-        body::after {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.05), transparent),
-                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.03), transparent),
-                radial-gradient(2px 2px at 50px 160px, rgba(255,255,255,0.04), transparent),
-                radial-gradient(2px 2px at 90px 40px, rgba(255,255,255,0.03), transparent),
-                radial-gradient(2px 2px at 130px 80px, rgba(255,255,255,0.05), transparent),
-                radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.02), transparent);
-            background-size: 200px 200px;
-            z-index: -1;
-            animation: particleFloat 30s linear infinite;
-        }
-
-        @keyframes backgroundMove {
-            0% { transform: rotate(0deg) scale(1); }
-            33% { transform: rotate(5deg) scale(1.05); }
-            66% { transform: rotate(-3deg) scale(0.95); }
-            100% { transform: rotate(0deg) scale(1); }
-        }
-
-        @keyframes particleFloat {
-            0% { transform: translate(0, 0); }
-            25% { transform: translate(-10px, -10px); }
-            50% { transform: translate(10px, 5px); }
-            75% { transform: translate(-5px, 10px); }
-            100% { transform: translate(0, 0); }
-        }
-
-        /* Animated glow orb */
-        .glow-orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.3;
-            z-index: -1;
-            animation: orbFloat 8s ease-in-out infinite alternate;
-        }
-        .glow-orb-1 {
-            width: 400px;
-            height: 400px;
-            background: rgba(99, 102, 241, 0.2);
-            top: -100px;
-            right: -100px;
-            animation-delay: 0s;
-        }
-        .glow-orb-2 {
-            width: 300px;
-            height: 300px;
-            background: rgba(236, 72, 153, 0.15);
-            bottom: -50px;
-            left: -50px;
-            animation-delay: -3s;
-        }
-        .glow-orb-3 {
-            width: 250px;
-            height: 250px;
-            background: rgba(52, 211, 153, 0.1);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation-delay: -5s;
-        }
-
-        @keyframes orbFloat {
-            0% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(30px, -20px) scale(1.1); }
-            66% { transform: translate(-20px, 30px) scale(0.9); }
-            100% { transform: translate(10px, -10px) scale(1.05); }
-        }
-
-        /* ===== GLASSMORPHISM ===== */
+        /* ===== GLASSMORPHISM SÁNG ===== */
         .glass {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: cardFadeIn 0.6s ease-out;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
         }
         .glass:hover {
             border-color: rgba(99, 102, 241, 0.2);
-            box-shadow: 0 8px 40px rgba(99, 102, 241, 0.08);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
             transform: translateY(-2px);
         }
 
-        @keyframes cardFadeIn {
-            from { opacity: 0; transform: translateY(20px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
         .glass-input {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 10px;
             padding: 8px 14px;
-            color: #e0e0e0;
+            color: #1a1a2e;
             font-size: 13px;
             font-family: 'Inter', sans-serif;
             transition: all 0.3s;
@@ -147,16 +45,17 @@
         }
         .glass-input:focus {
             outline: none;
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 0 30px rgba(99, 102, 241, 0.05);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
         }
-        .glass-input::placeholder { color: rgba(255,255,255,0.25); }
+        .glass-input::placeholder { color: rgba(0, 0, 0, 0.3); }
+
         .glass-select {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 10px;
             padding: 8px 14px;
-            color: #e0e0e0;
+            color: #1a1a2e;
             font-size: 13px;
             font-family: 'Inter', sans-serif;
             width: 100%;
@@ -164,13 +63,13 @@
             transition: all 0.3s;
             appearance: none;
         }
-        .glass-select:focus { outline: none; border-color: rgba(99, 102, 241, 0.5); }
-        .glass-select option { background: #1a1a2e; color: #e0e0e0; }
+        .glass-select:focus { outline: none; border-color: rgba(99, 102, 241, 0.4); }
+        .glass-select option { background: #ffffff; color: #1a1a2e; }
 
         ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.3); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.03); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.25); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.4); }
 
         /* ===== NAVBAR ===== */
         .navbar {
@@ -181,16 +80,11 @@
             height: 60px;
             display: flex;
             align-items: center;
-            background: rgba(15, 12, 41, 0.85);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            animation: slideDown 0.5s ease-out;
-        }
-
-        @keyframes slideDown {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
         }
 
         .navbar-inner {
@@ -209,41 +103,35 @@
             gap: 12px;
             font-weight: 700;
             font-size: 18px;
-            color: #fff;
+            color: #1a1a2e;
             text-decoration: none;
         }
         .navbar-brand .logo-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #818cf8, #6366f1);
+            background: linear-gradient(135deg, #6366f1, #818cf8);
             display: inline-block;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-            animation: pulseGlow 2s ease-in-out infinite;
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
         }
 
         .navbar-brand .badge {
-            background: rgba(99, 102, 241, 0.2);
-            color: #818cf8;
+            background: rgba(99, 102, 241, 0.08);
+            color: #6366f1;
             font-size: 10px;
             font-weight: 600;
             padding: 2px 12px;
             border-radius: 20px;
-            border: 1px solid rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.08);
         }
 
         .tabs {
             display: flex;
             gap: 4px;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(0, 0, 0, 0.03);
             padding: 4px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.04);
         }
         .tabs .tab {
             padding: 6px 20px;
@@ -252,17 +140,17 @@
             background: transparent;
             font-size: 12px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(0, 0, 0, 0.45);
             cursor: pointer;
             transition: all 0.3s;
             font-family: 'Inter', sans-serif;
             position: relative;
         }
-        .tabs .tab:hover { color: rgba(255, 255, 255, 0.7); background: rgba(255,255,255,0.03); }
+        .tabs .tab:hover { color: #1a1a2e; background: rgba(0,0,0,0.03); }
         .tabs .tab.active {
-            background: rgba(99, 102, 241, 0.15);
-            color: #818cf8;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.05);
+            background: rgba(99, 102, 241, 0.06);
+            color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.02);
         }
         .tabs .tab.active::after {
             content: '';
@@ -272,14 +160,8 @@
             transform: translateX(-50%);
             width: 20px;
             height: 2px;
-            background: #818cf8;
+            background: #6366f1;
             border-radius: 2px;
-            animation: tabUnderline 0.3s ease-out;
-        }
-
-        @keyframes tabUnderline {
-            from { width: 0; }
-            to { width: 20px; }
         }
 
         .navbar-actions {
@@ -293,32 +175,21 @@
             align-items: center;
             gap: 6px;
             font-size: 12px;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.45);
         }
         .navbar-actions .status-dot .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             display: inline-block;
-            animation: statusPulse 1.5s ease-in-out infinite;
         }
 
-        @keyframes statusPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .dot-green { background: #34d399; box-shadow: 0 0 12px rgba(52, 211, 153, 0.3); }
-        .dot-red { background: #f87171; box-shadow: 0 0 12px rgba(248, 113, 113, 0.3); }
+        .dot-green { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); }
+        .dot-red { background: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.2); }
 
         .main { max-width: 100%; margin: 0; padding: 12px 16px; }
-        .tab-content { display: none; animation: fadeIn 0.4s ease-out; }
+        .tab-content { display: none; }
         .tab-content.active { display: block; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -326,7 +197,7 @@
         .card { padding: 0; overflow: hidden; }
         .card-header {
             padding: 10px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -336,16 +207,16 @@
         .card-header h3 {
             font-size: 14px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.85);
+            color: #1a1a2e;
         }
         .card-header .badge {
             font-size: 10px;
             font-weight: 500;
             padding: 2px 12px;
             border-radius: 20px;
-            background: rgba(255,255,255,0.04);
-            color: rgba(255,255,255,0.3);
-            border: 1px solid rgba(255,255,255,0.03);
+            background: rgba(0, 0, 0, 0.04);
+            color: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(0, 0, 0, 0.04);
         }
         .card-body { padding: 10px 14px; }
 
@@ -357,28 +228,22 @@
             border-radius: 20px;
             font-size: 10px;
             font-weight: 600;
-            animation: badgePop 0.3s ease-out;
-        }
-
-        @keyframes badgePop {
-            from { transform: scale(0); }
-            to { transform: scale(1); }
         }
 
         .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-        .status-badge.online { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.12); }
-        .status-badge.online .dot { background: #34d399; }
-        .status-badge.fallback { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.12); }
-        .status-badge.fallback .dot { background: #fbbf24; }
-        .status-badge.real { background: rgba(99, 102, 241, 0.12); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.12); }
-        .status-badge.real .dot { background: #818cf8; }
+        .status-badge.online { background: rgba(16, 185, 129, 0.08); color: #065f46; border: 1px solid rgba(16, 185, 129, 0.08); }
+        .status-badge.online .dot { background: #10b981; }
+        .status-badge.fallback { background: rgba(245, 158, 11, 0.08); color: #92400e; border: 1px solid rgba(245, 158, 11, 0.08); }
+        .status-badge.fallback .dot { background: #f59e0b; }
+        .status-badge.real { background: rgba(99, 102, 241, 0.08); color: #3730a3; border: 1px solid rgba(99, 102, 241, 0.08); }
+        .status-badge.real .dot { background: #6366f1; }
 
         .status-row {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             padding: 8px 0 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             margin-bottom: 14px;
         }
         .status-row .item {
@@ -386,20 +251,20 @@
             align-items: center;
             gap: 5px;
             font-size: 12px;
-            color: rgba(255,255,255,0.35);
+            color: rgba(0, 0, 0, 0.45);
             padding: 4px 12px;
-            background: rgba(255,255,255,0.02);
+            background: rgba(255, 255, 255, 0.6);
             border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.03);
+            border: 1px solid rgba(0, 0, 0, 0.04);
         }
-        .status-row .item .label { font-weight: 500; color: rgba(255,255,255,0.5); }
+        .status-row .item .label { font-weight: 500; color: rgba(0, 0, 0, 0.55); }
 
         .field-group { margin-bottom: 8px; }
         .field-group label {
             display: block;
             font-size: 11px;
             font-weight: 500;
-            color: rgba(255,255,255,0.3);
+            color: rgba(0, 0, 0, 0.4);
             margin-bottom: 3px;
             letter-spacing: 0.3px;
         }
@@ -411,24 +276,12 @@
             font-size: 12px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
             gap: 5px;
             font-family: 'Inter', sans-serif;
-            position: relative;
-            overflow: hidden;
         }
-
-        .btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .btn:hover::after { opacity: 1; }
         .btn:hover { transform: translateY(-2px); }
         .btn:active { transform: translateY(0); }
 
@@ -437,38 +290,38 @@
             color: #fff;
             box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
         }
-        .btn-primary:hover { box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); }
+        .btn-primary:hover { box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25); }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.7);
+            color: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(0, 0, 0, 0.06);
         }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .btn-secondary:hover { background: #ffffff; color: #1a1a2e; }
 
         .btn-success {
-            background: linear-gradient(135deg, #34d399, #6ee7b7);
-            color: #0f0c29;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: #fff;
         }
-        .btn-success:hover { box-shadow: 0 8px 24px rgba(52, 211, 153, 0.25); }
+        .btn-success:hover { box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2); }
 
         .btn-danger {
-            background: linear-gradient(135deg, #f87171, #fca5a5);
-            color: #0f0c29;
+            background: linear-gradient(135deg, #ef4444, #f87171);
+            color: #fff;
         }
-        .btn-danger:hover { box-shadow: 0 8px 24px rgba(248, 113, 113, 0.25); }
+        .btn-danger:hover { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2); }
 
         .btn-warning {
-            background: linear-gradient(135deg, #fbbf24, #fcd34d);
-            color: #0f0c29;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            color: #fff;
         }
-        .btn-warning:hover { box-shadow: 0 8px 24px rgba(251, 191, 36, 0.25); }
+        .btn-warning:hover { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2); }
 
         .btn-info {
-            background: linear-gradient(135deg, #60a5fa, #93bbfc);
-            color: #0f0c29;
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            color: #fff;
         }
-        .btn-info:hover { box-shadow: 0 8px 24px rgba(96, 165, 250, 0.25); }
+        .btn-info:hover { box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2); }
 
         .btn-sm { padding: 4px 10px; font-size: 10px; }
         .btn-xs { padding: 2px 8px; font-size: 9px; }
@@ -487,26 +340,26 @@
         .sensor-btn {
             padding: 4px 6px;
             border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.05);
-            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(255, 255, 255, 0.5);
             font-size: 10px;
             cursor: pointer;
             transition: all 0.2s;
             text-align: center;
-            color: rgba(255,255,255,0.5);
+            color: rgba(0, 0, 0, 0.55);
             font-weight: 500;
             font-family: 'Inter', sans-serif;
         }
         .sensor-btn:hover {
             border-color: rgba(99, 102, 241, 0.25);
-            background: rgba(99, 102, 241, 0.06);
+            background: rgba(99, 102, 241, 0.04);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.04);
         }
-        .sensor-btn .sub { font-size: 8px; color: rgba(255,255,255,0.2); display: block; font-weight: 400; }
+        .sensor-btn .sub { font-size: 8px; color: rgba(0, 0, 0, 0.25); display: block; font-weight: 400; }
 
         .response-box {
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(0, 0, 0, 0.02);
             border-radius: 8px;
             padding: 8px 10px;
             font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -516,15 +369,9 @@
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            border: 1px solid rgba(255,255,255,0.03);
+            border: 1px solid rgba(0, 0, 0, 0.04);
             margin-top: 4px;
-            color: rgba(255,255,255,0.5);
-            animation: responseSlide 0.3s ease-out;
-        }
-
-        @keyframes responseSlide {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
+            color: rgba(0, 0, 0, 0.55);
         }
 
         .resp-grid {
@@ -533,21 +380,21 @@
             gap: 10px;
         }
         .resp-grid .item {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.4);
             border-radius: 8px;
             padding: 10px 12px;
-            border: 1px solid rgba(255,255,255,0.04);
+            border: 1px solid rgba(0, 0, 0, 0.04);
             min-height: 70px;
             transition: all 0.3s;
         }
         .resp-grid .item:hover {
-            border-color: rgba(99, 102, 241, 0.1);
-            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(99, 102, 241, 0.08);
+            background: rgba(255, 255, 255, 0.6);
         }
         .resp-grid .item .label {
             font-size: 9px;
             font-weight: 600;
-            color: rgba(255,255,255,0.25);
+            color: rgba(0, 0, 0, 0.3);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 4px;
@@ -559,7 +406,7 @@
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.5);
             line-height: 1.5;
         }
         @media (max-width: 768px) { .resp-grid { grid-template-columns: 1fr; } }
@@ -569,21 +416,22 @@
         @media (max-width: 600px) { .form-grid-3 { grid-template-columns: 1fr 1fr; } .form-grid-2 { grid-template-columns: 1fr; } }
 
         .curl-box {
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(0, 0, 0, 0.02);
             border-radius: 6px;
             padding: 6px 10px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 9px;
-            color: rgba(255,255,255,0.25);
+            color: rgba(0, 0, 0, 0.35);
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            border: 1px solid rgba(255,255,255,0.03);
+            border: 1px solid rgba(0, 0, 0, 0.04);
             margin-top: 4px;
-            max-height: 45px;
+            max-height: 60px;
         }
-        .text-muted { color: rgba(255,255,255,0.2); font-size: 11px; }
-        .border-top { border-top: 1px solid rgba(255,255,255,0.03); padding-top: 8px; margin-top: 8px; }
+        .curl-box-sm { max-height: 45px; font-size: 8px; }
+        .text-muted { color: rgba(0, 0, 0, 0.3); font-size: 11px; }
+        .border-top { border-top: 1px solid rgba(0, 0, 0, 0.04); padding-top: 8px; margin-top: 8px; }
 
         .b-badge {
             display: inline-block;
@@ -593,27 +441,17 @@
             font-weight: 700;
             margin-right: 4px;
         }
-        .b-badge.b1 { background: rgba(52, 211, 153, 0.15); color: #34d399; }
-        .b-badge.b2 { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
-        .b-badge.b3 { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
-        .b-badge.b4 { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
-        .b-badge.b5 { background: rgba(244, 114, 182, 0.15); color: #f472b6; }
-        .b-badge.b6 { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-        .b-badge.b7 { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
-        .b-badge.health { background: rgba(52, 211, 153, 0.1); color: #34d399; }
-
-        .ip-badge {
-            display: inline-block;
-            padding: 1px 7px;
-            border-radius: 3px;
-            font-size: 9px;
-            background: rgba(255,255,255,0.04);
-            color: rgba(255,255,255,0.3);
-            border: 1px solid rgba(255,255,255,0.03);
-        }
+        .b-badge.b1 { background: rgba(16, 185, 129, 0.12); color: #065f46; }
+        .b-badge.b2 { background: rgba(59, 130, 246, 0.12); color: #1e40af; }
+        .b-badge.b3 { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+        .b-badge.b4 { background: rgba(139, 92, 246, 0.12); color: #5b21b6; }
+        .b-badge.b5 { background: rgba(236, 72, 153, 0.12); color: #9d174d; }
+        .b-badge.b6 { background: rgba(99, 102, 241, 0.12); color: #3730a3; }
+        .b-badge.b7 { background: rgba(251, 146, 60, 0.12); color: #9a3412; }
+        .b-badge.health { background: rgba(16, 185, 129, 0.08); color: #065f46; }
 
         /* ============================================================ */
-        /* REALTIME LAYOUT */
+        /* REALTIME LAYOUT - SÁNG */
         /* ============================================================ */
         .realtime-container {
             display: flex;
@@ -623,7 +461,7 @@
         }
 
         .realtime-left {
-            flex: 0 0 36%;
+            flex: 0 0 32%;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -635,9 +473,10 @@
             flex: 1;
         }
         .realtime-left .row .b-card {
-            background: rgba(0, 0, 0, 0.15);
+            background: #ffffff;
             border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -646,23 +485,23 @@
         }
         .realtime-left .row .b-card:hover {
             border-color: rgba(99, 102, 241, 0.1);
-            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }
         .realtime-left .row .b-card .b-header {
             padding: 5px 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.6);
             flex-shrink: 0;
         }
         .realtime-left .row .b-card .b-header .b-count {
             font-size: 9px;
             font-weight: 400;
-            color: rgba(255,255,255,0.15);
+            color: rgba(0, 0, 0, 0.3);
         }
         .realtime-left .row .b-card .b-body {
             flex: 1;
@@ -671,66 +510,60 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
             line-height: 1.8;
-            color: rgba(255,255,255,0.35);
+            color: rgba(0, 0, 0, 0.5);
             min-height: 80px;
             max-height: 180px;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
         .realtime-left .row .b-card .b-body .entry {
-            border-bottom: 1px solid rgba(255,255,255,0.015);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
             padding: 3px 0;
             display: flex;
             flex-wrap: wrap;
             align-items: baseline;
             gap: 4px;
-            animation: entrySlide 0.2s ease-out;
         }
-
-        @keyframes entrySlide {
-            from { opacity: 0; transform: translateX(-5px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .realtime-left .row .b-card .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .status-ok { color: #34d399; }
-        .realtime-left .row .b-card .b-body .entry .status-err { color: #f87171; }
-        .realtime-left .row .b-card .b-body .entry .path { color: rgba(255,255,255,0.12); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .method { color: rgba(255,255,255,0.15); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .resp-detail { color: rgba(52, 211, 153, 0.3); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .empty { color: rgba(255,255,255,0.08); font-size: 9px; }
+        .realtime-left .row .b-card .b-body .entry .time { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .ip { color: rgba(245, 158, 11, 0.5); font-size: 8px; font-weight: 500; }
+        .realtime-left .row .b-card .b-body .entry .status-ok { color: #10b981; font-weight: 600; }
+        .realtime-left .row .b-card .b-body .entry .status-err { color: #ef4444; font-weight: 600; }
+        .realtime-left .row .b-card .b-body .entry .path { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .method { color: rgba(0, 0, 0, 0.25); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .entry .resp-detail { color: rgba(16, 185, 129, 0.4); font-size: 8px; }
+        .realtime-left .row .b-card .b-body .empty { color: rgba(0, 0, 0, 0.15); font-size: 9px; }
 
         .realtime-center {
             flex: 0 0 28%;
             display: flex;
             flex-direction: column;
-            background: rgba(0, 0, 0, 0.15);
+            background: #ffffff;
             border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
             overflow: hidden;
             min-height: 0;
             transition: all 0.3s;
         }
         .realtime-center:hover {
             border-color: rgba(99, 102, 241, 0.1);
-            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }
         .realtime-center .b-header {
             padding: 5px 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.6);
             flex-shrink: 0;
         }
         .realtime-center .b-header .b-count {
             font-size: 9px;
             font-weight: 400;
-            color: rgba(255,255,255,0.15);
+            color: rgba(0, 0, 0, 0.3);
         }
         .realtime-center .b-body {
             flex: 1;
@@ -739,108 +572,126 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
             line-height: 1.8;
-            color: rgba(255,255,255,0.35);
+            color: rgba(0, 0, 0, 0.5);
             min-height: 120px;
             max-height: 400px;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
         .realtime-center .b-body .entry {
-            border-bottom: 1px solid rgba(255,255,255,0.015);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
             padding: 4px 0;
-            animation: entrySlide 0.2s ease-out;
         }
-        .realtime-center .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
-        .realtime-center .b-body .entry .b6-from { color: #818cf8; font-weight: 500; }
-        .realtime-center .b-body .entry .b6-ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
-        .realtime-center .b-body .entry .b6-status-ok { color: #34d399; }
-        .realtime-center .b-body .entry .b6-status-err { color: #f87171; }
-        .realtime-center .b-body .entry .b6-detail { color: rgba(255,255,255,0.2); }
-        .realtime-center .b-body .entry .b6-send { color: rgba(251, 191, 36, 0.4); }
-        .realtime-center .b-body .entry .b6-response { color: rgba(52, 211, 153, 0.3); }
-        .realtime-center .b-body .empty { color: rgba(255,255,255,0.08); font-size: 9px; }
+        .realtime-center .b-body .entry .time { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
+        .realtime-center .b-body .entry .b6-from { color: #6366f1; font-weight: 600; }
+        .realtime-center .b-body .entry .b6-ip { color: rgba(245, 158, 11, 0.5); font-size: 8px; font-weight: 500; }
+        .realtime-center .b-body .entry .b6-status-ok { color: #10b981; font-weight: 600; }
+        .realtime-center .b-body .entry .b6-status-err { color: #ef4444; font-weight: 600; }
+        .realtime-center .b-body .entry .b6-detail { color: rgba(0, 0, 0, 0.3); }
+        .realtime-center .b-body .entry .b6-send { color: rgba(245, 158, 11, 0.5); }
+        .realtime-center .b-body .entry .b6-response { color: rgba(16, 185, 129, 0.4); }
+        .realtime-center .b-body .empty { color: rgba(0, 0, 0, 0.15); font-size: 9px; }
 
         .realtime-right {
-            flex: 0 0 36%;
+            flex: 0 0 40%;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
+        /* ✅ B5/B7 - SONG SONG NGANG */
         .realtime-right .row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             flex: 1;
         }
-        .realtime-right .row .b-card {
-            background: rgba(0, 0, 0, 0.15);
+        .b-color-b5 .b-header {
+            border-left: 3px solid #8b5cf6;
+        }
+        .b-color-b5 .b-header span {
+            color: #7c3aed;
+            font-weight: 600;
+        }
+        .b-color-b7 .b-header {
+            border-left: 3px solid #f97316;
+        }
+        .b-color-b7 .b-header span {
+            color: #ea580c;
+            font-weight: 600;
+        }
+        
+        .realtime-right .b-card {
+            background: #ffffff;
             border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             min-height: 0;
             transition: all 0.3s;
         }
-        .realtime-right .row .b-card:hover {
+        .realtime-right .b-card:hover {
             border-color: rgba(99, 102, 241, 0.1);
-            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }
-        .realtime-right .row .b-card .b-header {
+        .realtime-right .b-card .b-header {
             padding: 5px 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.6);
             flex-shrink: 0;
         }
-        .realtime-right .row .b-card .b-header .b-count {
+        .realtime-right .b-card .b-header .b-count {
             font-size: 9px;
             font-weight: 400;
-            color: rgba(255,255,255,0.15);
+            color: rgba(0, 0, 0, 0.3);
         }
-        .realtime-right .row .b-card .b-body {
+        .realtime-right .b-card .b-body {
             flex: 1;
             overflow-y: auto;
             padding: 5px 8px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
             line-height: 1.8;
-            color: rgba(255,255,255,0.35);
+            color: rgba(0, 0, 0, 0.5);
             min-height: 80px;
             max-height: 180px;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
-        .realtime-right .row .b-card .b-body .entry {
-            border-bottom: 1px solid rgba(255,255,255,0.015);
+        .realtime-right .b-card .b-body .entry {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
             padding: 3px 0;
             display: flex;
             flex-wrap: wrap;
             align-items: baseline;
             gap: 4px;
-            animation: entrySlide 0.2s ease-out;
         }
-        .realtime-right .row .b-card .b-body .entry .time { color: rgba(255,255,255,0.1); font-size: 8px; }
-        .realtime-right .row .b-card .b-body .entry .ip { color: rgba(251, 191, 36, 0.35); font-size: 8px; }
-        .realtime-right .row .b-card .b-body .entry .status-ok { color: #34d399; }
-        .realtime-right .row .b-card .b-body .entry .status-err { color: #f87171; }
-        .realtime-right .row .b-card .b-body .entry .b-detail { color: rgba(255,255,255,0.2); }
-        .realtime-right .row .b-card .b-body .entry .b-request { color: rgba(251, 191, 36, 0.3); font-size: 8px; }
-        .realtime-right .row .b-card .b-body .entry .b-response { color: rgba(52, 211, 153, 0.3); }
-        .realtime-right .row .b-card .b-body .empty { color: rgba(255,255,255,0.08); font-size: 9px; }
+        .realtime-right .b-card .b-body .entry .time { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
+        .realtime-right .b-card .b-body .entry .ip { color: rgba(245, 158, 11, 0.5); font-size: 8px; font-weight: 500; }
+        .realtime-right .b-card .b-body .entry .status-ok { color: #10b981; font-weight: 600; }
+        .realtime-right .b-card .b-body .entry .status-err { color: #ef4444; font-weight: 600; }
+        .realtime-right .b-card .b-body .entry .b-request { color: rgba(245, 158, 11, 0.5); font-size: 9px; font-weight: 500; }
+        .realtime-right .b-card .b-body .entry .b-response { color: rgba(16, 185, 129, 0.5); font-size: 9px; font-weight: 500; }
+        .realtime-right .b-card .b-body .entry .real { color: #10b981 !important; font-weight: 700; }
+        .realtime-right .b-card .b-body .entry .fallback { color: #92400e !important; font-weight: 700; }
+        .realtime-right .b-card .b-body .empty { color: rgba(0, 0, 0, 0.15); font-size: 9px; }
 
+        /* ✅ HEALTH - DƯỚI CÙNG */
         .realtime-bottom {
             margin-top: 8px;
             flex-shrink: 0;
         }
         .realtime-bottom .b-card {
-            background: rgba(0, 0, 0, 0.15);
+            background: #ffffff;
             border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -849,17 +700,17 @@
         }
         .realtime-bottom .b-card:hover {
             border-color: rgba(99, 102, 241, 0.1);
-            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }
         .realtime-bottom .b-card .b-header {
             padding: 3px 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255,255,255,0.4);
+            color: rgba(0, 0, 0, 0.6);
             flex-shrink: 0;
         }
         .realtime-bottom .b-card .b-body {
@@ -868,7 +719,7 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
             line-height: 1.8;
-            color: rgba(255,255,255,0.3);
+            color: rgba(0, 0, 0, 0.4);
             max-height: 55px;
             display: flex;
             flex-wrap: wrap;
@@ -879,16 +730,19 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: rgba(52, 211, 153, 0.06);
+            background: rgba(16, 185, 129, 0.06);
             padding: 2px 10px;
             border-radius: 12px;
-            border: 1px solid rgba(52, 211, 153, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.08);
             font-size: 10px;
-            animation: badgePop 0.3s ease-out;
         }
-        .realtime-bottom .b-card .b-body .health-ip .ip { color: rgba(255,255,255,0.4); }
-        .realtime-bottom .b-card .b-body .health-ip .time { color: rgba(255,255,255,0.15); font-size: 8px; }
-        .realtime-bottom .b-card .b-body .health-ip .status { color: #34d399; }
+        .realtime-bottom .b-card .b-body .health-ip .ip { color: rgba(0, 0, 0, 0.5); font-weight: 500; }
+        .realtime-bottom .b-card .b-body .health-ip .time { color: rgba(0, 0, 0, 0.25); font-size: 8px; }
+        .realtime-bottom .b-card .b-body .health-ip .status { color: #10b981; font-weight: 600; }
+
+        /* ============================================================ */
+        /* B5/B7 CALL INFO - ĐÃ XÓA */
+        /* ============================================================ */
 
         @media (max-width: 1024px) {
             .realtime-container { flex-direction: column; max-height: none; min-height: auto; }
@@ -918,11 +772,6 @@
     </style>
 </head>
 <body>
-
-<!-- ===== GLOW ORBS ===== -->
-<div class="glow-orb glow-orb-1"></div>
-<div class="glow-orb glow-orb-2"></div>
-<div class="glow-orb glow-orb-3"></div>
 
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar">
@@ -961,9 +810,9 @@
                 <div class="card-body">
 
                     <!-- ===== B1: IoT Sensor ===== -->
-                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
+                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b1">B1</span> IoT Sensor</span>
+                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b1">B1</span> IoT Sensor</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="sensor-grid">
@@ -990,9 +839,9 @@
                     </div>
 
                     <!-- ===== B2: Camera Stream ===== -->
-                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
+                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b2">B2</span> Camera Stream</span>
+                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b2">B2</span> Camera Stream</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group mb-6">
@@ -1019,9 +868,9 @@
                     </div>
 
                     <!-- ===== B3: Access Gate ===== -->
-                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.04);">
+                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b3">B3</span> Access Gate</span>
+                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b3">B3</span> Access Gate</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="form-grid-3">
@@ -1039,9 +888,9 @@
                     </div>
 
                     <!-- ===== B4: AI Vision ===== -->
-                    <div class="glass" style="padding:8px 12px; border:1px solid rgba(255,255,255,0.04);">
+                    <div class="glass" style="padding:8px 12px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:rgba(255,255,255,0.85);"><span class="b-badge b4">B4</span> AI Vision</span>
+                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b4">B4</span> AI Vision</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="form-grid-2">
@@ -1062,9 +911,9 @@
             <div class="glass card">
                 <div class="card-header"><h3>📬 Response</h3><span id="respTime" class="text-muted">Ready</span></div>
                 <div class="card-body">
-                    <div id="responseContainer" style="min-height:80px; color:rgba(255,255,255,0.2); font-size:13px;">▸ Select a test to send...</div>
+                    <div id="responseContainer" style="min-height:80px; color:rgba(0,0,0,0.3); font-size:13px;">▸ Select a test to send...</div>
                     <div class="border-top">
-                        <div style="color:rgba(255,255,255,0.2); font-weight:500; margin-bottom:3px; font-size:10px;">📋 cURL</div>
+                        <div style="color:rgba(0,0,0,0.3); font-weight:500; margin-bottom:3px; font-size:10px;">📋 cURL</div>
                         <div id="curlPreview" class="curl-box"># cURL will appear here</div>
                         <button id="copyBtn" class="btn btn-secondary btn-xs mt-6">📋 Copy</button>
                     </div>
@@ -1078,11 +927,11 @@
     <!-- ============================================================ -->
     <div id="consumerTab" class="tab-content">
         <div class="status-row">
-            <div class="item"><span class="label">B6</span> <span id="consumerStatusB6" style="color:#34d399;">● Online</span></div>
-            <div class="item"><span class="label">B3</span> <span id="consumerStatusB3" style="color:#fbbf24;">● Fallback</span></div>
-            <div class="item"><span class="label">B4</span> <span id="consumerStatusB4" style="color:#fbbf24;">● Fallback</span></div>
-            <div class="item"><span class="label">B5</span> <span id="consumerStatusB5" style="color:#fbbf24;">● Fallback</span></div>
-            <div class="item"><span class="label">B7</span> <span id="consumerStatusB7" style="color:#fbbf24;">● Fallback</span></div>
+            <div class="item"><span class="label">B6</span> <span id="consumerStatusB6" style="color:#10b981;">● Online</span></div>
+            <div class="item"><span class="label">B3</span> <span id="consumerStatusB3" style="color:#92400e;">● Fallback</span></div>
+            <div class="item"><span class="label">B4</span> <span id="consumerStatusB4" style="color:#92400e;">● Fallback</span></div>
+            <div class="item"><span class="label">B5</span> <span id="consumerStatusB5" style="color:#92400e;">● Fallback</span></div>
+            <div class="item"><span class="label">B7</span> <span id="consumerStatusB7" style="color:#92400e;">● Fallback</span></div>
         </div>
 
         <div class="grid-2">
@@ -1091,9 +940,9 @@
                 <div class="card-body">
 
                     <!-- ===== B3: Access Gate ===== -->
-                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
+                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b3">B3</span> Access Gate</span>
+                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b3">B3</span> Access Gate</span>
                             <span id="consumerB3Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group">
@@ -1103,9 +952,9 @@
                     </div>
 
                     <!-- ===== B4: AI Vision ===== -->
-                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
+                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b4">B4</span> AI Vision</span>
+                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b4">B4</span> AI Vision</span>
                             <span id="consumerB4Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="field-group" style="margin-bottom:3px;"><label>Image Reference</label><input type="text" id="consumerImageRef" class="glass-input" value="person.jpg"></div>
@@ -1113,9 +962,9 @@
                     </div>
 
                     <!-- ===== B5: Analytics ===== -->
-                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.03);">
+                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b5">B5</span> Analytics</span>
+                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b5">B5</span> Analytics</span>
                             <span id="consumerB5Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group">
@@ -1125,16 +974,16 @@
                     </div>
 
                     <!-- ===== B7: Notification ===== -->
-                    <div class="glass" style="padding:8px 10px; border:1px solid rgba(255,255,255,0.03);">
+                    <div class="glass" style="padding:8px 10px; border:1px solid rgba(0,0,0,0.04);">
                         <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:rgba(255,255,255,0.8);"><span class="b-badge b7">B7</span> Notification</span>
+                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b7">B7</span> Notification</span>
                             <span id="consumerB7Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group">
                             <button id="consumerSendAlertBtn" class="btn btn-danger btn-sm">🚨 Send Alert</button>
                             <button id="consumerTriggerSensorAlertBtn" class="btn btn-warning btn-sm">🌡️ Sensor</button>
                             <button id="consumerTriggerAIAalertBtn" class="btn btn-info btn-sm">🤖 AI</button>
-                            <button id="consumerTriggerCameraAlertBtn" class="btn btn-purple btn-sm">📹 Camera</button>
+                            <button id="consumerTriggerCameraAlertBtn" class="btn btn-primary btn-sm">📹 Camera</button>
                         </div>
                     </div>
 
@@ -1165,7 +1014,7 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- TAB 3: REALTIME -->
+    <!-- TAB 3: REALTIME - B5/B7 SONG SONG NGANG -->
     <!-- ============================================================ -->
     <div id="realtimeTab" class="tab-content">
         <div class="realtime-container">
@@ -1217,22 +1066,28 @@
                 </div>
             </div>
 
-            <!-- RIGHT: B5, B7 -->
+            <!-- RIGHT: B5, B7 - SONG SONG NGANG -->
             <div class="realtime-right">
                 <div class="row">
+                    <!-- B5 Analytics -->
                     <div class="b-card b-color-b5">
                         <div class="b-header">
                             <span><span class="b-badge b5">B5</span> Analytics</span>
                             <span class="b-count" id="countB5">0</span>
                         </div>
-                        <div class="b-body" id="realtimeB5"><div class="empty">▸ Waiting...</div></div>
+                        <div class="b-body" id="realtimeB5">
+                            <div class="empty">▸ Waiting for B5 requests...</div>
+                        </div>
                     </div>
+                    <!-- B7 Notification -->
                     <div class="b-card b-color-b7">
                         <div class="b-header">
                             <span><span class="b-badge b7">B7</span> Notification</span>
                             <span class="b-count" id="countB7">0</span>
                         </div>
-                        <div class="b-body" id="realtimeB7"><div class="empty">▸ Waiting...</div></div>
+                        <div class="b-body" id="realtimeB7">
+                            <div class="empty">▸ Waiting for B7 requests...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1247,7 +1102,7 @@
                     <span class="b-count" id="countHealth">0</span>
                 </div>
                 <div class="b-body" id="realtimeHealth">
-                    <span style="color:rgba(255,255,255,0.1); font-size:10px;">▸ No health checks yet...</span>
+                    <span style="color:rgba(0,0,0,0.15); font-size:10px;">▸ No health checks yet...</span>
                 </div>
             </div>
         </div>
@@ -1307,8 +1162,8 @@ function displayProvider(status, data, duration) {
     const icon = isOk ? '✅' : '❌';
     document.getElementById('respTime').textContent = `${status} · ${duration}ms`;
     container.innerHTML = `
-        <div style="color:${isOk ? '#34d399' : '#f87171'}; margin-bottom:3px; font-weight:500;">${icon} ${status} · ${duration}ms</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(255,255,255,0.5); white-space:pre-wrap; word-break:break-all;">${escapeHtml(JSON.stringify(data, null, 2))}</div>
+        <div style="color:${isOk ? '#10b981' : '#ef4444'}; margin-bottom:3px; font-weight:500;">${icon} ${status} · ${duration}ms</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(0,0,0,0.55); white-space:pre-wrap; word-break:break-all;">${escapeHtml(JSON.stringify(data, null, 2))}</div>
     `;
     document.getElementById('curlPreview').textContent = currentCurl;
 }
@@ -1317,9 +1172,9 @@ function displayProvider(status, data, duration) {
 // DISPLAY CONSUMER
 // ============================================================
 function displayConsumer(req, decision, ext) {
-    document.getElementById('consumerReqContent').innerHTML = req ? `<pre style="margin:0;color:rgba(255,255,255,0.35);font-size:10px;">${escapeHtml(JSON.stringify(req, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
-    document.getElementById('consumerDecisionContent').innerHTML = decision ? `<pre style="margin:0;color:rgba(255,255,255,0.35);font-size:10px;">${escapeHtml(JSON.stringify(decision, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
-    document.getElementById('consumerExtContent').innerHTML = ext ? `<pre style="margin:0;color:rgba(255,255,255,0.35);font-size:10px;">${escapeHtml(JSON.stringify(ext, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+    document.getElementById('consumerReqContent').innerHTML = req ? `<pre style="margin:0;color:rgba(0,0,0,0.4);font-size:10px;">${escapeHtml(JSON.stringify(req, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+    document.getElementById('consumerDecisionContent').innerHTML = decision ? `<pre style="margin:0;color:rgba(0,0,0,0.4);font-size:10px;">${escapeHtml(JSON.stringify(decision, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+    document.getElementById('consumerExtContent').innerHTML = ext ? `<pre style="margin:0;color:rgba(0,0,0,0.4);font-size:10px;">${escapeHtml(JSON.stringify(ext, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
 }
 
 // ============================================================
@@ -1332,13 +1187,13 @@ async function updateStatus() {
             const s = res.data;
             connectionStatus = { b3: s.b3?.status || 'fallback', b4: s.b4?.status || 'fallback', b5: s.b5?.status || 'fallback', b7: s.b7?.status || 'fallback' };
             const map = { real: '● Online', fallback: '● Fallback', offline: '● Offline' };
-            const colorMap = { real: '#34d399', fallback: '#fbbf24', offline: '#f87171' };
+            const colorMap = { real: '#10b981', fallback: '#92400e', offline: '#dc2626' };
             const badgeMap = { real: 'real', fallback: 'fallback', offline: 'offline' };
             ['b3','b4','b5','b7'].forEach(k => {
                 const status = connectionStatus[k] || 'fallback';
                 const elStatus = document.getElementById(`consumerStatus${k.toUpperCase()}`);
                 const elBadge = document.getElementById(`consumer${k.toUpperCase()}Badge`);
-                if (elStatus) { elStatus.textContent = map[status] || '● Fallback'; elStatus.style.color = colorMap[status] || '#fbbf24'; }
+                if (elStatus) { elStatus.textContent = map[status] || '● Fallback'; elStatus.style.color = colorMap[status] || '#92400e'; }
                 if (elBadge) { elBadge.className = `status-badge ${badgeMap[status] || 'fallback'}`; elBadge.innerHTML = `<span class="dot"></span> ${(status||'FALLBACK').toUpperCase()}`; }
             });
         }
@@ -1522,7 +1377,7 @@ document.getElementById('consumerFallbackDecisionsBtn').addEventListener('click'
     displayConsumer(null, null, res.data);
 });
 document.getElementById('consumerSendAlertBtn').addEventListener('click', async () => {
-    const body = { severity: 'CRITICAL', message: 'Test alert from B6 consumer' };
+    const body = { severity: 'critical', message: 'Test alert from B6 consumer' };
     displayConsumer(body, null, null);
     const res = await callApi('POST', '/internal/send-test-alert', body);
     displayConsumer(body, res.data, res.data);
@@ -1598,10 +1453,10 @@ function getStatusClass(status) {
     return status >= 200 && status < 300 ? 'status-ok' : 'status-err';
 }
 
-function addToRealtime(service, log) {
+function addToRealtime(service, log, displayIp) {
     if (!realtimeData[service]) realtimeData[service] = [];
     const time = new Date(log.timestamp).toLocaleTimeString();
-    const ip = log.client_ip || 'unknown';
+    const ip = displayIp || log.display_ip || log.client_ip || 'unknown';
     let detail = '';
     let responseDetail = '';
     
@@ -1635,29 +1490,31 @@ function addB6LogEntry(from, ip, status, detail, sendTo = '', response = '') {
     renderRealtime('b6');
 }
 
-function addOutgoingRealtime(service, ip, status, request, response) {
+function addOutgoingRealtime(service, ip, status, request, response, mode) {
     if (!realtimeData[service]) realtimeData[service] = [];
     const time = new Date().toLocaleTimeString();
     const entry = {
         time, ip, status,
         statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err',
         request: request || '',
-        response: response || ''
+        response: response || '',
+        mode: mode || 'FALLBACK'
     };
     realtimeData[service].push(entry);
     if (realtimeData[service].length > 25) realtimeData[service].shift();
     renderRealtime(service);
 }
 
-function addHealthIP(ip) {
+function addHealthIP(ip, displayIp) {
     if (!realtimeData['health']) realtimeData['health'] = [];
+    const display = displayIp || ip || 'unknown';
     const time = new Date().toLocaleTimeString();
-    const existing = realtimeData['health'].find(e => e.ip === ip);
+    const existing = realtimeData['health'].find(e => e.ip === display);
     if (existing) {
         existing.time = time;
         existing.count = (existing.count || 1) + 1;
     } else {
-        realtimeData['health'].push({ time, ip, count: 1 });
+        realtimeData['health'].push({ time, ip: display, count: 1 });
     }
     if (realtimeData['health'].length > 20) realtimeData['health'].shift();
     renderRealtime('health');
@@ -1697,7 +1554,7 @@ function renderRealtime(service) {
                 <span class="ip">${e.ip}</span>
                 <span class="time">${e.time}</span>
                 <span class="status">●</span>
-                <span style="color:rgba(255,255,255,0.1);font-size:8px;">${e.count || 1}</span>
+                <span style="color:rgba(0,0,0,0.15);font-size:8px;">${e.count || 1}</span>
             </span>
         `).join('');
     } else if (service === 'b5' || service === 'b7') {
@@ -1708,6 +1565,7 @@ function renderRealtime(service) {
                 <span class="${e.statusClass}">${e.status}</span>
                 ${e.request ? `<span class="b-request">📤 ${e.request}</span>` : ''}
                 ${e.response ? `<span class="b-response">📬 ${e.response}</span>` : ''}
+                ${e.mode ? `<span class="${e.mode.toLowerCase()}" style="font-size:8px;font-weight:700;">${e.mode}</span>` : ''}
             </div>
         `).join('');
     } else {
@@ -1718,11 +1576,165 @@ function renderRealtime(service) {
                 <span class="${e.statusClass}">${e.status}</span>
                 ${e.method ? `<span class="method">${e.method}</span>` : ''}
                 ${e.path ? `<span class="path">${e.path}</span>` : ''}
-                ${e.detail ? `<span style="color:rgba(255,255,255,0.15);font-size:8px;">📊 ${e.detail}</span>` : ''}
+                ${e.detail ? `<span style="color:rgba(0,0,0,0.2);font-size:8px;">📊 ${e.detail}</span>` : ''}
                 ${e.responseDetail ? `<span class="resp-detail">📤 ${e.responseDetail}</span>` : ''}
             </div>
         `).join('');
     }
+}
+
+// ============================================================
+// FETCH REALTIME B5
+// ============================================================
+async function fetchRealtimeB5() {
+    try {
+        const res = await callApi('GET', '/internal/realtime-b5');
+        if (res.status === 200 && res.data) {
+            const entry = res.data.last_entry;
+            if (entry) {
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                const ip = entry.ip || 'localhost';
+                const status = entry.status || 200;
+                const statusClass = status >= 200 && status < 300 ? 'status-ok' : 'status-err';
+                const mode = entry.mode || 'FALLBACK';
+                
+                let requestStr = '';
+                let responseStr = '';
+                if (entry.request) {
+                    if (entry.request.correlationId) {
+                        requestStr = `📤 ${entry.request.decision || 'decision'} (${entry.request.correlationId.slice(0, 8)})`;
+                    } else if (entry.request.payload) {
+                        const p = entry.request.payload;
+                        if (p.correlationId) {
+                            requestStr = `📤 ${p.decision || 'decision'} (${p.correlationId.slice(0, 8)})`;
+                        } else {
+                            requestStr = `📤 ${JSON.stringify(p).slice(0, 50)}`;
+                        }
+                    } else {
+                        requestStr = `📤 ${JSON.stringify(entry.request).slice(0, 50)}`;
+                    }
+                }
+                
+                if (entry.response) {
+                    if (entry.response.status) {
+                        responseStr = `📬 ${entry.response.status}${entry.response.mode ? ` (${entry.response.mode})` : ''}`;
+                    } else {
+                        responseStr = `📬 ${JSON.stringify(entry.response).slice(0, 50)}`;
+                    }
+                }
+                
+                const el = document.getElementById('realtimeB5');
+                if (el) {
+                    const empty = el.querySelector('.empty');
+                    if (empty) empty.remove();
+                    
+                    let currentEntries = el.querySelectorAll('.entry');
+                    if (currentEntries.length >= 10) {
+                        while (el.children.length > 10) {
+                            el.removeChild(el.firstChild);
+                        }
+                    }
+                    
+                    const entryHtml = `
+                        <div class="entry">
+                            <span class="time">[${time}]</span>
+                            <span class="ip">${ip}</span>
+                            <span class="${statusClass}">${status}</span>
+                            <span class="b-request">${requestStr || '📤 --'}</span>
+                            <span class="b-response">${responseStr || '📬 --'}</span>
+                            <span class="${mode.toLowerCase()}" style="font-size:8px;font-weight:700;">${mode}</span>
+                        </div>
+                    `;
+                    el.insertAdjacentHTML('afterbegin', entryHtml);
+                    
+                    const count = document.getElementById('countB5');
+                    if (count) {
+                        const entries = el.querySelectorAll('.entry');
+                        count.textContent = entries.length;
+                    }
+                }
+            }
+        }
+    } catch(e) { /* ignore */ }
+}
+
+// ============================================================
+// FETCH REALTIME B7
+// ============================================================
+async function fetchRealtimeB7() {
+    try {
+        const res = await callApi('GET', '/internal/realtime-b7');
+        if (res.status === 200 && res.data) {
+            const entry = res.data.last_entry;
+            if (entry) {
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                const ip = entry.ip || 'localhost';
+                const status = entry.status || 200;
+                const statusClass = status >= 200 && status < 300 ? 'status-ok' : 'status-err';
+                const mode = entry.mode || 'FALLBACK';
+                
+                let requestStr = '';
+                let responseStr = '';
+                if (entry.request) {
+                    if (entry.request.payload) {
+                        const p = entry.request.payload;
+                        if (p.data && p.data.alertId) {
+                            requestStr = `📤 Alert ${p.data.alertId.slice(0, 8)} (${p.data.severity})`;
+                        } else if (p.alert_id) {
+                            requestStr = `📤 Alert ${p.alert_id.slice(0, 8)}`;
+                        } else if (p.message) {
+                            requestStr = `📤 ${p.message.slice(0, 30)}`;
+                        } else {
+                            requestStr = `📤 ${JSON.stringify(p).slice(0, 50)}`;
+                        }
+                    } else {
+                        requestStr = `📤 ${JSON.stringify(entry.request).slice(0, 50)}`;
+                    }
+                }
+                
+                if (entry.response) {
+                    if (entry.response.status) {
+                        responseStr = `📬 ${entry.response.status}${entry.response.mode ? ` (${entry.response.mode})` : ''}`;
+                    } else if (entry.response.alertId) {
+                        responseStr = `📬 Alert ${entry.response.alertId.slice(0, 8)}`;
+                    } else {
+                        responseStr = `📬 ${JSON.stringify(entry.response).slice(0, 50)}`;
+                    }
+                }
+                
+                const el = document.getElementById('realtimeB7');
+                if (el) {
+                    const empty = el.querySelector('.empty');
+                    if (empty) empty.remove();
+                    
+                    let currentEntries = el.querySelectorAll('.entry');
+                    if (currentEntries.length >= 10) {
+                        while (el.children.length > 10) {
+                            el.removeChild(el.firstChild);
+                        }
+                    }
+                    
+                    const entryHtml = `
+                        <div class="entry">
+                            <span class="time">[${time}]</span>
+                            <span class="ip">${ip}</span>
+                            <span class="${statusClass}">${status}</span>
+                            <span class="b-request">${requestStr || '📤 --'}</span>
+                            <span class="b-response">${responseStr || '📬 --'}</span>
+                            <span class="${mode.toLowerCase()}" style="font-size:8px;font-weight:700;">${mode}</span>
+                        </div>
+                    `;
+                    el.insertAdjacentHTML('afterbegin', entryHtml);
+                    
+                    const count = document.getElementById('countB7');
+                    if (count) {
+                        const entries = el.querySelectorAll('.entry');
+                        count.textContent = entries.length;
+                    }
+                }
+            }
+        }
+    } catch(e) { /* ignore */ }
 }
 
 // ============================================================
@@ -1739,7 +1751,8 @@ async function refreshRealtime() {
                     const key = log.timestamp + log.path + log.method + log.client_ip;
                     if (!processedLogs.has(key)) {
                         processedLogs.add(key);
-                        addToRealtime(service, log);
+                        const displayIp = log.display_ip || log.client_ip || 'unknown';
+                        addToRealtime(service, log, displayIp);
                         
                         const serviceName = getServiceName(service);
                         let detail = `${log.method} ${log.path}`;
@@ -1767,7 +1780,7 @@ async function refreshRealtime() {
                         
                         addB6LogEntry(
                             serviceName,
-                            log.client_ip || 'unknown',
+                            displayIp,
                             log.status_code,
                             detail,
                             sendTo,
@@ -1775,21 +1788,20 @@ async function refreshRealtime() {
                         );
                     }
                 } else if (service === 'health') {
-                    addHealthIP(log.client_ip || 'unknown');
+                    const displayIp = log.display_ip || log.client_ip || 'unknown';
+                    addHealthIP(log.client_ip || 'unknown', displayIp);
                 }
             });
         }
+        
+        // Fetch B5 và B7 realtime riêng
+        await fetchRealtimeB5();
+        await fetchRealtimeB7();
+        
     } catch(e) {
         /* ignore */
     }
 }
-
-// ============================================================
-// COPY
-// ============================================================
-document.getElementById('copyBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(document.getElementById('curlPreview').textContent);
-});
 
 // ============================================================
 // STATUS B6
@@ -1807,7 +1819,7 @@ async function updateB6Status() {
             text.textContent = 'Offline';
         }
         if (res.data && res.data.client_ip) {
-            addHealthIP(res.data.client_ip);
+            addHealthIP(res.data.client_ip, res.data.client_ip);
         }
     } catch(e) {
         document.getElementById('statusDot').className = 'dot dot-red';
@@ -1823,6 +1835,7 @@ updateB6Status();
 setInterval(updateStatus, 30000);
 setInterval(updateB6Status, 10000);
 
+// Refresh realtime every 3 seconds when tab is active
 setInterval(() => {
     if (document.getElementById('realtimeTab').classList.contains('active')) {
         refreshRealtime();

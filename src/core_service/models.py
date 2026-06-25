@@ -1,3 +1,8 @@
+"""
+Models - Định nghĩa dữ liệu cho B6 Core
+Version: 2.1 - Thêm target và traceId cho AlertEvent
+"""
+
 from pydantic import BaseModel, Field, UUID4, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -120,16 +125,14 @@ class SensorReading(BaseModel):
 
 class SensorEvent(BaseModel):
     """Sensor Event - Đầu vào từ B1 (IoT Ingestion)"""
-    # Field bắt buộc theo yêu cầu
-    event_id: Optional[str] = None  # Tự sinh nếu không có
+    event_id: Optional[str] = None
     event_type: str = Field(default="sensor.data.processed", pattern=r'^sensor\..+$')
     source_service: str = Field(default="team-iot", pattern=r'^team-.*$')
-    raw_event_id: Optional[str] = None  # ID của event raw
+    raw_event_id: Optional[str] = None
     device_id: str = Field(..., min_length=1)
     location: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
     
-    # Dữ liệu cảm biến
     temperature_c: Optional[float] = Field(None, ge=-50, le=100)
     humidity_percent: Optional[float] = Field(None, ge=0, le=100)
     light_lux: Optional[float] = Field(None, ge=0)
@@ -138,14 +141,12 @@ class SensorEvent(BaseModel):
     battery_percent: Optional[float] = Field(None, ge=0, le=100)
     motion_detected: Optional[bool] = False
     
-    # Kết quả phân loại (sẽ được B6 gán)
     status: Optional[SensorStatus] = None
     alert_level: Optional[AlertLevel] = None
     reason: Optional[str] = None
     
-    # Metadata
     correlationId: Optional[UUID4] = None
-    scenario_hint_for_teacher: Optional[str] = None  # CHỈ dùng cho GV chấm, KHÔNG dùng trong logic
+    scenario_hint_for_teacher: Optional[str] = None
     
     class Config:
         json_encoders = {
@@ -169,7 +170,7 @@ class SensorEvent(BaseModel):
 
 
 # ============================================================
-# ACCESS EVENT - ĐẦY ĐỦ THEO YÊU CẦU
+# ACCESS EVENT
 # ============================================================
 class AccessEvent(BaseModel):
     """Access Event - Đầu vào từ B3 (Access Gate)"""
@@ -183,14 +184,12 @@ class AccessEvent(BaseModel):
     direction: str = Field(..., pattern=r'^(IN|OUT)$')
     timestamp: datetime = Field(default_factory=datetime.now)
     
-    # Kết quả sau khi xử lý (sẽ được B6 gán)
     access_result: Optional[AccessResult] = None
     reason: Optional[str] = None
     student_id: Optional[str] = None
     full_name: Optional[str] = None
     class_name: Optional[str] = None
     
-    # Metadata
     correlationId: Optional[UUID4] = None
     
     class Config:
@@ -214,7 +213,7 @@ class AccessEvent(BaseModel):
 
 
 # ============================================================
-# CAMERA EVENT - ĐẦY ĐỦ THEO YÊU CẦU
+# CAMERA EVENT
 # ============================================================
 class CameraEvent(BaseModel):
     """Camera Event - Đầu vào từ B2 (Camera Stream)"""
@@ -226,7 +225,6 @@ class CameraEvent(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="Thời gian xảy ra sự kiện")
     correlationId: Optional[UUID4] = Field(None, description="ID định danh cho request")
     
-    # Kết quả xử lý (sẽ được B6 gán)
     status: Optional[str] = None
     alert_level: Optional[AlertLevel] = None
     reason: Optional[str] = None
@@ -246,24 +244,26 @@ class CameraEventResponse(BaseModel):
 
 
 # ============================================================
-# ALERT EVENT - ĐẦU RA CHO B7 (Notification)
+# ALERT EVENT - ĐẦU RA CHO B7 (Notification) - ĐÃ SỬA
 # ============================================================
+# Trong models.py, sửa AlertEvent
+
 class AlertEvent(BaseModel):
     """Alert Event - Đầu ra cho B7 (Notification)"""
     event_id: Optional[str] = None
-    event_type: str = Field(default="core.alert.created")
-    source_service: str = Field(default="team-core")
+    event_type: str = Field(default="alert.created")
+    source_service: str = Field(default="core-business")
     alert_id: str
     alert_type: str
     severity: Severity
-    target: Optional[str] = None
+    target: Optional[str] = Field(default="security_team")
+    title: Optional[str] = Field(None, description="Tiêu đề alert")  # ✅ THÊM title
     message: str
     details: Dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=datetime.now)
     correlationId: Optional[UUID4] = None
-    traceId: Optional[UUID4] = None
+    traceId: Optional[UUID4] = Field(default_factory=uuid4)
     
-    # ✅ Thêm property để tương thích với code cũ
     @property
     def eventId(self) -> str:
         return self.event_id or self.alert_id
@@ -281,11 +281,26 @@ class AlertEvent(BaseModel):
             return f"alert-{uuid4().hex[:12]}"
         return v
     
+    @validator('traceId', pre=True, always=True)
+    def set_trace_id(cls, v):
+        if v is None:
+            return uuid4()
+        return v
+    
+    @validator('title', pre=True, always=True)
+    def set_title(cls, v, values):
+        if v is None:
+            alert_type = values.get('alert_type', 'Alert')
+            severity = values.get('severity', Severity.MEDIUM)
+            return f"🚨 {alert_type} - {severity.value.upper()}"
+        return v
+    
     def dict(self, *args, **kwargs):
         """Override dict để thêm eventId cho tương thích"""
         d = super().dict(*args, **kwargs)
         d['eventId'] = self.eventId
         return d
+
 
 # ============================================================
 # POLICY DECISION - ĐẦU RA CHO B5 (Analytics)

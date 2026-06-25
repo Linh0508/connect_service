@@ -11,6 +11,10 @@ from enum import Enum
 from datetime import datetime
 import re
 
+# ✅ THÊM IMPORT aio_pika
+import aio_pika
+from aio_pika import connect_robust, Message
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +58,7 @@ class ConnectionManager:
             "b5": {
                 "url": os.getenv("ANALYTICS_URL", "http://26.100.91.226:8000"),
                 "auto_detect": os.getenv("ANALYTICS_AUTO_DETECT", "false").lower() == "true",
-                "timeout": float(os.getenv("ANALYTICS_TIMEOUT", "3.0")),
+                "timeout": float(os.getenv("ANALYTICS_TIMEOUT", "5.0")),
                 "retry_interval": int(os.getenv("ANALYTICS_RETRY_INTERVAL", "60")),
                 "retry_enabled": os.getenv("ANALYTICS_RETRY_ENABLED", "false").lower() == "true",
                 "fallback_url": None
@@ -62,7 +66,7 @@ class ConnectionManager:
             "b7": {
                 "url": os.getenv("NOTIFICATION_URL", "http://26.64.54.49:8000"),
                 "auto_detect": os.getenv("NOTIFICATION_AUTO_DETECT", "false").lower() == "true",
-                "timeout": float(os.getenv("NOTIFICATION_TIMEOUT", "3.0")),
+                "timeout": float(os.getenv("NOTIFICATION_TIMEOUT", "5.0")),
                 "retry_interval": int(os.getenv("NOTIFICATION_RETRY_INTERVAL", "60")),
                 "retry_enabled": os.getenv("NOTIFICATION_RETRY_ENABLED", "false").lower() == "true",
                 "fallback_url": None
@@ -88,6 +92,15 @@ class ConnectionManager:
             self.status[service] = ConnectionStatus.FALLBACK
             self._initial_checked[service] = False
             self._check_failed[service] = False
+        
+        # Khởi tạo status cho RabbitMQ
+        self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+        
+        # Lưu connection và channel để dùng chung
+        self._rabbitmq_connection = None
+        self._rabbitmq_channel = None
+        self._rabbitmq_keepalive_task = None
+        self._rabbitmq_connected = False
         
         # Log cấu hình từng service
         logger.info("🔍 Connection Manager initialized with per-service config:")
@@ -306,54 +319,138 @@ class ConnectionManager:
             
             self._initial_checked[service] = True
         
-        # RabbitMQ - check 1 lần
-        await self._check_rabbitmq_once()
+        # RabbitMQ - TẠO CONNECTION VÀ GIỮ MÃI MÃI
+        await self._setup_rabbitmq_connection()
         
         logger.info("🔍 One-time connection checks completed")
         self.log_status_summary()
     
-    async def _check_rabbitmq_once(self):
-        """Kiểm tra RabbitMQ 1 lần duy nhất"""
+    async def _setup_rabbitmq_connection(self):
+        """Tạo RabbitMQ connection và GIỮ MÃI MÃI với heartbeat"""
         rabbitmq_host = os.getenv("RABBITMQ_HOST", "")
+        rabbitmq_port = os.getenv("RABBITMQ_PORT", "5672")
+        rabbitmq_user = os.getenv("RABBITMQ_USER", "guest")
+        rabbitmq_pass = os.getenv("RABBITMQ_PASS", "guest")
+        
+        # Kiểm tra host có hợp lệ không
         if not rabbitmq_host or rabbitmq_host in ["localhost", "127.0.0.1", ""]:
             logger.info("📧 RabbitMQ disabled or using localhost -> FALLBACK mode")
             self.status["b7_rabbitmq"] = ConnectionStatus.DISABLED
+            self._rabbitmq_connected = False
             return
         
         try:
-            import aio_pika
-            from aio_pika import connect_robust
+            connection_url = f"amqp://{rabbitmq_user}:{rabbitmq_pass}@{rabbitmq_host}:{rabbitmq_port}/"
             
-            connection_url = f"amqp://{os.getenv('RABBITMQ_USER', 'guest')}:{os.getenv('RABBITMQ_PASS', 'guest')}@{rabbitmq_host}:{os.getenv('RABBITMQ_PORT', '5672')}/"
+            logger.info(f"📧 Creating RabbitMQ connection at {rabbitmq_host}:{rabbitmq_port} (KEEP ALIVE FOREVER)...")
             
-            logger.info(f"📧 Checking RabbitMQ connection to {rabbitmq_host} (one-time)...")
-            
-            connection = await asyncio.wait_for(
-                connect_robust(connection_url),
-                timeout=float(os.getenv("RABBITMQ_CONNECTION_TIMEOUT", "3.0"))
+            # Tạo connection với heartbeat
+            self._rabbitmq_connection = await asyncio.wait_for(
+                connect_robust(
+                    connection_url,
+                    reconnect_interval=5,
+                    reconnect_attempts=10,
+                    heartbeat=30
+                ),
+                timeout=float(os.getenv("RABBITMQ_CONNECTION_TIMEOUT", "5.0"))
             )
-            await connection.close()
             
-            logger.info(f"✅ RabbitMQ connected successfully to {rabbitmq_host}")
+            # Tạo channel
+            self._rabbitmq_channel = await self._rabbitmq_connection.channel()
+            
+            # Declare queue và bind
+            queue_name = os.getenv("RABBITMQ_QUEUE", "notification.alerts")
+            exchange_name = os.getenv("RABBITMQ_EXCHANGE", "amq.topic")
+            routing_key = os.getenv("RABBITMQ_ROUTING_KEY", "notification.alerts")
+            
+            queue = await self._rabbitmq_channel.declare_queue(queue_name, durable=True)
+            await queue.bind(exchange_name, routing_key)
+            
+            self._rabbitmq_connected = True
+            
+            # Khởi động task giữ kết nối sống
+            if self._rabbitmq_keepalive_task is None or self._rabbitmq_keepalive_task.done():
+                self._rabbitmq_keepalive_task = asyncio.create_task(self._keep_rabbitmq_alive())
+            
+            logger.info(f"✅ RabbitMQ connection created and KEEP ALIVE FOREVER: {rabbitmq_host}:{rabbitmq_port}")
             self.status["b7_rabbitmq"] = ConnectionStatus.REAL
+            
         except asyncio.TimeoutError:
-            logger.info(f"⏱️ RabbitMQ check timeout -> FALLBACK")
+            logger.info(f"⏱️ RabbitMQ connection timeout -> FALLBACK")
             self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+            self._rabbitmq_connection = None
+            self._rabbitmq_channel = None
+            self._rabbitmq_connected = False
+        except ImportError as e:
+            logger.warning(f"📧 aio_pika not installed: {e} -> FALLBACK")
+            self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+            self._rabbitmq_connection = None
+            self._rabbitmq_channel = None
+            self._rabbitmq_connected = False
         except Exception as e:
-            logger.info(f"⚠️ RabbitMQ check failed: {e} -> FALLBACK")
+            logger.info(f"⚠️ RabbitMQ connection failed: {e} -> FALLBACK")
             self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+            self._rabbitmq_connection = None
+            self._rabbitmq_channel = None
+            self._rabbitmq_connected = False
+    
+    async def _keep_rabbitmq_alive(self):
+        """
+        Task giữ RabbitMQ connection sống
+        ✅ KHÔNG CẦN GỬI HEARTBEAT VÌ aio_pika TỰ ĐỘNG LÀM
+        """
+        while True:
+            try:
+                await asyncio.sleep(30)
+                
+                # ✅ Chỉ kiểm tra connection, không gửi heartbeat thủ công
+                if self._rabbitmq_connection is None:
+                    logger.warning("📧 RabbitMQ connection is None, reconnecting...")
+                    self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+                    await self._setup_rabbitmq_connection()
+                    continue
+                
+                if self._rabbitmq_connection.is_closed:
+                    logger.warning("📧 RabbitMQ connection was closed, reconnecting...")
+                    self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+                    await self._setup_rabbitmq_connection()
+                    continue
+                
+                # ✅ Kiểm tra channel
+                if self._rabbitmq_channel is None or self._rabbitmq_channel.is_closed:
+                    logger.warning("📧 RabbitMQ channel was closed, recreating...")
+                    self._rabbitmq_channel = await self._rabbitmq_connection.channel()
+                    queue_name = os.getenv("RABBITMQ_QUEUE", "notification.alerts")
+                    exchange_name = os.getenv("RABBITMQ_EXCHANGE", "amq.topic")
+                    routing_key = os.getenv("RABBITMQ_ROUTING_KEY", "notification.alerts")
+                    queue = await self._rabbitmq_channel.declare_queue(queue_name, durable=True)
+                    await queue.bind(exchange_name, routing_key)
+                    logger.info("📧 RabbitMQ channel recreated")
+                
+                logger.debug("📧 RabbitMQ connection is alive")
+                
+            except asyncio.CancelledError:
+                logger.info("📧 RabbitMQ keepalive task cancelled")
+                break
+            except Exception as e:
+                logger.warning(f"📧 RabbitMQ keepalive error: {e}")
+                await asyncio.sleep(5)
+    
+    def get_rabbitmq_connection(self):
+        """Lấy connection RabbitMQ đã giữ"""
+        return self._rabbitmq_connection
+    
+    def get_rabbitmq_channel(self):
+        """Lấy channel RabbitMQ đã giữ"""
+        return self._rabbitmq_channel
     
     async def start_retry_tasks(self):
-        """Khởi động retry tasks - CHỈ CHO CÁC SERVICE CÓ RETRY_ENABLED=true"""
+        """Khởi động retry tasks"""
         logger.info("🔄 Starting connection retry tasks (per-service config)...")
         
         for service in ["b3", "b4", "b5", "b7"]:
             config = self.services_config.get(service, {})
             
-            # Chỉ retry nếu:
-            # 1. retry_enabled = true
-            # 2. service đang ở FALLBACK
-            # 3. auto_detect = true (đã từng thử kết nối)
             if (config.get("retry_enabled", False) and 
                 self.status.get(service) == ConnectionStatus.FALLBACK and
                 config.get("auto_detect", False)):
@@ -372,7 +469,6 @@ class ConnectionManager:
             try:
                 await asyncio.sleep(interval)
                 
-                # Chỉ retry nếu đang ở FALLBACK và đã có initial check
                 if (self.status.get(service_name) == ConnectionStatus.FALLBACK and 
                     self._initial_checked.get(service_name, False)):
                     
@@ -384,7 +480,6 @@ class ConnectionManager:
                         logger.info(f"🔄 Retrying connection to {service_name} at {url}")
                         await self.check_connection(service_name, url, timeout)
                         
-                        # Nếu kết nối thành công, dừng retry
                         if self.status.get(service_name) == ConnectionStatus.REAL:
                             logger.info(f"✅ {service_name} reconnected successfully!")
                             break
@@ -405,13 +500,18 @@ class ConnectionManager:
                     pass
                 logger.info(f"🔄 Retry task stopped for {service}")
         self._retry_tasks.clear()
+        
+        if self._rabbitmq_keepalive_task:
+            self._rabbitmq_keepalive_task.cancel()
+            try:
+                await self._rabbitmq_keepalive_task
+            except asyncio.CancelledError:
+                pass
     
     def get_status(self, service_name: str) -> ConnectionStatus:
         return self.status.get(service_name, ConnectionStatus.FALLBACK)
     
     def should_use_real(self, service_name: str) -> bool:
-        """Có nên gọi thật không? - TRẢ VỀ FALSE NHANH"""
-        # Nếu đã fail, luôn trả về False
         if self._check_failed.get(service_name, False):
             return False
         if not self._initial_checked.get(service_name, False):
@@ -419,7 +519,24 @@ class ConnectionManager:
         return self.get_status(service_name) == ConnectionStatus.REAL
     
     def is_rabbitmq_available(self) -> bool:
-        return self.get_status("b7_rabbitmq") == ConnectionStatus.REAL
+        """Kiểm tra RabbitMQ availability"""
+        if not self._rabbitmq_connected:
+            return False
+        
+        if self.status.get("b7_rabbitmq") != ConnectionStatus.REAL:
+            return False
+        
+        if self._rabbitmq_connection is None:
+            return False
+        
+        if self._rabbitmq_connection.is_closed:
+            logger.warning("📧 RabbitMQ connection was closed")
+            self._rabbitmq_connected = False
+            self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+            asyncio.create_task(self._setup_rabbitmq_connection())
+            return False
+        
+        return True
     
     def log_status_summary(self):
         logger.info("📊 Connection Status Summary:")
@@ -429,7 +546,8 @@ class ConnectionManager:
             failed = self._check_failed.get(service, False)
             retry_enabled = config.get("retry_enabled", False)
             logger.info(f"   {service}: {status.value} (failed={failed}, retry_enabled={retry_enabled})")
-        logger.info(f"   b7_rabbitmq: {self.get_status('b7_rabbitmq').value}")
+        rabbit_status = self.get_status("b7_rabbitmq")
+        logger.info(f"   b7_rabbitmq: {rabbit_status.value}")
     
     def get_status_display(self) -> Dict[str, str]:
         displays = {}
