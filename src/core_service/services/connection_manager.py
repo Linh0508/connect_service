@@ -9,9 +9,10 @@ import asyncio
 from typing import Dict, Any, Optional
 from enum import Enum
 from datetime import datetime
+import json
 import re
 
-# ✅ THÊM IMPORT aio_pika
+# ✅ Import aio_pika
 import aio_pika
 from aio_pika import connect_robust, Message
 
@@ -344,16 +345,18 @@ class ConnectionManager:
             
             logger.info(f"📧 Creating RabbitMQ connection at {rabbitmq_host}:{rabbitmq_port} (KEEP ALIVE FOREVER)...")
             
-            # Tạo connection với heartbeat
+            # ✅ Tạo connection với heartbeat ngắn hơn (15s)
             self._rabbitmq_connection = await asyncio.wait_for(
                 connect_robust(
                     connection_url,
                     reconnect_interval=5,
                     reconnect_attempts=10,
-                    heartbeat=30
+                    heartbeat=15  # ✅ Giảm xuống 15s để giữ connection sống
                 ),
                 timeout=float(os.getenv("RABBITMQ_CONNECTION_TIMEOUT", "5.0"))
             )
+            
+            logger.info(f"📧 Connection established with heartbeat=15s")
             
             # Tạo channel
             self._rabbitmq_channel = await self._rabbitmq_connection.channel()
@@ -362,6 +365,8 @@ class ConnectionManager:
             queue_name = os.getenv("RABBITMQ_QUEUE", "notification.alerts")
             exchange_name = os.getenv("RABBITMQ_EXCHANGE", "amq.topic")
             routing_key = os.getenv("RABBITMQ_ROUTING_KEY", "notification.alerts")
+            
+            logger.info(f"📧 RabbitMQ config: exchange={exchange_name}, queue={queue_name}, routing_key={routing_key}")
             
             queue = await self._rabbitmq_channel.declare_queue(queue_name, durable=True)
             await queue.bind(exchange_name, routing_key)
@@ -396,14 +401,15 @@ class ConnectionManager:
     
     async def _keep_rabbitmq_alive(self):
         """
-        Task giữ RabbitMQ connection sống
-        ✅ KHÔNG CẦN GỬI HEARTBEAT VÌ aio_pika TỰ ĐỘNG LÀM
+        Task giữ RabbitMQ connection sống - ✅ GỬI HEARTBEAT THỰC TẾ
         """
+        heartbeat_interval = 20  # Gửi heartbeat mỗi 20 giây
+        
         while True:
             try:
-                await asyncio.sleep(30)
+                await asyncio.sleep(heartbeat_interval)
                 
-                # ✅ Chỉ kiểm tra connection, không gửi heartbeat thủ công
+                # Kiểm tra connection
                 if self._rabbitmq_connection is None:
                     logger.warning("📧 RabbitMQ connection is None, reconnecting...")
                     self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
@@ -413,21 +419,57 @@ class ConnectionManager:
                 if self._rabbitmq_connection.is_closed:
                     logger.warning("📧 RabbitMQ connection was closed, reconnecting...")
                     self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+                    self._rabbitmq_connection = None
+                    self._rabbitmq_channel = None
                     await self._setup_rabbitmq_connection()
                     continue
                 
-                # ✅ Kiểm tra channel
-                if self._rabbitmq_channel is None or self._rabbitmq_channel.is_closed:
-                    logger.warning("📧 RabbitMQ channel was closed, recreating...")
+                # ✅ GỬI HEARTBEAT THỰC TẾ - publish message nhẹ
+                try:
+                    if self._rabbitmq_channel is None or self._rabbitmq_channel.is_closed:
+                        logger.warning("📧 RabbitMQ channel was closed, recreating...")
+                        self._rabbitmq_channel = await self._rabbitmq_connection.channel()
+                        queue_name = os.getenv("RABBITMQ_QUEUE", "notification.alerts")
+                        exchange_name = os.getenv("RABBITMQ_EXCHANGE", "amq.topic")
+                        routing_key = os.getenv("RABBITMQ_ROUTING_KEY", "notification.alerts")
+                        queue = await self._rabbitmq_channel.declare_queue(queue_name, durable=True)
+                        await queue.bind(exchange_name, routing_key)
+                        logger.info("📧 RabbitMQ channel recreated")
+                    
+                    # ✅ GỬI HEARTBEAT MESSAGE - giữ connection sống
+                    exchange = await self._rabbitmq_channel.get_exchange("amq.topic")
+                    
+                    heartbeat_payload = {
+                        "type": "heartbeat",
+                        "timestamp": datetime.now().isoformat(),
+                        "source": "b6-core"
+                    }
+                    
+                    await exchange.publish(
+                        aio_pika.Message(
+                            body=json.dumps(heartbeat_payload).encode(),
+                            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+                            expiration="5000"  # Tự động expire sau 5s
+                        ),
+                        routing_key="heartbeat"
+                    )
+                    logger.debug("📧 Heartbeat sent to RabbitMQ")
+                    
+                except aio_pika.exceptions.ChannelNotFoundError:
+                    logger.warning("📧 Channel not found, recreating...")
                     self._rabbitmq_channel = await self._rabbitmq_connection.channel()
                     queue_name = os.getenv("RABBITMQ_QUEUE", "notification.alerts")
                     exchange_name = os.getenv("RABBITMQ_EXCHANGE", "amq.topic")
                     routing_key = os.getenv("RABBITMQ_ROUTING_KEY", "notification.alerts")
                     queue = await self._rabbitmq_channel.declare_queue(queue_name, durable=True)
                     await queue.bind(exchange_name, routing_key)
-                    logger.info("📧 RabbitMQ channel recreated")
-                
-                logger.debug("📧 RabbitMQ connection is alive")
+                    
+                except Exception as e:
+                    logger.warning(f"📧 Heartbeat failed: {e}, reconnecting...")
+                    self.status["b7_rabbitmq"] = ConnectionStatus.FALLBACK
+                    self._rabbitmq_connection = None
+                    self._rabbitmq_channel = None
+                    await self._setup_rabbitmq_connection()
                 
             except asyncio.CancelledError:
                 logger.info("📧 RabbitMQ keepalive task cancelled")

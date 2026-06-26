@@ -1,6 +1,6 @@
 """
 Notification Client - Gửi alert sang B7 via RabbitMQ (Queue Async)
-Version: 3.2 - THÊM RETRY KHI CONNECTION BỊ ĐÓNG
+Version: 3.3 - SỬA SEVERITY UPPERCASE
 """
 
 import os
@@ -85,10 +85,11 @@ class NotificationClient:
         event_type = alert.event_type or "alert.created"
         
         target = alert.target or "security_team"
-        severity_value = alert.severity.value if hasattr(alert.severity, 'value') else str(alert.severity)
+        # ✅ SỬA: Chuyển severity thành UPPERCASE
+        severity_value = alert.severity.value.upper() if hasattr(alert.severity, 'value') else str(alert.severity).upper()
         
         # ============================================================
-        # PAYLOAD ĐÚNG SPEC B7 - GIỐNG SCRIPT PYTHON
+        # PAYLOAD ĐÚNG SPEC B7
         # ============================================================
         payload = {
             "eventId": event_id,
@@ -99,9 +100,9 @@ class NotificationClient:
             "source": "core-business",
             "data": {
                 "alertId": alert_id,
-                "severity": severity_value,
+                "severity": severity_value,  # ✅ Đã UPPERCASE
                 "target": target,
-                "title": alert.details.get("title", f"🚨 {alert.alert_type or 'Alert'} - {severity_value.upper()}"),
+                "title": alert.details.get("title", f"🚨 {alert.alert_type or 'Alert'} - {severity_value}"),
                 "message": alert.message or "Alert from B6 Core",
                 "details": alert.details or {}
             }

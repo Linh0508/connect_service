@@ -42,10 +42,10 @@ class EventType(str, Enum):
 
 
 class Severity(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
+    LOW = "LOW"        # ✅ SỬA: thành UPPERCASE
+    MEDIUM = "MEDIUM"  # ✅ SỬA: thành UPPERCASE
+    HIGH = "HIGH"      # ✅ SỬA: thành UPPERCASE
+    CRITICAL = "CRITICAL"  # ✅ SỬA: thành UPPERCASE
 
 
 # ============================================================
