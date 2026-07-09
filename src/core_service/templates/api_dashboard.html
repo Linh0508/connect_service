@@ -4,770 +4,1063 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>B6 Core · Decision Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ============================================================
+           RESET & BASE
+           ============================================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: #F4F6F9;
+            color: #111827;
+            padding: 0;
+            margin: 0;
             min-height: 100vh;
-            background: #f0f2f5;
-            color: #1a1a2e;
-            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* ===== GLASSMORPHISM SÁNG ===== */
-        .glass {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
+        /* ============================================================
+           SCROLLBAR
+           ============================================================ */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
-        .glass:hover {
-            border-color: rgba(99, 102, 241, 0.2);
-            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(79, 70, 229, 0.2);
+            border-radius: 12px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 70, 229, 0.35);
+        }
+
+        /* ============================================================
+           TYPOGRAPHY
+           ============================================================ */
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: -0.02em;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #111827;
+            letter-spacing: -0.01em;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .label-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #4B5563;
+        }
+
+        .badge-text {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* ============================================================
+           GLOBAL SPACING & CARDS
+           ============================================================ */
+        .main {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 16px 20px 32px;
+        }
+
+        .glass-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+            padding: 16px;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
             transform: translateY(-2px);
         }
 
-        .glass-input {
-            background: #ffffff;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            padding: 8px 14px;
-            color: #1a1a2e;
+        .glass-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .glass-card .card-header .card-title {
+            margin: 0;
+        }
+
+        .glass-card .card-header .badge {
             font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.3s;
-            width: 100%;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 100px;
+            background: rgba(79, 70, 229, 0.08);
+            color: #4F46E5;
+            border: 1px solid rgba(79, 70, 229, 0.08);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            white-space: nowrap;
         }
-        .glass-input:focus {
-            outline: none;
-            border-color: rgba(99, 102, 241, 0.4);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
-        }
-        .glass-input::placeholder { color: rgba(0, 0, 0, 0.3); }
 
-        .glass-select {
-            background: #ffffff;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            padding: 8px 14px;
-            color: #1a1a2e;
-            font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            width: 100%;
-            cursor: pointer;
-            transition: all 0.3s;
-            appearance: none;
-        }
-        .glass-select:focus { outline: none; border-color: rgba(99, 102, 241, 0.4); }
-        .glass-select option { background: #ffffff; color: #1a1a2e; }
-
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.03); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.25); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.4); }
-
-        /* ===== NAVBAR ===== */
+        /* ============================================================
+           NAVBAR
+           ============================================================ */
         .navbar {
+            background: #FFFFFF;
+            border-bottom: 1px solid #E5E7EB;
+            padding: 0 20px;
+            height: 68px;
+            display: flex;
+            align-items: center;
             position: sticky;
             top: 0;
             z-index: 100;
-            padding: 0 24px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
         }
 
         .navbar-inner {
             max-width: 1440px;
-            margin: 0 auto;
             width: 100%;
+            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
         }
+
         .navbar-brand {
             display: flex;
             align-items: center;
             gap: 12px;
             font-weight: 700;
-            font-size: 18px;
-            color: #1a1a2e;
+            font-size: 20px;
+            color: #111827;
             text-decoration: none;
         }
+
         .navbar-brand .logo-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #6366f1, #818cf8);
+            background: #4F46E5;
             display: inline-block;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
         }
 
         .navbar-brand .badge {
-            background: rgba(99, 102, 241, 0.08);
-            color: #6366f1;
-            font-size: 10px;
+            background: rgba(79, 70, 229, 0.06);
+            color: #4F46E5;
+            font-size: 12px;
             font-weight: 600;
             padding: 2px 12px;
-            border-radius: 20px;
-            border: 1px solid rgba(99, 102, 241, 0.08);
+            border-radius: 100px;
+            border: 1px solid rgba(79, 70, 229, 0.08);
         }
 
         .tabs {
             display: flex;
             gap: 4px;
-            background: rgba(0, 0, 0, 0.03);
+            background: #F1F3F5;
             padding: 4px;
             border-radius: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.04);
+            border: 1px solid #E5E7EB;
         }
+
         .tabs .tab {
-            padding: 6px 20px;
+            padding: 8px 24px;
             border-radius: 8px;
             border: none;
             background: transparent;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 500;
-            color: rgba(0, 0, 0, 0.45);
+            color: #6B7280;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s ease;
             font-family: 'Inter', sans-serif;
-            position: relative;
+            line-height: 1.4;
         }
-        .tabs .tab:hover { color: #1a1a2e; background: rgba(0,0,0,0.03); }
+
+        .tabs .tab:hover {
+            color: #111827;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
         .tabs .tab.active {
-            background: rgba(99, 102, 241, 0.06);
-            color: #6366f1;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.02);
-        }
-        .tabs .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 2px;
-            background: #6366f1;
-            border-radius: 2px;
+            background: #FFFFFF;
+            color: #4F46E5;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
         }
 
         .navbar-actions {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
         }
-        .navbar-actions .status-dot {
+
+        .status-dot {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.45);
+            gap: 8px;
+            font-size: 14px;
+            color: #4B5563;
+            font-weight: 500;
         }
-        .navbar-actions .status-dot .dot {
+
+        .status-dot .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.2);
+        }
+
+        .dot-green {
+            background: #22C55E;
+        }
+        .dot-red {
+            background: #EF4444;
+        }
+
+        .navbar-actions .glass-input {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            color: #111827;
+            width: 200px;
+            transition: border-color 0.2s ease;
+        }
+
+        .navbar-actions .glass-input:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+        }
+
+        .navbar-actions .glass-input::placeholder {
+            color: #6B7280;
+        }
+
+        /* ============================================================
+           TAB CONTENT (ẩn/hiện)
+           ============================================================ */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
+        .btn {
+            height: 42px;
+            padding: 0 20px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: #4F46E5;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.15);
+        }
+        .btn-primary:hover {
+            background: #4338CA;
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-secondary {
+            background: #F9FAFB;
+            color: #4B5563;
+            border: 1px solid #E5E7EB;
+        }
+        .btn-secondary:hover {
+            background: #F3F4F6;
+            border-color: #D1D5DB;
+        }
+
+        .btn-success {
+            background: #22C55E;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #16A34A;
+        }
+
+        .btn-danger {
+            background: #EF4444;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-warning {
+            background: #F59E0B;
+            color: #fff;
+        }
+        .btn-warning:hover {
+            background: #D97706;
+        }
+
+        .btn-info {
+            background: #3B82F6;
+            color: #fff;
+        }
+        .btn-info:hover {
+            background: #2563EB;
+        }
+
+        .btn-sm {
+            height: 34px;
+            padding: 0 14px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+        .btn-xs {
+            height: 28px;
+            padding: 0 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        /* ============================================================
+           INPUTS
+           ============================================================ */
+        .glass-input,
+        .glass-select {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 15px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            color: #111827;
+            width: 100%;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .glass-input::placeholder {
+            color: #6B7280;
+            font-weight: 400;
+        }
+
+        .glass-input:focus,
+        .glass-select:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+        }
+
+        .glass-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234B5563' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        .field-group {
+            margin-bottom: 10px;
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4B5563;
+            margin-bottom: 4px;
+        }
+
+        /* ============================================================
+           BADGES (status chips)
+           ============================================================ */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            height: 30px;
+            border: 1px solid transparent;
+        }
+
+        .status-badge .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             display: inline-block;
         }
 
-        .dot-green { background: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); }
-        .dot-red { background: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.2); }
-
-        .main { max-width: 100%; margin: 0; padding: 12px 16px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media (max-width: 1024px) { .grid-2 { grid-template-columns: 1fr; } }
-
-        .card { padding: 0; overflow: hidden; }
-        .card-header {
-            padding: 10px 16px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
+        .status-badge.online {
+            background: rgba(34, 197, 94, 0.08);
+            color: #15803D;
+            border-color: rgba(34, 197, 94, 0.1);
         }
-        .card-header h3 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a1a2e;
-        }
-        .card-header .badge {
-            font-size: 10px;
-            font-weight: 500;
-            padding: 2px 12px;
-            border-radius: 20px;
-            background: rgba(0, 0, 0, 0.04);
-            color: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(0, 0, 0, 0.04);
-        }
-        .card-body { padding: 10px 14px; }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 3px 12px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 600;
+        .status-badge.online .dot {
+            background: #22C55E;
         }
 
-        .status-badge .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-        .status-badge.online { background: rgba(16, 185, 129, 0.08); color: #065f46; border: 1px solid rgba(16, 185, 129, 0.08); }
-        .status-badge.online .dot { background: #10b981; }
-        .status-badge.fallback { background: rgba(245, 158, 11, 0.08); color: #92400e; border: 1px solid rgba(245, 158, 11, 0.08); }
-        .status-badge.fallback .dot { background: #f59e0b; }
-        .status-badge.real { background: rgba(99, 102, 241, 0.08); color: #3730a3; border: 1px solid rgba(99, 102, 241, 0.08); }
-        .status-badge.real .dot { background: #6366f1; }
-
-        .status-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            padding: 8px 0 12px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-            margin-bottom: 14px;
+        .status-badge.fallback {
+            background: rgba(245, 158, 11, 0.08);
+            color: #B45309;
+            border-color: rgba(245, 158, 11, 0.1);
         }
-        .status-row .item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .status-badge.fallback .dot {
+            background: #F59E0B;
+        }
+
+        .status-badge.real {
+            background: rgba(79, 70, 229, 0.08);
+            color: #4F46E5;
+            border-color: rgba(79, 70, 229, 0.1);
+        }
+        .status-badge.real .dot {
+            background: #4F46E5;
+        }
+
+        /* ============================================================
+           B-BADGE (service labels)
+           ============================================================ */
+        .b-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 6px;
             font-size: 12px;
-            color: rgba(0, 0, 0, 0.45);
-            padding: 4px 12px;
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 8px;
-            border: 1px solid rgba(0, 0, 0, 0.04);
+            font-weight: 700;
+            margin-right: 4px;
+            background: rgba(79, 70, 229, 0.06);
+            color: #4F46E5;
+            border: 1px solid rgba(79, 70, 229, 0.04);
         }
-        .status-row .item .label { font-weight: 500; color: rgba(0, 0, 0, 0.55); }
+        .b-badge.b1 { background: rgba(34, 197, 94, 0.08); color: #15803D; }
+        .b-badge.b3 { background: rgba(245, 158, 11, 0.08); color: #B45309; }
+        .b-badge.b4 { background: rgba(139, 92, 246, 0.08); color: #6D28D9; }
+        .b-badge.b5 { background: rgba(236, 72, 153, 0.08); color: #BE185D; }
+        .b-badge.b6 { background: rgba(79, 70, 229, 0.08); color: #4F46E5; }
+        .b-badge.b7 { background: rgba(251, 146, 60, 0.08); color: #C2410C; }
+        .b-badge.health { background: rgba(34, 197, 94, 0.08); color: #15803D; }
 
-        .field-group { margin-bottom: 8px; }
-        .field-group label {
-            display: block;
-            font-size: 11px;
-            font-weight: 500;
-            color: rgba(0, 0, 0, 0.4);
-            margin-bottom: 3px;
-            letter-spacing: 0.3px;
+        /* ============================================================
+           PROVIDER GRID
+           ============================================================ */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
-        .btn {
-            padding: 6px 14px;
-            border-radius: 10px;
-            border: none;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-family: 'Inter', sans-serif;
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
         }
-        .btn:hover { transform: translateY(-2px); }
-        .btn:active { transform: translateY(0); }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #6366f1, #818cf8);
-            color: #fff;
-            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
-        }
-        .btn-primary:hover { box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25); }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.7);
-            color: rgba(0, 0, 0, 0.65);
-            border: 1px solid rgba(0, 0, 0, 0.06);
-        }
-        .btn-secondary:hover { background: #ffffff; color: #1a1a2e; }
-
-        .btn-success {
-            background: linear-gradient(135deg, #10b981, #34d399);
-            color: #fff;
-        }
-        .btn-success:hover { box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2); }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #f87171);
-            color: #fff;
-        }
-        .btn-danger:hover { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2); }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f59e0b, #fbbf24);
-            color: #fff;
-        }
-        .btn-warning:hover { box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2); }
-
-        .btn-info {
-            background: linear-gradient(135deg, #3b82f6, #60a5fa);
-            color: #fff;
-        }
-        .btn-info:hover { box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2); }
-
-        .btn-sm { padding: 4px 10px; font-size: 10px; }
-        .btn-xs { padding: 2px 8px; font-size: 9px; }
-        .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
-        .w-full { width: 100%; }
-        .mt-6 { margin-top: 6px; }
-        .mb-6 { margin-bottom: 6px; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-
+        /* Sensor grid */
         .sensor-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-            gap: 4px;
-            margin-bottom: 8px;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 6px;
+            margin-bottom: 10px;
         }
+
         .sensor-btn {
-            padding: 4px 6px;
-            border-radius: 6px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            background: rgba(255, 255, 255, 0.5);
-            font-size: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-            color: rgba(0, 0, 0, 0.55);
+            padding: 6px 4px;
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+            background: #F9FAFB;
+            font-size: 11px;
             font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            color: #4B5563;
             font-family: 'Inter', sans-serif;
         }
         .sensor-btn:hover {
-            border-color: rgba(99, 102, 241, 0.25);
-            background: rgba(99, 102, 241, 0.04);
+            border-color: #4F46E5;
+            background: #FFFFFF;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.04);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.04);
         }
-        .sensor-btn .sub { font-size: 8px; color: rgba(0, 0, 0, 0.25); display: block; font-weight: 400; }
-
-        .response-box {
-            background: rgba(0, 0, 0, 0.02);
-            border-radius: 8px;
-            padding: 8px 10px;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 11px;
-            overflow-x: auto;
-            max-height: 150px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            border: 1px solid rgba(0, 0, 0, 0.04);
-            margin-top: 4px;
-            color: rgba(0, 0, 0, 0.55);
+        .sensor-btn .sub {
+            display: block;
+            font-size: 9px;
+            color: #6B7280;
+            font-weight: 400;
         }
 
-        .resp-grid {
+        /* Form grids */
+        .form-grid-3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
-        .resp-grid .item {
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 8px;
-            padding: 10px 12px;
-            border: 1px solid rgba(0, 0, 0, 0.04);
-            min-height: 70px;
-            transition: all 0.3s;
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
         }
-        .resp-grid .item:hover {
-            border-color: rgba(99, 102, 241, 0.08);
-            background: rgba(255, 255, 255, 0.6);
+        @media (max-width: 600px) {
+            .form-grid-3 {
+                grid-template-columns: 1fr 1fr;
+            }
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+            }
         }
-        .resp-grid .item .label {
-            font-size: 9px;
-            font-weight: 600;
-            color: rgba(0, 0, 0, 0.3);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
+
+        .mt-6 {
+            margin-top: 6px;
         }
-        .resp-grid .item .content {
+        .mb-6 {
+            margin-bottom: 6px;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .response-box {
+            background: #F9FAFB;
+            border-radius: 10px;
+            padding: 12px 16px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            max-height: 80px;
+            font-size: 13px;
+            overflow-x: auto;
+            max-height: 180px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            color: rgba(0, 0, 0, 0.5);
-            line-height: 1.5;
+            border: 1px solid #E5E7EB;
+            color: #111827;
+            line-height: 1.6;
         }
-        @media (max-width: 768px) { .resp-grid { grid-template-columns: 1fr; } }
-
-        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        @media (max-width: 600px) { .form-grid-3 { grid-template-columns: 1fr 1fr; } .form-grid-2 { grid-template-columns: 1fr; } }
 
         .curl-box {
-            background: rgba(0, 0, 0, 0.02);
-            border-radius: 6px;
-            padding: 6px 10px;
+            background: #F9FAFB;
+            border-radius: 8px;
+            padding: 8px 12px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 9px;
-            color: rgba(0, 0, 0, 0.35);
+            font-size: 12px;
+            color: #4B5563;
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            border: 1px solid rgba(0, 0, 0, 0.04);
-            margin-top: 4px;
-            max-height: 60px;
+            border: 1px solid #E5E7EB;
+            max-height: 70px;
         }
-        .curl-box-sm { max-height: 45px; font-size: 8px; }
-        .text-muted { color: rgba(0, 0, 0, 0.3); font-size: 11px; }
-        .border-top { border-top: 1px solid rgba(0, 0, 0, 0.04); padding-top: 8px; margin-top: 8px; }
 
-        .b-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: 700;
-            margin-right: 4px;
+        .text-muted {
+            color: #6B7280;
+            font-size: 14px;
         }
-        .b-badge.b1 { background: rgba(16, 185, 129, 0.12); color: #065f46; }
-        .b-badge.b2 { background: rgba(59, 130, 246, 0.12); color: #1e40af; }
-        .b-badge.b3 { background: rgba(245, 158, 11, 0.12); color: #92400e; }
-        .b-badge.b4 { background: rgba(139, 92, 246, 0.12); color: #5b21b6; }
-        .b-badge.b5 { background: rgba(236, 72, 153, 0.12); color: #9d174d; }
-        .b-badge.b6 { background: rgba(99, 102, 241, 0.12); color: #3730a3; }
-        .b-badge.b7 { background: rgba(251, 146, 60, 0.12); color: #9a3412; }
-        .b-badge.health { background: rgba(16, 185, 129, 0.08); color: #065f46; }
+        .border-top {
+            border-top: 1px solid #E5E7EB;
+            padding-top: 14px;
+            margin-top: 14px;
+        }
 
-        /* ============================================================ */
-        /* REALTIME LAYOUT - SÁNG */
-        /* ============================================================ */
+        /* ============================================================
+           CONSUMER PAGE
+           ============================================================ */
+        .status-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 10px 0 14px;
+            border-bottom: 1px solid #E5E7EB;
+            margin-bottom: 16px;
+        }
+
+        .status-row .item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #4B5563;
+            padding: 6px 16px;
+            background: #F9FAFB;
+            border-radius: 100px;
+            border: 1px solid #E5E7EB;
+        }
+        .status-row .item .label {
+            font-weight: 500;
+            color: #6B7280;
+        }
+
+        /* Consumer Response stack */
+        .resp-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .resp-stack .item {
+            background: #F9FAFB;
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid #E5E7EB;
+        }
+
+        .resp-stack .item .label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 6px;
+        }
+
+        .resp-stack .item .content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #111827;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
+        }
+
+        /* ============================================================
+           REALTIME PAGE - VERTICAL RATIO 45% / 25% / 30%
+           ============================================================ */
         .realtime-container {
             display: flex;
+            flex-direction: row;
             gap: 16px;
-            min-height: 550px;
-            max-height: 72vh;
+            height: 70vh;
+            min-height: 450px;
+            max-height: 750px;
         }
 
         .realtime-left {
-            flex: 0 0 32%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .realtime-left .row {
+            flex: 0 0 45%;
+            height: 100%;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            flex: 1;
+            grid-template-rows: 1fr 1fr;
+            gap: 16px;
         }
-        .realtime-left .row .b-card {
-            background: #ffffff;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+
+        .realtime-left .rt-card {
+            height: 100%;
             min-height: 0;
-            transition: all 0.3s;
         }
-        .realtime-left .row .b-card:hover {
-            border-color: rgba(99, 102, 241, 0.1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-        }
-        .realtime-left .row .b-card .b-header {
-            padding: 5px 10px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            font-weight: 600;
-            color: rgba(0, 0, 0, 0.6);
-            flex-shrink: 0;
-        }
-        .realtime-left .row .b-card .b-header .b-count {
-            font-size: 9px;
-            font-weight: 400;
-            color: rgba(0, 0, 0, 0.3);
-        }
-        .realtime-left .row .b-card .b-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 5px 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            line-height: 1.8;
-            color: rgba(0, 0, 0, 0.5);
-            min-height: 80px;
-            max-height: 180px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-        .realtime-left .row .b-card .b-body .entry {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
-            padding: 3px 0;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: baseline;
-            gap: 4px;
-        }
-        .realtime-left .row .b-card .b-body .entry .time { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .ip { color: rgba(245, 158, 11, 0.5); font-size: 8px; font-weight: 500; }
-        .realtime-left .row .b-card .b-body .entry .status-ok { color: #10b981; font-weight: 600; }
-        .realtime-left .row .b-card .b-body .entry .status-err { color: #ef4444; font-weight: 600; }
-        .realtime-left .row .b-card .b-body .entry .path { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .method { color: rgba(0, 0, 0, 0.25); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .entry .resp-detail { color: rgba(16, 185, 129, 0.4); font-size: 8px; }
-        .realtime-left .row .b-card .b-body .empty { color: rgba(0, 0, 0, 0.15); font-size: 9px; }
 
         .realtime-center {
-            flex: 0 0 28%;
-            display: flex;
-            flex-direction: column;
-            background: #ffffff;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-            overflow: hidden;
-            min-height: 0;
-            transition: all 0.3s;
+            flex: 0 0 25%;
+            height: 100%;
         }
-        .realtime-center:hover {
-            border-color: rgba(99, 102, 241, 0.1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+        .realtime-center .rt-card {
+            height: 100%;
         }
-        .realtime-center .b-header {
-            padding: 5px 10px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            font-weight: 600;
-            color: rgba(0, 0, 0, 0.6);
-            flex-shrink: 0;
-        }
-        .realtime-center .b-header .b-count {
-            font-size: 9px;
-            font-weight: 400;
-            color: rgba(0, 0, 0, 0.3);
-        }
-        .realtime-center .b-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 5px 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            line-height: 1.8;
-            color: rgba(0, 0, 0, 0.5);
-            min-height: 120px;
-            max-height: 400px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
-        .realtime-center .b-body .entry {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
-            padding: 4px 0;
-        }
-        .realtime-center .b-body .entry .time { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
-        .realtime-center .b-body .entry .b6-from { color: #6366f1; font-weight: 600; }
-        .realtime-center .b-body .entry .b6-ip { color: rgba(245, 158, 11, 0.5); font-size: 8px; font-weight: 500; }
-        .realtime-center .b-body .entry .b6-status-ok { color: #10b981; font-weight: 600; }
-        .realtime-center .b-body .entry .b6-status-err { color: #ef4444; font-weight: 600; }
-        .realtime-center .b-body .entry .b6-detail { color: rgba(0, 0, 0, 0.3); }
-        .realtime-center .b-body .entry .b6-send { color: rgba(245, 158, 11, 0.5); }
-        .realtime-center .b-body .entry .b6-response { color: rgba(16, 185, 129, 0.4); }
-        .realtime-center .b-body .empty { color: rgba(0, 0, 0, 0.15); font-size: 9px; }
 
         .realtime-right {
-            flex: 0 0 40%;
+            flex: 0 0 30%;
+            height: 100%;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 16px;
         }
-        /* ✅ B5/B7 - SONG SONG NGANG */
-        .realtime-right .row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+
+        .realtime-right .rt-card {
             flex: 1;
+            min-height: 0;
         }
-        .b-color-b5 .b-header {
-            border-left: 3px solid #8b5cf6;
-        }
-        .b-color-b5 .b-header span {
-            color: #7c3aed;
-            font-weight: 600;
-        }
-        .b-color-b7 .b-header {
-            border-left: 3px solid #f97316;
-        }
-        .b-color-b7 .b-header span {
-            color: #ea580c;
-            font-weight: 600;
-        }
-        
-        .realtime-right .b-card {
-            background: #ffffff;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+
+        .rt-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            min-height: 0;
-            transition: all 0.3s;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
-        .realtime-right .b-card:hover {
-            border-color: rgba(99, 102, 241, 0.1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+        .rt-card:hover {
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+            transform: translateY(-2px);
         }
-        .realtime-right .b-card .b-header {
-            padding: 5px 10px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+
+        .rt-card .rt-header {
+            padding: 8px 14px;
+            border-bottom: 1px solid #E5E7EB;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11px;
+            font-size: 14px;
             font-weight: 600;
-            color: rgba(0, 0, 0, 0.6);
+            color: #111827;
             flex-shrink: 0;
         }
-        .realtime-right .b-card .b-header .b-count {
-            font-size: 9px;
-            font-weight: 400;
-            color: rgba(0, 0, 0, 0.3);
+
+        .rt-card .rt-header .rt-count {
+            font-size: 13px;
+            font-weight: 500;
+            color: #6B7280;
+            background: #F9FAFB;
+            padding: 2px 10px;
+            border-radius: 100px;
+            border: 1px solid #E5E7EB;
         }
-        .realtime-right .b-card .b-body {
+
+        .rt-card .rt-body {
             flex: 1;
             overflow-y: auto;
-            padding: 5px 8px;
+            padding: 6px 12px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
+            font-size: 12px;
             line-height: 1.8;
-            color: rgba(0, 0, 0, 0.5);
-            min-height: 80px;
-            max-height: 180px;
+            color: #4B5563;
+            min-height: 0;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
-        .realtime-right .b-card .b-body .entry {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
-            padding: 3px 0;
+
+        .rt-card .rt-body .entry {
+            border-bottom: 1px solid #F3F4F6;
+            padding: 4px 0;
             display: flex;
             flex-wrap: wrap;
             align-items: baseline;
-            gap: 4px;
+            gap: 4px 8px;
         }
-        .realtime-right .b-card .b-body .entry .time { color: rgba(0, 0, 0, 0.2); font-size: 8px; }
-        .realtime-right .b-card .b-body .entry .ip { color: rgba(245, 158, 11, 0.5); font-size: 8px; font-weight: 500; }
-        .realtime-right .b-card .b-body .entry .status-ok { color: #10b981; font-weight: 600; }
-        .realtime-right .b-card .b-body .entry .status-err { color: #ef4444; font-weight: 600; }
-        .realtime-right .b-card .b-body .entry .b-request { color: rgba(245, 158, 11, 0.5); font-size: 9px; font-weight: 500; }
-        .realtime-right .b-card .b-body .entry .b-response { color: rgba(16, 185, 129, 0.5); font-size: 9px; font-weight: 500; }
-        .realtime-right .b-card .b-body .entry .real { color: #10b981 !important; font-weight: 700; }
-        .realtime-right .b-card .b-body .entry .fallback { color: #92400e !important; font-weight: 700; }
-        .realtime-right .b-card .b-body .empty { color: rgba(0, 0, 0, 0.15); font-size: 9px; }
 
-        /* ✅ HEALTH - DƯỚI CÙNG */
-        .realtime-bottom {
-            margin-top: 8px;
-            flex-shrink: 0;
-        }
-        .realtime-bottom .b-card {
-            background: #ffffff;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            max-height: 85px;
-            transition: all 0.3s;
-        }
-        .realtime-bottom .b-card:hover {
-            border-color: rgba(99, 102, 241, 0.1);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-        }
-        .realtime-bottom .b-card .b-header {
-            padding: 3px 10px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .rt-card .rt-body .entry .time {
+            color: #6B7280;
             font-size: 11px;
-            font-weight: 600;
-            color: rgba(0, 0, 0, 0.6);
             flex-shrink: 0;
         }
-        .realtime-bottom .b-card .b-body {
-            overflow-y: auto;
-            padding: 4px 10px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            line-height: 1.8;
-            color: rgba(0, 0, 0, 0.4);
-            max-height: 55px;
+        .rt-card .rt-body .entry .ip {
+            color: #F59E0B;
+            font-size: 11px;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        .rt-card .rt-body .entry .status-ok {
+            color: #22C55E;
+            font-weight: 600;
+        }
+        .rt-card .rt-body .entry .status-err {
+            color: #EF4444;
+            font-weight: 600;
+        }
+        .rt-card .rt-body .entry .path {
+            color: #6B7280;
+            font-size: 11px;
+        }
+        .rt-card .rt-body .entry .method {
+            color: #6B7280;
+            font-size: 11px;
+        }
+        .rt-card .rt-body .entry .resp-detail {
+            color: #22C55E;
+            font-size: 11px;
+        }
+        .rt-card .rt-body .empty {
+            color: #6B7280;
+            font-size: 13px;
+        }
+
+        /* B6 center specific */
+        .rt-card.b6-card .rt-body .entry .b6-from {
+            color: #4F46E5;
+            font-weight: 600;
+        }
+        .rt-card.b6-card .rt-body .entry .b6-ip {
+            color: #F59E0B;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .rt-card.b6-card .rt-body .entry .b6-detail {
+            color: #4B5563;
+        }
+        .rt-card.b6-card .rt-body .entry .b6-send {
+            color: #F59E0B;
+        }
+        .rt-card.b6-card .rt-body .entry .b6-response {
+            color: #22C55E;
+        }
+
+        /* B5/B7 specific */
+        .rt-card.b5-card .rt-header {
+            border-left: 3px solid #8B5CF6;
+        }
+        .rt-card.b7-card .rt-header {
+            border-left: 3px solid #F97316;
+        }
+
+        .rt-card .rt-body .entry .b-request {
+            color: #F59E0B;
+            font-weight: 500;
+        }
+        .rt-card .rt-body .entry .b-response {
+            color: #22C55E;
+            font-weight: 500;
+        }
+        .rt-card .rt-body .entry .real {
+            color: #22C55E;
+            font-weight: 700;
+        }
+        .rt-card .rt-body .entry .fallback {
+            color: #B45309;
+            font-weight: 700;
+        }
+
+        /* ============================================================
+           HEALTH CHECK (full width bottom)
+           ============================================================ */
+        .health-grid {
+            margin-top: 16px;
+        }
+
+        .health-grid .rt-card {
+            max-height: 85px;
+        }
+
+        .health-grid .rt-body {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px 10px;
             align-items: center;
+            gap: 8px 16px;
+            padding: 6px 16px;
+            max-height: 55px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #4B5563;
         }
-        .realtime-bottom .b-card .b-body .health-ip {
+
+        .health-grid .rt-body .health-ip {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            background: rgba(16, 185, 129, 0.06);
-            padding: 2px 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(16, 185, 129, 0.08);
-            font-size: 10px;
+            gap: 6px;
+            background: #F9FAFB;
+            padding: 4px 14px;
+            border-radius: 100px;
+            border: 1px solid #E5E7EB;
+            font-size: 13px;
         }
-        .realtime-bottom .b-card .b-body .health-ip .ip { color: rgba(0, 0, 0, 0.5); font-weight: 500; }
-        .realtime-bottom .b-card .b-body .health-ip .time { color: rgba(0, 0, 0, 0.25); font-size: 8px; }
-        .realtime-bottom .b-card .b-body .health-ip .status { color: #10b981; font-weight: 600; }
 
-        /* ============================================================ */
-        /* B5/B7 CALL INFO - ĐÃ XÓA */
-        /* ============================================================ */
-
-        @media (max-width: 1024px) {
-            .realtime-container { flex-direction: column; max-height: none; min-height: auto; }
-            .realtime-left { flex: 1; }
-            .realtime-left .row { grid-template-columns: 1fr 1fr; }
-            .realtime-center { flex: 1; min-height: 200px; }
-            .realtime-center .b-body { max-height: 200px; }
-            .realtime-right { flex: 1; }
-            .realtime-right .row { grid-template-columns: 1fr 1fr; }
-            .realtime-bottom .b-card { max-height: 65px; }
-            .realtime-bottom .b-card .b-body { max-height: 40px; }
+        .health-grid .rt-body .health-ip .ip {
+            font-weight: 500;
+            color: #111827;
         }
-        @media (max-width: 600px) {
-            .realtime-left .row { grid-template-columns: 1fr; }
-            .realtime-right .row { grid-template-columns: 1fr; }
+        .health-grid .rt-body .health-ip .time {
+            color: #6B7280;
+            font-size: 12px;
+        }
+        .health-grid .rt-body .health-ip .status {
+            color: #22C55E;
+            font-weight: 600;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 1200px) {
+            .realtime-container {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+                gap: 16px;
+            }
+            .realtime-left {
+                flex: 1 1 auto;
+                height: 400px;
+                width: 100%;
+            }
+            .realtime-center {
+                flex: 1 1 auto;
+                height: 250px;
+                width: 100%;
+            }
+            .realtime-right {
+                flex: 1 1 auto;
+                height: 300px;
+                width: 100%;
+                flex-direction: row;
+            }
+            .realtime-right .rt-card {
+                flex: 1;
+            }
         }
 
         @media (max-width: 768px) {
-            .navbar { height: auto; padding: 8px 12px; }
-            .navbar-inner { flex-direction: column; align-items: stretch; gap: 6px; }
-            .tabs { width: 100%; justify-content: center; }
-            .tabs .tab { flex: 1; text-align: center; padding: 5px 10px; font-size: 10px; }
-            .navbar-actions { width: 100%; justify-content: center; }
-            .main { padding: 6px; }
-            .card-body { padding: 8px 10px; }
+            .realtime-left {
+                height: 350px;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+            .realtime-center {
+                height: 200px;
+            }
+            .realtime-right {
+                height: 250px;
+                flex-direction: column;
+            }
+            .realtime-right .rt-card {
+                flex: 1;
+            }
+            .health-grid .rt-card {
+                max-height: 75px;
+            }
+            .health-grid .rt-body {
+                max-height: 50px;
+            }
+
+            .navbar {
+                height: auto;
+                padding: 10px 16px;
+            }
+            .navbar-inner {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .tabs {
+                justify-content: center;
+                width: 100%;
+            }
+            .tabs .tab {
+                flex: 1;
+                text-align: center;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+            .navbar-actions {
+                justify-content: center;
+                width: 100%;
+            }
+            .navbar-actions .glass-input {
+                width: 100%;
+            }
+            .main {
+                padding: 12px;
+            }
+            .glass-card {
+                padding: 14px;
+            }
+            .grid-2 {
+                gap: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .realtime-left {
+                height: 300px;
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 1fr);
+            }
+            .realtime-center {
+                height: 180px;
+            }
+            .realtime-right {
+                height: 220px;
+            }
+        }
+
+        /* ============================================================
+           UTILITIES
+           ============================================================ */
+        .text-muted {
+            color: #6B7280;
+        }
+        .border-top {
+            border-top: 1px solid #E5E7EB;
+            padding-top: 14px;
+            margin-top: 14px;
+        }
+        .mt-6 {
+            margin-top: 6px;
+        }
+        .mb-6 {
+            margin-bottom: 6px;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
     </style>
 </head>
@@ -791,12 +1084,12 @@
                 <span class="dot dot-green" id="statusDot"></span>
                 <span id="statusText">Online</span>
             </div>
-            <input type="text" id="apiBaseInput" class="glass-input" style="width:200px; font-size:11px; padding:5px 12px;" placeholder="http://localhost:8000" value="http://localhost:8000">
+            <input type="text" id="apiBaseInput" class="glass-input" placeholder="http://localhost:8000" value="http://localhost:8000">
         </div>
     </div>
 </nav>
 
-<!-- ===== MAIN CONTENT ===== -->
+<!-- ===== MAIN ===== -->
 <div class="main">
 
     <!-- ============================================================ -->
@@ -805,14 +1098,17 @@
     <div id="providerTab" class="tab-content active">
         <div class="grid-2">
             <!-- LEFT: Controls -->
-            <div class="glass card">
-                <div class="card-header"><h3>⚡ Provider Tests</h3><span class="badge">Các B → B6</span></div>
+            <div class="glass-card">
+                <div class="card-header">
+                    <span class="card-title">⚡ Provider Tests</span>
+                    <span class="badge">Các B → B6</span>
+                </div>
                 <div class="card-body">
 
                     <!-- ===== B1: IoT Sensor ===== -->
-                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b1">B1</span> IoT Sensor</span>
+                    <div class="glass-card" style="padding:14px; margin-bottom:14px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:8px;">
+                            <span style="font-weight:600; font-size:16px; color:#111827;"><span class="b-badge b1">B1</span> IoT Sensor</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="sensor-grid">
@@ -838,39 +1134,10 @@
                         <button id="sendSensorBtn" class="btn btn-primary w-full mt-6">🚀 POST /internal/evaluate-sensor</button>
                     </div>
 
-                    <!-- ===== B2: Camera Stream ===== -->
-                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b2">B2</span> Camera Stream</span>
-                            <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
-                        </div>
-                        <div class="btn-group mb-6">
-                            <button id="camMotionBtn" class="btn btn-secondary btn-sm">🟢 Normal</button>
-                            <button id="camSensitiveBtn" class="btn btn-danger btn-sm">🔴 Sensitive</button>
-                            <button id="camOfflineBtn" class="btn btn-warning btn-sm">🔶 Offline</button>
-                            <button id="camObstructBtn" class="btn btn-warning btn-sm">🔶 Obstruction</button>
-                            <button id="camNightBtn" class="btn btn-info btn-sm">🌙 Night</button>
-                            <button id="camTamperBtn" class="btn btn-danger btn-sm">🔴 Tamper</button>
-                        </div>
-                        <div class="form-grid-3">
-                            <div class="field-group" style="margin-bottom:0;"><label>Camera ID</label><input type="text" id="cameraId" class="glass-input" value="cam-lobby-01"></div>
-                            <div class="field-group" style="margin-bottom:0;"><label>Event Type</label>
-                                <select id="cameraEventType" class="glass-select">
-                                    <option value="motion_detected">motion_detected</option>
-                                    <option value="camera_offline">camera_offline</option>
-                                    <option value="obstruction">obstruction</option>
-                                    <option value="tamper_detected">tamper_detected</option>
-                                </select>
-                            </div>
-                            <div class="field-group" style="margin-bottom:0;"><label>Location</label><input type="text" id="cameraLocation" class="glass-input" value="LOBBY"></div>
-                        </div>
-                        <button id="sendCameraBtn" class="btn btn-primary w-full mt-6">🚀 POST /policies/evaluate-camera-event</button>
-                    </div>
-
                     <!-- ===== B3: Access Gate ===== -->
-                    <div class="glass" style="padding:8px 12px; margin-bottom:10px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b3">B3</span> Access Gate</span>
+                    <div class="glass-card" style="padding:14px; margin-bottom:14px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:8px;">
+                            <span style="font-weight:600; font-size:16px; color:#111827;"><span class="b-badge b3">B3</span> Access Gate</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="form-grid-3">
@@ -888,9 +1155,9 @@
                     </div>
 
                     <!-- ===== B4: AI Vision ===== -->
-                    <div class="glass" style="padding:8px 12px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:4px;">
-                            <span style="font-weight:600; font-size:13px; color:#1a1a2e;"><span class="b-badge b4">B4</span> AI Vision</span>
+                    <div class="glass-card" style="padding:14px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:8px;">
+                            <span style="font-weight:600; font-size:16px; color:#111827;"><span class="b-badge b4">B4</span> AI Vision</span>
                             <span class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="form-grid-2">
@@ -908,12 +1175,15 @@
             </div>
 
             <!-- RIGHT: Response -->
-            <div class="glass card">
-                <div class="card-header"><h3>📬 Response</h3><span id="respTime" class="text-muted">Ready</span></div>
+            <div class="glass-card">
+                <div class="card-header">
+                    <span class="card-title">📬 Response</span>
+                    <span id="respTime" class="text-muted">Ready</span>
+                </div>
                 <div class="card-body">
-                    <div id="responseContainer" style="min-height:80px; color:rgba(0,0,0,0.3); font-size:13px;">▸ Select a test to send...</div>
+                    <div id="responseContainer" style="min-height:80px; color:#6B7280; font-size:15px;">▸ Select a test to send...</div>
                     <div class="border-top">
-                        <div style="color:rgba(0,0,0,0.3); font-weight:500; margin-bottom:3px; font-size:10px;">📋 cURL</div>
+                        <div style="color:#6B7280; font-weight:500; margin-bottom:6px; font-size:13px;">📋 cURL</div>
                         <div id="curlPreview" class="curl-box"># cURL will appear here</div>
                         <button id="copyBtn" class="btn btn-secondary btn-xs mt-6">📋 Copy</button>
                     </div>
@@ -927,22 +1197,25 @@
     <!-- ============================================================ -->
     <div id="consumerTab" class="tab-content">
         <div class="status-row">
-            <div class="item"><span class="label">B6</span> <span id="consumerStatusB6" style="color:#10b981;">● Online</span></div>
-            <div class="item"><span class="label">B3</span> <span id="consumerStatusB3" style="color:#92400e;">● Fallback</span></div>
-            <div class="item"><span class="label">B4</span> <span id="consumerStatusB4" style="color:#92400e;">● Fallback</span></div>
-            <div class="item"><span class="label">B5</span> <span id="consumerStatusB5" style="color:#92400e;">● Fallback</span></div>
-            <div class="item"><span class="label">B7</span> <span id="consumerStatusB7" style="color:#92400e;">● Fallback</span></div>
+            <div class="item"><span class="label">B6</span> <span id="consumerStatusB6" style="color:#22C55E;">● Online</span></div>
+            <div class="item"><span class="label">B3</span> <span id="consumerStatusB3" style="color:#B45309;">● Fallback</span></div>
+            <div class="item"><span class="label">B4</span> <span id="consumerStatusB4" style="color:#B45309;">● Fallback</span></div>
+            <div class="item"><span class="label">B5</span> <span id="consumerStatusB5" style="color:#B45309;">● Fallback</span></div>
+            <div class="item"><span class="label">B7</span> <span id="consumerStatusB7" style="color:#B45309;">● Fallback</span></div>
         </div>
 
         <div class="grid-2">
-            <div class="glass card">
-                <div class="card-header"><h3>🎮 Consumer Tests</h3><span class="badge">B6 → Các B</span></div>
+            <div class="glass-card">
+                <div class="card-header">
+                    <span class="card-title">🎮 Consumer Tests</span>
+                    <span class="badge">B6 → Các B</span>
+                </div>
                 <div class="card-body">
 
                     <!-- ===== B3: Access Gate ===== -->
-                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b3">B3</span> Access Gate</span>
+                    <div class="glass-card" style="padding:14px; margin-bottom:12px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:6px;">
+                            <span style="font-weight:600; font-size:15px; color:#111827;"><span class="b-badge b3">B3</span> Access Gate</span>
                             <span id="consumerB3Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group">
@@ -952,19 +1225,19 @@
                     </div>
 
                     <!-- ===== B4: AI Vision ===== -->
-                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b4">B4</span> AI Vision</span>
+                    <div class="glass-card" style="padding:14px; margin-bottom:12px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:6px;">
+                            <span style="font-weight:600; font-size:15px; color:#111827;"><span class="b-badge b4">B4</span> AI Vision</span>
                             <span id="consumerB4Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
-                        <div class="field-group" style="margin-bottom:3px;"><label>Image Reference</label><input type="text" id="consumerImageRef" class="glass-input" value="person.jpg"></div>
+                        <div class="field-group" style="margin-bottom:6px;"><label>Image Reference</label><input type="text" id="consumerImageRef" class="glass-input" value="person.jpg"></div>
                         <button id="consumerCallAiBtn" class="btn btn-primary btn-sm">🔍 Detect Image</button>
                     </div>
 
                     <!-- ===== B5: Analytics ===== -->
-                    <div class="glass" style="padding:8px 10px; margin-bottom:8px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b5">B5</span> Analytics</span>
+                    <div class="glass-card" style="padding:14px; margin-bottom:12px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:6px;">
+                            <span style="font-weight:600; font-size:15px; color:#111827;"><span class="b-badge b5">B5</span> Analytics</span>
                             <span id="consumerB5Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group">
@@ -974,16 +1247,15 @@
                     </div>
 
                     <!-- ===== B7: Notification ===== -->
-                    <div class="glass" style="padding:8px 10px; border:1px solid rgba(0,0,0,0.04);">
-                        <div class="flex-between" style="margin-bottom:3px;">
-                            <span style="font-weight:600; font-size:12px; color:#1a1a2e;"><span class="b-badge b7">B7</span> Notification</span>
+                    <div class="glass-card" style="padding:14px; box-shadow: none; border:1px solid #E5E7EB;">
+                        <div class="flex-between" style="margin-bottom:6px;">
+                            <span style="font-weight:600; font-size:15px; color:#111827;"><span class="b-badge b7">B7</span> Notification</span>
                             <span id="consumerB7Badge" class="status-badge fallback"><span class="dot"></span> FALLBACK</span>
                         </div>
                         <div class="btn-group">
                             <button id="consumerSendAlertBtn" class="btn btn-danger btn-sm">🚨 Send Alert</button>
                             <button id="consumerTriggerSensorAlertBtn" class="btn btn-warning btn-sm">🌡️ Sensor</button>
                             <button id="consumerTriggerAIAalertBtn" class="btn btn-info btn-sm">🤖 AI</button>
-                            <button id="consumerTriggerCameraAlertBtn" class="btn btn-primary btn-sm">📹 Camera</button>
                         </div>
                     </div>
 
@@ -991,10 +1263,13 @@
             </div>
 
             <!-- RIGHT: Response -->
-            <div class="glass card">
-                <div class="card-header"><h3>📬 Consumer Response</h3><span id="consumerRespTime" class="text-muted">Ready</span></div>
+            <div class="glass-card">
+                <div class="card-header">
+                    <span class="card-title">📬 Consumer Response</span>
+                    <span id="consumerRespTime" class="text-muted">Ready</span>
+                </div>
                 <div class="card-body">
-                    <div class="resp-grid">
+                    <div class="resp-stack">
                         <div class="item">
                             <div class="label">📤 Request → B6</div>
                             <div class="content" id="consumerReqContent"><span class="text-muted">Waiting...</span></div>
@@ -1014,847 +1289,854 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- TAB 3: REALTIME - B5/B7 SONG SONG NGANG -->
+    <!-- TAB 3: REALTIME - VERTICAL RATIO 45% / 25% / 30% -->
     <!-- ============================================================ -->
     <div id="realtimeTab" class="tab-content">
         <div class="realtime-container">
 
-            <!-- LEFT: B1, B2, B3, B4 -->
+            <!-- LEFT: 45% - B1, B3, B4 (grid 2x2) -->
             <div class="realtime-left">
-                <div class="row">
-                    <div class="b-card b-color-b1">
-                        <div class="b-header">
-                            <span><span class="b-badge b1">B1</span> IoT Sensor</span>
-                            <span class="b-count" id="countB1">0</span>
-                        </div>
-                        <div class="b-body" id="realtimeB1"><div class="empty">▸ Waiting...</div></div>
+                <div class="rt-card">
+                    <div class="rt-header">
+                        <span><span class="b-badge b1">B1</span> IoT Sensor</span>
+                        <span class="rt-count" id="countB1">0</span>
                     </div>
-                    <div class="b-card b-color-b2">
-                        <div class="b-header">
-                            <span><span class="b-badge b2">B2</span> Camera</span>
-                            <span class="b-count" id="countB2">0</span>
-                        </div>
-                        <div class="b-body" id="realtimeB2"><div class="empty">▸ Waiting...</div></div>
-                    </div>
+                    <div class="rt-body" id="realtimeB1"><div class="empty">▸ Waiting...</div></div>
                 </div>
-                <div class="row">
-                    <div class="b-card b-color-b3">
-                        <div class="b-header">
-                            <span><span class="b-badge b3">B3</span> Access Gate</span>
-                            <span class="b-count" id="countB3">0</span>
-                        </div>
-                        <div class="b-body" id="realtimeB3"><div class="empty">▸ Waiting...</div></div>
+                <div class="rt-card">
+                    <div class="rt-header">
+                        <span><span class="b-badge b3">B3</span> Access Gate</span>
+                        <span class="rt-count" id="countB3">0</span>
                     </div>
-                    <div class="b-card b-color-b4">
-                        <div class="b-header">
-                            <span><span class="b-badge b4">B4</span> AI Vision</span>
-                            <span class="b-count" id="countB4">0</span>
-                        </div>
-                        <div class="b-body" id="realtimeB4"><div class="empty">▸ Waiting...</div></div>
+                    <div class="rt-body" id="realtimeB3"><div class="empty">▸ Waiting...</div></div>
+                </div>
+                <div class="rt-card">
+                    <div class="rt-header">
+                        <span><span class="b-badge b4">B4</span> AI Vision</span>
+                        <span class="rt-count" id="countB4">0</span>
+                    </div>
+                    <div class="rt-body" id="realtimeB4"><div class="empty">▸ Waiting...</div></div>
+                </div>
+            </div>
+
+            <!-- CENTER: 25% - B6 -->
+            <div class="realtime-center">
+                <div class="rt-card b6-card">
+                    <div class="rt-header">
+                        <span><span class="b-badge b6">B6</span> Core Processing</span>
+                        <span class="rt-count" id="countB6">0</span>
+                    </div>
+                    <div class="rt-body" id="realtimeB6">
+                        <div class="empty">▸ Waiting for B6 processing...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- CENTER: B6 -->
-            <div class="realtime-center b-color-b6">
-                <div class="b-header">
-                    <span><span class="b-badge b6">B6</span> Core Processing</span>
-                    <span class="b-count" id="countB6">0</span>
-                </div>
-                <div class="b-body" id="realtimeB6">
-                    <div class="empty">▸ Waiting for B6 processing...</div>
-                </div>
-            </div>
-
-            <!-- RIGHT: B5, B7 - SONG SONG NGANG -->
+            <!-- RIGHT: 30% - B5 và B7 (xếp dọc) -->
             <div class="realtime-right">
-                <div class="row">
-                    <!-- B5 Analytics -->
-                    <div class="b-card b-color-b5">
-                        <div class="b-header">
-                            <span><span class="b-badge b5">B5</span> Analytics</span>
-                            <span class="b-count" id="countB5">0</span>
-                        </div>
-                        <div class="b-body" id="realtimeB5">
-                            <div class="empty">▸ Waiting for B5 requests...</div>
-                        </div>
+                <div class="rt-card b5-card">
+                    <div class="rt-header">
+                        <span><span class="b-badge b5">B5</span> Analytics</span>
+                        <span class="rt-count" id="countB5">0</span>
                     </div>
-                    <!-- B7 Notification -->
-                    <div class="b-card b-color-b7">
-                        <div class="b-header">
-                            <span><span class="b-badge b7">B7</span> Notification</span>
-                            <span class="b-count" id="countB7">0</span>
-                        </div>
-                        <div class="b-body" id="realtimeB7">
-                            <div class="empty">▸ Waiting for B7 requests...</div>
-                        </div>
+                    <div class="rt-body" id="realtimeB5">
+                        <div class="empty">▸ Waiting for B5 requests...</div>
+                    </div>
+                </div>
+                <div class="rt-card b7-card">
+                    <div class="rt-header">
+                        <span><span class="b-badge b7">B7</span> Notification</span>
+                        <span class="rt-count" id="countB7">0</span>
+                    </div>
+                    <div class="rt-body" id="realtimeB7">
+                        <div class="empty">▸ Waiting for B7 requests...</div>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- BOTTOM: Health IP -->
-        <div class="realtime-bottom">
-            <div class="b-card">
-                <div class="b-header">
-                    <span><span class="b-badge health">🟢</span> Health Check IPs</span>
-                    <span class="b-count" id="countHealth">0</span>
-                </div>
-                <div class="b-body" id="realtimeHealth">
-                    <span style="color:rgba(0,0,0,0.15); font-size:10px;">▸ No health checks yet...</span>
-                </div>
+        <!-- HEALTH CHECK (full width) -->
+        <div class="health-grid rt-card">
+            <div class="rt-header">
+                <span><span class="b-badge health">🟢</span> Health Check IPs</span>
+                <span class="rt-count" id="countHealth">0</span>
+            </div>
+            <div class="rt-body" id="realtimeHealth">
+                <span style="color:#6B7280; font-size:13px;">▸ No health checks yet...</span>
             </div>
         </div>
     </div>
 
 </div>
 
+<!-- ============================================================ -->
+<!-- JAVASCRIPT (sửa lỗi ID cho health)                           -->
+<!-- ============================================================ -->
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
-function getApiBase() { return document.getElementById('apiBaseInput').value.trim() || 'http://localhost:8000'; }
-function getToken() { return "mock-token-123"; }
-function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; const v = c==='x'?r:(r&0x3|0x8); return v.toString(16); }); }
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    function getApiBase() { return document.getElementById('apiBaseInput').value.trim() || 'http://localhost:8000'; }
+    function getToken() { return "mock-token-123"; }
+    function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; const v = c==='x'?r:(r&0x3|0x8); return v.toString(16); }); }
 
-let currentCurl = "";
-let connectionStatus = { b3: 'fallback', b4: 'fallback', b5: 'fallback', b7: 'fallback' };
+    let currentCurl = "";
+    let connectionStatus = { b3: 'fallback', b4: 'fallback', b5: 'fallback', b7: 'fallback' };
 
-let realtimeData = {
-    b1: [], b2: [], b3: [], b4: [],
-    b6: [],
-    b5: [], b7: [],
-    health: []
-};
-let processedLogs = new Set();
+    let realtimeData = {
+        b1: [], b3: [], b4: [],
+        b6: [],
+        b5: [], b7: [],
+        health: []
+    };
+    let processedLogs = new Set();
+    let b5DisplayedHashes = new Set();
+    let b7DisplayedHashes = new Set();
 
-function escapeHtml(str) { if (typeof str !== 'string') str = JSON.stringify(str); return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+    function escapeHtml(str) { if (typeof str !== 'string') str = JSON.stringify(str); return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
 
-// ============================================================
-// API CALL
-// ============================================================
-async function callApi(method, endpoint, body = null) {
-    const base = getApiBase();
-    const url = base + endpoint;
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
-    const options = { method, headers };
-    if (body && method !== 'GET') options.body = JSON.stringify(body);
-    currentCurl = `curl -X ${method} "${url}" -H "Content-Type: application/json" -H "Authorization: Bearer ${getToken()}"${options.body ? ` -d '${JSON.stringify(body)}'` : ''}`;
-    const start = performance.now();
-    try {
-        const resp = await fetch(url, options);
-        const text = await resp.text();
-        let data;
-        try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
-        return { status: resp.status, data, duration: Math.round(performance.now() - start) };
-    } catch(e) {
-        return { status: 0, data: { error: e.message }, duration: Math.round(performance.now() - start) };
+    function hashEntry(entry) {
+        const parts = [
+            entry.timestamp || '',
+            entry.ip || '',
+            entry.status || '',
+            entry.request || '',
+            entry.response || '',
+            entry.mode || ''
+        ];
+        return parts.join('|');
     }
-}
 
-// ============================================================
-// DISPLAY PROVIDER
-// ============================================================
-function displayProvider(status, data, duration) {
-    const container = document.getElementById('responseContainer');
-    const isOk = status >= 200 && status < 300;
-    const icon = isOk ? '✅' : '❌';
-    document.getElementById('respTime').textContent = `${status} · ${duration}ms`;
-    container.innerHTML = `
-        <div style="color:${isOk ? '#10b981' : '#ef4444'}; margin-bottom:3px; font-weight:500;">${icon} ${status} · ${duration}ms</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:rgba(0,0,0,0.55); white-space:pre-wrap; word-break:break-all;">${escapeHtml(JSON.stringify(data, null, 2))}</div>
-    `;
-    document.getElementById('curlPreview').textContent = currentCurl;
-}
-
-// ============================================================
-// DISPLAY CONSUMER
-// ============================================================
-function displayConsumer(req, decision, ext) {
-    document.getElementById('consumerReqContent').innerHTML = req ? `<pre style="margin:0;color:rgba(0,0,0,0.4);font-size:10px;">${escapeHtml(JSON.stringify(req, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
-    document.getElementById('consumerDecisionContent').innerHTML = decision ? `<pre style="margin:0;color:rgba(0,0,0,0.4);font-size:10px;">${escapeHtml(JSON.stringify(decision, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
-    document.getElementById('consumerExtContent').innerHTML = ext ? `<pre style="margin:0;color:rgba(0,0,0,0.4);font-size:10px;">${escapeHtml(JSON.stringify(ext, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
-}
-
-// ============================================================
-// UPDATE STATUS
-// ============================================================
-async function updateStatus() {
-    try {
-        const res = await callApi('GET', '/connection-status');
-        if (res.status === 200) {
-            const s = res.data;
-            connectionStatus = { b3: s.b3?.status || 'fallback', b4: s.b4?.status || 'fallback', b5: s.b5?.status || 'fallback', b7: s.b7?.status || 'fallback' };
-            const map = { real: '● Online', fallback: '● Fallback', offline: '● Offline' };
-            const colorMap = { real: '#10b981', fallback: '#92400e', offline: '#dc2626' };
-            const badgeMap = { real: 'real', fallback: 'fallback', offline: 'offline' };
-            ['b3','b4','b5','b7'].forEach(k => {
-                const status = connectionStatus[k] || 'fallback';
-                const elStatus = document.getElementById(`consumerStatus${k.toUpperCase()}`);
-                const elBadge = document.getElementById(`consumer${k.toUpperCase()}Badge`);
-                if (elStatus) { elStatus.textContent = map[status] || '● Fallback'; elStatus.style.color = colorMap[status] || '#92400e'; }
-                if (elBadge) { elBadge.className = `status-badge ${badgeMap[status] || 'fallback'}`; elBadge.innerHTML = `<span class="dot"></span> ${(status||'FALLBACK').toUpperCase()}`; }
-            });
+    // ============================================================
+    // API CALL
+    // ============================================================
+    async function callApi(method, endpoint, body = null) {
+        const base = getApiBase();
+        const url = base + endpoint;
+        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` };
+        const options = { method, headers };
+        if (body && method !== 'GET') options.body = JSON.stringify(body);
+        currentCurl = `curl -X ${method} "${url}" -H "Content-Type: application/json" -H "Authorization: Bearer ${getToken()}"${options.body ? ` -d '${JSON.stringify(body)}'` : ''}`;
+        const start = performance.now();
+        try {
+            const resp = await fetch(url, options);
+            const text = await resp.text();
+            let data;
+            try { data = JSON.parse(text); } catch(e) { data = { raw: text }; }
+            return { status: resp.status, data, duration: Math.round(performance.now() - start) };
+        } catch(e) {
+            return { status: 0, data: { error: e.message }, duration: Math.round(performance.now() - start) };
         }
-    } catch(e) { /* ignore */ }
-}
-
-// ============================================================
-// TAB SWITCHING
-// ============================================================
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
-        if (tab.dataset.tab === 'realtime') refreshRealtime();
-        if (tab.dataset.tab === 'consumer') updateStatus();
-    });
-});
-
-// ============================================================
-// PROVIDER FUNCTIONS
-// ============================================================
-async function sendSensor(deviceId, location, temp, humidity, co2, smoke, battery, motion, time = null) {
-    const corrId = uuid();
-    const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
-    const body = {
-        source_service: "team-iot",
-        device_id: deviceId,
-        location: location || "LAB_01",
-        temperature_c: temp === 'null' ? null : parseFloat(temp),
-        humidity_percent: humidity === 'null' ? null : parseFloat(humidity),
-        co2_ppm: co2 === 'null' ? null : parseInt(co2),
-        smoke_ppm: smoke === 'null' ? null : parseFloat(smoke),
-        battery_percent: battery === 'null' ? null : parseInt(battery),
-        motion_detected: motion === 'true' || motion === true,
-        timestamp: timestamp,
-        correlationId: corrId
-    };
-    const res = await callApi('POST', '/internal/evaluate-sensor', body);
-    displayProvider(res.status, res.data, res.duration);
-    return res;
-}
-
-document.querySelectorAll('.sensor-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const d = btn.dataset;
-        document.getElementById('sensorDeviceId').value = d.device;
-        if (d.temp !== undefined && d.temp !== 'null') document.getElementById('sensorTemp').value = d.temp;
-        if (d.humidity !== undefined && d.humidity !== 'null') document.getElementById('sensorHumidity').value = d.humidity;
-        if (d.co2 !== undefined && d.co2 !== 'null') document.getElementById('sensorCo2').value = d.co2;
-        if (d.smoke !== undefined && d.smoke !== 'null') document.getElementById('sensorSmoke').value = d.smoke;
-        if (d.battery !== undefined && d.battery !== 'null') document.getElementById('sensorBattery').value = d.battery;
-        document.getElementById('sensorMotion').value = d.motion || 'false';
-        sendSensor(d.device, d.location || 'LAB_01', d.temp, d.humidity, d.co2, d.smoke, d.battery, d.motion, d.time);
-    });
-});
-
-document.getElementById('sendSensorBtn').addEventListener('click', () => {
-    sendSensor(
-        document.getElementById('sensorDeviceId').value,
-        document.getElementById('sensorLocation').value,
-        document.getElementById('sensorTemp').value,
-        document.getElementById('sensorHumidity').value,
-        document.getElementById('sensorCo2').value,
-        document.getElementById('sensorSmoke').value,
-        document.getElementById('sensorBattery').value,
-        document.getElementById('sensorMotion').value
-    );
-});
-
-async function sendCamera(cameraId, eventType, motion, location, time = null) {
-    const corrId = uuid();
-    const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
-    const body = {
-        camera_id: cameraId,
-        event_type: eventType,
-        motion_detected: motion,
-        location: location || "LOBBY",
-        timestamp: timestamp,
-        correlationId: corrId
-    };
-    const res = await callApi('POST', '/policies/evaluate-camera-event', body);
-    displayProvider(res.status, res.data, res.duration);
-    return res;
-}
-
-document.getElementById('sendCameraBtn').addEventListener('click', () => {
-    sendCamera(
-        document.getElementById('cameraId').value,
-        document.getElementById('cameraEventType').value,
-        document.getElementById('cameraEventType').value === 'motion_detected',
-        document.getElementById('cameraLocation').value
-    );
-});
-
-document.getElementById('camMotionBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'motion_detected', true, 'LOBBY'));
-document.getElementById('camSensitiveBtn').addEventListener('click', () => sendCamera('cam-server-01', 'motion_detected', true, 'SERVER_ROOM'));
-document.getElementById('camOfflineBtn').addEventListener('click', () => sendCamera('cam-gate-01', 'camera_offline', false, 'MAIN_GATE'));
-document.getElementById('camObstructBtn').addEventListener('click', () => sendCamera('cam-lobby-01', 'obstruction', false, 'LOBBY'));
-document.getElementById('camNightBtn').addEventListener('click', () => sendCamera('cam-office-01', 'motion_detected', true, 'OFFICE', '23:30'));
-document.getElementById('camTamperBtn').addEventListener('click', () => sendCamera('cam-vault-01', 'tamper_detected', true, 'VAULT'));
-
-async function sendAccess(cardId, gateId, direction, timestamp = null) {
-    const corrId = uuid();
-    const body = { 
-        cardId, 
-        gateId, 
-        direction: direction || 'IN', 
-        correlationId: corrId, 
-        timestamp: timestamp || new Date().toISOString() 
-    };
-    const res = await callApi('POST', '/access/check', body);
-    displayProvider(res.status, res.data, res.duration);
-    return res;
-}
-
-document.getElementById('sendAccessBtn').addEventListener('click', () => {
-    sendAccess(document.getElementById('cardId').value, document.getElementById('gateId').value, document.getElementById('direction').value);
-});
-document.getElementById('sendAccessStaffBtn').addEventListener('click', () => {
-    sendAccess('STAFF001', 'OFFICE_01', 'IN');
-});
-document.getElementById('sendAccessOutBtn').addEventListener('click', () => {
-    sendAccess('STU001', 'LAB_01', 'IN', '2026-06-24T23:30:00');
-});
-
-async function sendAI(label, confidence) {
-    const detectionId = uuid();
-    const body = { 
-        detectionId, 
-        matched: true, 
-        label, 
-        confidence: parseFloat(confidence), 
-        status: 'matched', 
-        modelVersion: 'yolov8n', 
-        processedAt: new Date().toISOString() 
-    };
-    const res = await callApi('POST', '/policies/evaluate-detection', body);
-    displayProvider(res.status, res.data, res.duration);
-    return res;
-}
-
-document.getElementById('sendAiBtn').addEventListener('click', () => {
-    sendAI(document.getElementById('aiLabel').value, document.getElementById('aiConfidence').value);
-});
-document.getElementById('sendAiLowBtn').addEventListener('click', () => {
-    sendAI('person', 0.65);
-});
-document.getElementById('sendAiObjectBtn').addEventListener('click', () => {
-    sendAI('car', 0.88);
-});
-
-// ============================================================
-// CONSUMER FUNCTIONS
-// ============================================================
-document.getElementById('consumerGetLogsBtn').addEventListener('click', async () => {
-    const res = await callApi('GET', '/internal/access-logs?limit=5');
-    displayConsumer(null, null, res.data);
-});
-document.getElementById('consumerGateStatusBtn').addEventListener('click', async () => {
-    const res = await callApi('GET', '/internal/gates/LAB_01/status');
-    displayConsumer(null, null, res.data);
-});
-document.getElementById('consumerCallAiBtn').addEventListener('click', async () => {
-    const corrId = uuid();
-    const body = { correlationId: corrId, imageRef: document.getElementById('consumerImageRef').value, timestamp: new Date().toISOString() };
-    displayConsumer(body, null, null);
-    const res = await callApi('POST', '/evaluate-detection', body);
-    displayConsumer(body, res.data, res.data);
-});
-document.getElementById('consumerSendDecisionBtn').addEventListener('click', async () => {
-    const corrId = uuid();
-    const body = { correlationId: corrId, decision: 'ALLOW', reason: 'TEST_CONSUMER' };
-    displayConsumer(body, null, null);
-    const res = await callApi('POST', '/internal/send-test-decision', body);
-    displayConsumer(body, res.data, res.data);
-});
-document.getElementById('consumerFallbackDecisionsBtn').addEventListener('click', async () => {
-    const res = await callApi('GET', '/internal/fallback-decisions?limit=5');
-    displayConsumer(null, null, res.data);
-});
-document.getElementById('consumerSendAlertBtn').addEventListener('click', async () => {
-    const body = { severity: 'critical', message: 'Test alert from B6 consumer' };
-    displayConsumer(body, null, null);
-    const res = await callApi('POST', '/internal/send-test-alert', body);
-    displayConsumer(body, res.data, res.data);
-});
-document.getElementById('consumerTriggerSensorAlertBtn').addEventListener('click', async () => {
-    const corrId = uuid();
-    const body = { 
-        device_id: 'esp32-lab-a101', 
-        location: 'Lab A101', 
-        temperature_c: 42.5, 
-        humidity_percent: 45.2, 
-        co2_ppm: 800, 
-        smoke_ppm: 0.01, 
-        battery_percent: 77, 
-        motion_detected: false, 
-        correlationId: corrId 
-    };
-    displayConsumer(body, null, null);
-    const res = await callApi('POST', '/internal/evaluate-sensor', body);
-    displayConsumer(body, res.data, res.data);
-});
-document.getElementById('consumerTriggerAIAalertBtn').addEventListener('click', async () => {
-    const detectionId = uuid();
-    const body = { 
-        detectionId, 
-        matched: true, 
-        label: 'person', 
-        confidence: 0.95, 
-        status: 'matched', 
-        modelVersion: 'yolov8n', 
-        processedAt: new Date().toISOString() 
-    };
-    displayConsumer(body, null, null);
-    const res = await callApi('POST', '/policies/evaluate-detection', body);
-    displayConsumer(body, res.data, res.data);
-});
-document.getElementById('consumerTriggerCameraAlertBtn').addEventListener('click', async () => {
-    const corrId = uuid();
-    const body = {
-        camera_id: 'cam-server-01',
-        event_type: 'camera_offline',
-        motion_detected: false,
-        location: 'SERVER_ROOM',
-        correlationId: corrId
-    };
-    displayConsumer(body, null, null);
-    const res = await callApi('POST', '/policies/evaluate-camera-event', body);
-    displayConsumer(body, res.data, res.data);
-});
-
-// ============================================================
-// REALTIME FUNCTIONS
-// ============================================================
-function getServiceFromPath(path) {
-    if (path.includes('evaluate-sensor')) return 'b1';
-    if (path.includes('evaluate-camera')) return 'b2';
-    if (path.includes('access/check')) return 'b3';
-    if (path.includes('evaluate-detection')) return 'b4';
-    if (path.includes('send-test-decision')) return 'b5';
-    if (path.includes('send-test-alert')) return 'b7';
-    if (path.includes('alerts') && path.includes('GET')) return null;
-    if (path.includes('fallback-decisions') && path.includes('GET')) return null;
-    if (path.includes('health')) return 'health';
-    return null;
-}
-
-function getServiceName(b) {
-    const map = { b1: 'B1', b2: 'B2', b3: 'B3', b4: 'B4', b5: 'B5', b6: 'B6', b7: 'B7', health: 'Health' };
-    return map[b] || b.toUpperCase();
-}
-
-function getStatusClass(status) {
-    return status >= 200 && status < 300 ? 'status-ok' : 'status-err';
-}
-
-function addToRealtime(service, log, displayIp) {
-    if (!realtimeData[service]) realtimeData[service] = [];
-    const time = new Date(log.timestamp).toLocaleTimeString();
-    const ip = displayIp || log.display_ip || log.client_ip || 'unknown';
-    let detail = '';
-    let responseDetail = '';
-    
-    if (log.body) {
-        if (log.body.status) detail = `status: ${log.body.status}`;
-        if (log.body.alerts_count !== undefined) detail += `, alerts: ${log.body.alerts_count}`;
-        if (log.body.message) responseDetail = log.body.message;
     }
-    
-    const entry = {
-        time, ip, status: log.status_code, method: log.method, path: log.path,
-        statusClass: getStatusClass(log.status_code),
-        detail: detail,
-        responseDetail: responseDetail || (log.status_code >= 200 && log.status_code < 300 ? '✅ Success' : '❌ Error'),
-        raw: log
-    };
-    realtimeData[service].push(entry);
-    if (realtimeData[service].length > 25) realtimeData[service].shift();
-    renderRealtime(service);
-}
 
-function addB6LogEntry(from, ip, status, detail, sendTo = '', response = '') {
-    if (!realtimeData['b6']) realtimeData['b6'] = [];
-    const time = new Date().toLocaleTimeString();
-    const entry = {
-        time, from, ip, status, detail, sendTo, response,
-        statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err'
-    };
-    realtimeData['b6'].push(entry);
-    if (realtimeData['b6'].length > 30) realtimeData['b6'].shift();
-    renderRealtime('b6');
-}
-
-function addOutgoingRealtime(service, ip, status, request, response, mode) {
-    if (!realtimeData[service]) realtimeData[service] = [];
-    const time = new Date().toLocaleTimeString();
-    const entry = {
-        time, ip, status,
-        statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err',
-        request: request || '',
-        response: response || '',
-        mode: mode || 'FALLBACK'
-    };
-    realtimeData[service].push(entry);
-    if (realtimeData[service].length > 25) realtimeData[service].shift();
-    renderRealtime(service);
-}
-
-function addHealthIP(ip, displayIp) {
-    if (!realtimeData['health']) realtimeData['health'] = [];
-    const display = displayIp || ip || 'unknown';
-    const time = new Date().toLocaleTimeString();
-    const existing = realtimeData['health'].find(e => e.ip === display);
-    if (existing) {
-        existing.time = time;
-        existing.count = (existing.count || 1) + 1;
-    } else {
-        realtimeData['health'].push({ time, ip: display, count: 1 });
+    // ============================================================
+    // DISPLAY PROVIDER
+    // ============================================================
+    function displayProvider(status, data, duration) {
+        const container = document.getElementById('responseContainer');
+        const isOk = status >= 200 && status < 300;
+        const icon = isOk ? '✅' : '❌';
+        document.getElementById('respTime').textContent = `${status} · ${duration}ms`;
+        container.innerHTML = `
+            <div style="color:${isOk ? '#22C55E' : '#EF4444'}; margin-bottom:6px; font-weight:500;">${icon} ${status} · ${duration}ms</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#111827; white-space:pre-wrap; word-break:break-all;">${escapeHtml(JSON.stringify(data, null, 2))}</div>
+        `;
+        document.getElementById('curlPreview').textContent = currentCurl;
     }
-    if (realtimeData['health'].length > 20) realtimeData['health'].shift();
-    renderRealtime('health');
-}
 
-function renderRealtime(service) {
-    const el = document.getElementById(`realtime${service.toUpperCase()}`);
-    const countEl = document.getElementById(`count${service.toUpperCase()}`);
-    if (!el) return;
-    
-    const data = realtimeData[service] || [];
-    if (countEl) countEl.textContent = data.length;
-    
-    if (data.length === 0) {
-        const names = { b1: 'B1', b2: 'B2', b3: 'B3', b4: 'B4', b5: 'B5', b6: 'B6', b7: 'B7', health: 'Health' };
-        el.innerHTML = `<div class="empty">▸ Waiting for ${names[service] || service}...</div>`;
-        return;
+    // ============================================================
+    // DISPLAY CONSUMER
+    // ============================================================
+    function displayConsumer(req, decision, ext) {
+        document.getElementById('consumerReqContent').innerHTML = req ? `<pre style="margin:0;color:#111827;font-size:13px;">${escapeHtml(JSON.stringify(req, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+        document.getElementById('consumerDecisionContent').innerHTML = decision ? `<pre style="margin:0;color:#111827;font-size:13px;">${escapeHtml(JSON.stringify(decision, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
+        document.getElementById('consumerExtContent').innerHTML = ext ? `<pre style="margin:0;color:#111827;font-size:13px;">${escapeHtml(JSON.stringify(ext, null, 2))}</pre>` : '<span class="text-muted">Waiting...</span>';
     }
-    
-    const recent = data.slice(-20).reverse();
-    
-    if (service === 'b6') {
-        el.innerHTML = recent.map(e => `
-            <div class="entry">
-                <span class="time">[${e.time}]</span>
-                <span class="b6-from">${e.from}</span>
-                <span class="b6-ip">${e.ip}</span>
-                <span class="${e.statusClass}">${e.status}</span>
-                <span class="b6-detail">📥 ${e.detail || ''}</span>
-                ${e.response ? `<span class="b6-response">📤 ${e.response}</span>` : ''}
-                ${e.sendTo ? `<span class="b6-send">→ ${e.sendTo}</span>` : ''}
-            </div>
-        `).join('');
-    } else if (service === 'health') {
-        el.innerHTML = data.slice(-20).reverse().map(e => `
-            <span class="health-ip">
-                <span class="ip">${e.ip}</span>
-                <span class="time">${e.time}</span>
-                <span class="status">●</span>
-                <span style="color:rgba(0,0,0,0.15);font-size:8px;">${e.count || 1}</span>
-            </span>
-        `).join('');
-    } else if (service === 'b5' || service === 'b7') {
-        el.innerHTML = recent.map(e => `
-            <div class="entry">
-                <span class="time">[${e.time}]</span>
-                <span class="ip">${e.ip}</span>
-                <span class="${e.statusClass}">${e.status}</span>
-                ${e.request ? `<span class="b-request">📤 ${e.request}</span>` : ''}
-                ${e.response ? `<span class="b-response">📬 ${e.response}</span>` : ''}
-                ${e.mode ? `<span class="${e.mode.toLowerCase()}" style="font-size:8px;font-weight:700;">${e.mode}</span>` : ''}
-            </div>
-        `).join('');
-    } else {
-        el.innerHTML = recent.map(e => `
-            <div class="entry">
-                <span class="time">[${e.time}]</span>
-                <span class="ip">${e.ip || 'local'}</span>
-                <span class="${e.statusClass}">${e.status}</span>
-                ${e.method ? `<span class="method">${e.method}</span>` : ''}
-                ${e.path ? `<span class="path">${e.path}</span>` : ''}
-                ${e.detail ? `<span style="color:rgba(0,0,0,0.2);font-size:8px;">📊 ${e.detail}</span>` : ''}
-                ${e.responseDetail ? `<span class="resp-detail">📤 ${e.responseDetail}</span>` : ''}
-            </div>
-        `).join('');
-    }
-}
 
-// ============================================================
-// FETCH REALTIME B5
-// ============================================================
-async function fetchRealtimeB5() {
-    try {
-        const res = await callApi('GET', '/internal/realtime-b5');
-        if (res.status === 200 && res.data) {
-            const entry = res.data.last_entry;
-            if (entry) {
-                const time = new Date(entry.timestamp).toLocaleTimeString();
-                const ip = entry.ip || 'localhost';
-                const status = entry.status || 200;
-                const statusClass = status >= 200 && status < 300 ? 'status-ok' : 'status-err';
-                const mode = entry.mode || 'FALLBACK';
-                
-                let requestStr = '';
-                let responseStr = '';
-                if (entry.request) {
-                    if (entry.request.correlationId) {
-                        requestStr = `📤 ${entry.request.decision || 'decision'} (${entry.request.correlationId.slice(0, 8)})`;
-                    } else if (entry.request.payload) {
-                        const p = entry.request.payload;
-                        if (p.correlationId) {
-                            requestStr = `📤 ${p.decision || 'decision'} (${p.correlationId.slice(0, 8)})`;
-                        } else {
-                            requestStr = `📤 ${JSON.stringify(p).slice(0, 50)}`;
-                        }
-                    } else {
-                        requestStr = `📤 ${JSON.stringify(entry.request).slice(0, 50)}`;
-                    }
-                }
-                
-                if (entry.response) {
-                    if (entry.response.status) {
-                        responseStr = `📬 ${entry.response.status}${entry.response.mode ? ` (${entry.response.mode})` : ''}`;
-                    } else {
-                        responseStr = `📬 ${JSON.stringify(entry.response).slice(0, 50)}`;
-                    }
-                }
-                
-                const el = document.getElementById('realtimeB5');
-                if (el) {
-                    const empty = el.querySelector('.empty');
-                    if (empty) empty.remove();
-                    
-                    let currentEntries = el.querySelectorAll('.entry');
-                    if (currentEntries.length >= 10) {
-                        while (el.children.length > 10) {
-                            el.removeChild(el.firstChild);
-                        }
-                    }
-                    
-                    const entryHtml = `
-                        <div class="entry">
-                            <span class="time">[${time}]</span>
-                            <span class="ip">${ip}</span>
-                            <span class="${statusClass}">${status}</span>
-                            <span class="b-request">${requestStr || '📤 --'}</span>
-                            <span class="b-response">${responseStr || '📬 --'}</span>
-                            <span class="${mode.toLowerCase()}" style="font-size:8px;font-weight:700;">${mode}</span>
-                        </div>
-                    `;
-                    el.insertAdjacentHTML('afterbegin', entryHtml);
-                    
-                    const count = document.getElementById('countB5');
-                    if (count) {
-                        const entries = el.querySelectorAll('.entry');
-                        count.textContent = entries.length;
-                    }
-                }
+    // ============================================================
+    // UPDATE STATUS
+    // ============================================================
+    async function updateStatus() {
+        try {
+            const res = await callApi('GET', '/connection-status');
+            if (res.status === 200) {
+                const s = res.data;
+                connectionStatus = { b3: s.b3?.status || 'fallback', b4: s.b4?.status || 'fallback', b5: s.b5?.status || 'fallback', b7: s.b7?.status || 'fallback' };
+                const map = { real: '● Online', fallback: '● Fallback', offline: '● Offline' };
+                const colorMap = { real: '#22C55E', fallback: '#B45309', offline: '#DC2626' };
+                const badgeMap = { real: 'real', fallback: 'fallback', offline: 'offline' };
+                ['b3','b4','b5','b7'].forEach(k => {
+                    const status = connectionStatus[k] || 'fallback';
+                    const elStatus = document.getElementById(`consumerStatus${k.toUpperCase()}`);
+                    const elBadge = document.getElementById(`consumer${k.toUpperCase()}Badge`);
+                    if (elStatus) { elStatus.textContent = map[status] || '● Fallback'; elStatus.style.color = colorMap[status] || '#B45309'; }
+                    if (elBadge) { elBadge.className = `status-badge ${badgeMap[status] || 'fallback'}`; elBadge.innerHTML = `<span class="dot"></span> ${(status||'FALLBACK').toUpperCase()}`; }
+                });
             }
-        }
-    } catch(e) { /* ignore */ }
-}
+        } catch(e) { /* ignore */ }
+    }
 
-// ============================================================
-// FETCH REALTIME B7
-// ============================================================
-async function fetchRealtimeB7() {
-    try {
-        const res = await callApi('GET', '/internal/realtime-b7');
-        if (res.status === 200 && res.data) {
-            const entry = res.data.last_entry;
-            if (entry) {
-                const time = new Date(entry.timestamp).toLocaleTimeString();
-                const ip = entry.ip || 'localhost';
-                const status = entry.status || 200;
-                const statusClass = status >= 200 && status < 300 ? 'status-ok' : 'status-err';
-                const mode = entry.mode || 'FALLBACK';
-                
-                let requestStr = '';
-                let responseStr = '';
-                if (entry.request) {
-                    if (entry.request.payload) {
-                        const p = entry.request.payload;
-                        if (p.data && p.data.alertId) {
-                            requestStr = `📤 Alert ${p.data.alertId.slice(0, 8)} (${p.data.severity})`;
-                        } else if (p.alert_id) {
-                            requestStr = `📤 Alert ${p.alert_id.slice(0, 8)}`;
-                        } else if (p.message) {
-                            requestStr = `📤 ${p.message.slice(0, 30)}`;
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab + 'Tab').classList.add('active');
+            if (tab.dataset.tab === 'realtime') refreshRealtime();
+            if (tab.dataset.tab === 'consumer') updateStatus();
+        });
+    });
+
+    // ============================================================
+    // PROVIDER FUNCTIONS (unchanged)
+    // ============================================================
+    async function sendSensor(deviceId, location, temp, humidity, co2, smoke, battery, motion, time = null) {
+        const corrId = uuid();
+        const timestamp = time ? new Date(`2026-06-17T${time}:00+07:00`).toISOString() : new Date().toISOString();
+        const body = {
+            source_service: "team-iot",
+            device_id: deviceId,
+            location: location || "LAB_01",
+            temperature_c: temp === 'null' ? null : parseFloat(temp),
+            humidity_percent: humidity === 'null' ? null : parseFloat(humidity),
+            co2_ppm: co2 === 'null' ? null : parseInt(co2),
+            smoke_ppm: smoke === 'null' ? null : parseFloat(smoke),
+            battery_percent: battery === 'null' ? null : parseInt(battery),
+            motion_detected: motion === 'true' || motion === true,
+            timestamp: timestamp,
+            correlationId: corrId
+        };
+        const res = await callApi('POST', '/internal/evaluate-sensor', body);
+        displayProvider(res.status, res.data, res.duration);
+        return res;
+    }
+
+    document.querySelectorAll('.sensor-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const d = btn.dataset;
+            document.getElementById('sensorDeviceId').value = d.device;
+            if (d.temp !== undefined && d.temp !== 'null') document.getElementById('sensorTemp').value = d.temp;
+            if (d.humidity !== undefined && d.humidity !== 'null') document.getElementById('sensorHumidity').value = d.humidity;
+            if (d.co2 !== undefined && d.co2 !== 'null') document.getElementById('sensorCo2').value = d.co2;
+            if (d.smoke !== undefined && d.smoke !== 'null') document.getElementById('sensorSmoke').value = d.smoke;
+            if (d.battery !== undefined && d.battery !== 'null') document.getElementById('sensorBattery').value = d.battery;
+            document.getElementById('sensorMotion').value = d.motion || 'false';
+            sendSensor(d.device, d.location || 'LAB_01', d.temp, d.humidity, d.co2, d.smoke, d.battery, d.motion, d.time);
+        });
+    });
+
+    document.getElementById('sendSensorBtn').addEventListener('click', () => {
+        sendSensor(
+            document.getElementById('sensorDeviceId').value,
+            document.getElementById('sensorLocation').value,
+            document.getElementById('sensorTemp').value,
+            document.getElementById('sensorHumidity').value,
+            document.getElementById('sensorCo2').value,
+            document.getElementById('sensorSmoke').value,
+            document.getElementById('sensorBattery').value,
+            document.getElementById('sensorMotion').value
+        );
+    });
+
+    async function sendAccess(cardId, gateId, direction, timestamp = null) {
+        const corrId = uuid();
+        const body = { 
+            cardId, 
+            gateId, 
+            direction: direction || 'IN', 
+            correlationId: corrId, 
+            timestamp: timestamp || new Date().toISOString() 
+        };
+        const res = await callApi('POST', '/access/check', body);
+        displayProvider(res.status, res.data, res.duration);
+        return res;
+    }
+
+    document.getElementById('sendAccessBtn').addEventListener('click', () => {
+        sendAccess(document.getElementById('cardId').value, document.getElementById('gateId').value, document.getElementById('direction').value);
+    });
+    document.getElementById('sendAccessStaffBtn').addEventListener('click', () => {
+        sendAccess('STAFF001', 'OFFICE_01', 'IN');
+    });
+    document.getElementById('sendAccessOutBtn').addEventListener('click', () => {
+        sendAccess('STU001', 'LAB_01', 'IN', '2026-06-24T23:30:00');
+    });
+
+    async function sendAI(label, confidence) {
+        const detectionId = uuid();
+        const body = { 
+            detectionId, 
+            matched: true, 
+            label, 
+            confidence: parseFloat(confidence), 
+            status: 'matched', 
+            modelVersion: 'yolov8n', 
+            processedAt: new Date().toISOString() 
+        };
+        const res = await callApi('POST', '/policies/evaluate-detection', body);
+        displayProvider(res.status, res.data, res.duration);
+        return res;
+    }
+
+    document.getElementById('sendAiBtn').addEventListener('click', () => {
+        sendAI(document.getElementById('aiLabel').value, document.getElementById('aiConfidence').value);
+    });
+    document.getElementById('sendAiLowBtn').addEventListener('click', () => {
+        sendAI('person', 0.65);
+    });
+    document.getElementById('sendAiObjectBtn').addEventListener('click', () => {
+        sendAI('car', 0.88);
+    });
+
+    // ============================================================
+    // CONSUMER FUNCTIONS (unchanged)
+    // ============================================================
+    document.getElementById('consumerGetLogsBtn').addEventListener('click', async () => {
+        const res = await callApi('GET', '/internal/access-logs?limit=5');
+        displayConsumer(null, null, res.data);
+    });
+    document.getElementById('consumerGateStatusBtn').addEventListener('click', async () => {
+        const res = await callApi('GET', '/internal/gates/LAB_01/status');
+        displayConsumer(null, null, res.data);
+    });
+    document.getElementById('consumerCallAiBtn').addEventListener('click', async () => {
+        const corrId = uuid();
+        const body = { correlationId: corrId, imageRef: document.getElementById('consumerImageRef').value, timestamp: new Date().toISOString() };
+        displayConsumer(body, null, null);
+        const res = await callApi('POST', '/evaluate-detection', body);
+        displayConsumer(body, res.data, res.data);
+    });
+    document.getElementById('consumerSendDecisionBtn').addEventListener('click', async () => {
+        const corrId = uuid();
+        const body = { correlationId: corrId, decision: 'ALLOW', reason: 'TEST_CONSUMER' };
+        displayConsumer(body, null, null);
+        const res = await callApi('POST', '/internal/send-test-decision', body);
+        displayConsumer(body, res.data, res.data);
+    });
+    document.getElementById('consumerFallbackDecisionsBtn').addEventListener('click', async () => {
+        const res = await callApi('GET', '/internal/fallback-decisions?limit=5');
+        displayConsumer(null, null, res.data);
+    });
+    document.getElementById('consumerSendAlertBtn').addEventListener('click', async () => {
+        const body = { severity: 'critical', message: 'Test alert from B6 consumer' };
+        displayConsumer(body, null, null);
+        const res = await callApi('POST', '/internal/send-test-alert', body);
+        displayConsumer(body, res.data, res.data);
+    });
+    document.getElementById('consumerTriggerSensorAlertBtn').addEventListener('click', async () => {
+        const corrId = uuid();
+        const body = { 
+            device_id: 'esp32-lab-a101', 
+            location: 'Lab A101', 
+            temperature_c: 42.5, 
+            humidity_percent: 45.2, 
+            co2_ppm: 800, 
+            smoke_ppm: 0.01, 
+            battery_percent: 77, 
+            motion_detected: false, 
+            correlationId: corrId 
+        };
+        displayConsumer(body, null, null);
+        const res = await callApi('POST', '/internal/evaluate-sensor', body);
+        displayConsumer(body, res.data, res.data);
+    });
+    document.getElementById('consumerTriggerAIAalertBtn').addEventListener('click', async () => {
+        const detectionId = uuid();
+        const body = { 
+            detectionId, 
+            matched: true, 
+            label: 'person', 
+            confidence: 0.95, 
+            status: 'matched', 
+            modelVersion: 'yolov8n', 
+            processedAt: new Date().toISOString() 
+        };
+        displayConsumer(body, null, null);
+        const res = await callApi('POST', '/policies/evaluate-detection', body);
+        displayConsumer(body, res.data, res.data);
+    });
+
+    // ============================================================
+    // REALTIME FUNCTIONS (sửa lỗi ID cho health)
+    // ============================================================
+    function getServiceFromPath(path) {
+        if (path.includes('evaluate-sensor')) return 'b1';
+        if (path.includes('access/check')) return 'b3';
+        if (path.includes('evaluate-detection')) return 'b4';
+        if (path.includes('send-test-decision')) return 'b5';
+        if (path.includes('send-test-alert')) return 'b7';
+        if (path.includes('alerts') && path.includes('GET')) return null;
+        if (path.includes('fallback-decisions') && path.includes('GET')) return null;
+        if (path.includes('health')) return 'health';
+        return null;
+    }
+
+    function getServiceName(b) {
+        const map = { b1: 'B1', b3: 'B3', b4: 'B4', b5: 'B5', b6: 'B6', b7: 'B7', health: 'Health' };
+        return map[b] || b.toUpperCase();
+    }
+
+    function getStatusClass(status) {
+        return status >= 200 && status < 300 ? 'status-ok' : 'status-err';
+    }
+
+    function addToRealtime(service, log, displayIp) {
+        if (!realtimeData[service]) realtimeData[service] = [];
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        const ip = displayIp || log.display_ip || log.client_ip || 'unknown';
+        let detail = '';
+        let responseDetail = '';
+        
+        if (log.body) {
+            if (log.body.status) detail = `status: ${log.body.status}`;
+            if (log.body.alerts_count !== undefined) detail += `, alerts: ${log.body.alerts_count}`;
+            if (log.body.message) responseDetail = log.body.message;
+        }
+        
+        const entry = {
+            time, ip, status: log.status_code, method: log.method, path: log.path,
+            statusClass: getStatusClass(log.status_code),
+            detail: detail,
+            responseDetail: responseDetail || (log.status_code >= 200 && log.status_code < 300 ? '✅ Success' : '❌ Error'),
+            raw: log
+        };
+        realtimeData[service].push(entry);
+        if (realtimeData[service].length > 25) realtimeData[service].shift();
+        renderRealtime(service);
+    }
+
+    function addB6LogEntry(from, ip, status, detail, sendTo = '', response = '') {
+        if (!realtimeData['b6']) realtimeData['b6'] = [];
+        const time = new Date().toLocaleTimeString();
+        const entry = {
+            time, from, ip, status, detail, sendTo, response,
+            statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err'
+        };
+        realtimeData['b6'].push(entry);
+        if (realtimeData['b6'].length > 30) realtimeData['b6'].shift();
+        renderRealtime('b6');
+    }
+
+    function addOutgoingRealtime(service, ip, status, request, response, mode) {
+        if (!realtimeData[service]) realtimeData[service] = [];
+        const time = new Date().toLocaleTimeString();
+        const entry = {
+            time, ip, status,
+            statusClass: status >= 200 && status < 300 ? 'status-ok' : 'status-err',
+            request: request || '',
+            response: response || '',
+            mode: mode || 'FALLBACK'
+        };
+        realtimeData[service].push(entry);
+        if (realtimeData[service].length > 25) realtimeData[service].shift();
+        renderRealtime(service);
+    }
+
+    function addHealthIP(ip, displayIp) {
+        if (!realtimeData['health']) realtimeData['health'] = [];
+        const display = displayIp || ip || 'unknown';
+        const time = new Date().toLocaleTimeString();
+        const existing = realtimeData['health'].find(e => e.ip === display);
+        if (existing) {
+            existing.time = time;
+            existing.count = (existing.count || 1) + 1;
+        } else {
+            realtimeData['health'].push({ time, ip: display, count: 1 });
+        }
+        if (realtimeData['health'].length > 20) realtimeData['health'].shift();
+        renderRealtime('health');
+    }
+
+    function renderRealtime(service) {
+        // Sửa lỗi ID cho health
+        let elId;
+        if (service === 'health') {
+            elId = 'realtimeHealth';
+        } else {
+            elId = `realtime${service.toUpperCase()}`;
+        }
+        const el = document.getElementById(elId);
+        const countEl = document.getElementById(`count${service.toUpperCase()}`);
+        if (!el) return;
+        
+        const data = realtimeData[service] || [];
+        if (countEl) countEl.textContent = data.length;
+        
+        if (data.length === 0) {
+            const names = { b1: 'B1', b3: 'B3', b4: 'B4', b5: 'B5', b6: 'B6', b7: 'B7', health: 'Health' };
+            el.innerHTML = `<div class="empty">▸ Waiting for ${names[service] || service}...</div>`;
+            return;
+        }
+        
+        const recent = data.slice(-20).reverse();
+        
+        if (service === 'b6') {
+            el.innerHTML = recent.map(e => `
+                <div class="entry">
+                    <span class="time">[${e.time}]</span>
+                    <span class="b6-from">${e.from}</span>
+                    <span class="b6-ip">${e.ip}</span>
+                    <span class="${e.statusClass}">${e.status}</span>
+                    <span class="b6-detail">📥 ${e.detail || ''}</span>
+                    ${e.response ? `<span class="b6-response">📤 ${e.response}</span>` : ''}
+                    ${e.sendTo ? `<span class="b6-send">→ ${e.sendTo}</span>` : ''}
+                </div>
+            `).join('');
+        } else if (service === 'health') {
+            el.innerHTML = data.slice(-20).reverse().map(e => `
+                <span class="health-ip">
+                    <span class="ip">${e.ip}</span>
+                    <span class="time">${e.time}</span>
+                    <span class="status">●</span>
+                    <span style="color:#6B7280;font-size:11px;">${e.count || 1}</span>
+                </span>
+            `).join('');
+        } else if (service === 'b5' || service === 'b7') {
+            el.innerHTML = recent.map(e => `
+                <div class="entry">
+                    <span class="time">[${e.time}]</span>
+                    <span class="ip">${e.ip}</span>
+                    <span class="${e.statusClass}">${e.status}</span>
+                    ${e.request ? `<span class="b-request">📤 ${e.request}</span>` : ''}
+                    ${e.response ? `<span class="b-response">📬 ${e.response}</span>` : ''}
+                    ${e.mode ? `<span class="${e.mode.toLowerCase()}" style="font-size:11px;font-weight:700;">${e.mode}</span>` : ''}
+                </div>
+            `).join('');
+        } else {
+            el.innerHTML = recent.map(e => `
+                <div class="entry">
+                    <span class="time">[${e.time}]</span>
+                    <span class="ip">${e.ip || 'local'}</span>
+                    <span class="${e.statusClass}">${e.status}</span>
+                    ${e.method ? `<span class="method">${e.method}</span>` : ''}
+                    ${e.path ? `<span class="path">${e.path}</span>` : ''}
+                    ${e.detail ? `<span style="color:#6B7280;font-size:11px;">📊 ${e.detail}</span>` : ''}
+                    ${e.responseDetail ? `<span class="resp-detail">📤 ${e.responseDetail}</span>` : ''}
+                </div>
+            `).join('');
+        }
+    }
+
+    // ============================================================
+    // FETCH REALTIME B5/B7 (with spam protection)
+    // ============================================================
+    async function fetchRealtimeB5() {
+        try {
+            const res = await callApi('GET', '/internal/realtime-b5');
+            if (res.status === 200 && res.data) {
+                const entry = res.data.last_entry;
+                if (entry) {
+                    const time = new Date(entry.timestamp).toLocaleTimeString();
+                    const ip = entry.ip || 'localhost';
+                    const status = entry.status || 200;
+                    const statusClass = status >= 200 && status < 300 ? 'status-ok' : 'status-err';
+                    const mode = entry.mode || 'FALLBACK';
+                    
+                    let requestStr = '';
+                    let responseStr = '';
+                    if (entry.request) {
+                        if (entry.request.correlationId) {
+                            requestStr = `📤 ${entry.request.decision || 'decision'} (${entry.request.correlationId.slice(0, 8)})`;
+                        } else if (entry.request.payload) {
+                            const p = entry.request.payload;
+                            if (p.correlationId) {
+                                requestStr = `📤 ${p.decision || 'decision'} (${p.correlationId.slice(0, 8)})`;
+                            } else {
+                                requestStr = `📤 ${JSON.stringify(p).slice(0, 50)}`;
+                            }
                         } else {
-                            requestStr = `📤 ${JSON.stringify(p).slice(0, 50)}`;
-                        }
-                    } else {
-                        requestStr = `📤 ${JSON.stringify(entry.request).slice(0, 50)}`;
-                    }
-                }
-                
-                if (entry.response) {
-                    if (entry.response.status) {
-                        responseStr = `📬 ${entry.response.status}${entry.response.mode ? ` (${entry.response.mode})` : ''}`;
-                    } else if (entry.response.alertId) {
-                        responseStr = `📬 Alert ${entry.response.alertId.slice(0, 8)}`;
-                    } else {
-                        responseStr = `📬 ${JSON.stringify(entry.response).slice(0, 50)}`;
-                    }
-                }
-                
-                const el = document.getElementById('realtimeB7');
-                if (el) {
-                    const empty = el.querySelector('.empty');
-                    if (empty) empty.remove();
-                    
-                    let currentEntries = el.querySelectorAll('.entry');
-                    if (currentEntries.length >= 10) {
-                        while (el.children.length > 10) {
-                            el.removeChild(el.firstChild);
+                            requestStr = `📤 ${JSON.stringify(entry.request).slice(0, 50)}`;
                         }
                     }
                     
-                    const entryHtml = `
-                        <div class="entry">
-                            <span class="time">[${time}]</span>
-                            <span class="ip">${ip}</span>
-                            <span class="${statusClass}">${status}</span>
-                            <span class="b-request">${requestStr || '📤 --'}</span>
-                            <span class="b-response">${responseStr || '📬 --'}</span>
-                            <span class="${mode.toLowerCase()}" style="font-size:8px;font-weight:700;">${mode}</span>
-                        </div>
-                    `;
-                    el.insertAdjacentHTML('afterbegin', entryHtml);
-                    
-                    const count = document.getElementById('countB7');
-                    if (count) {
-                        const entries = el.querySelectorAll('.entry');
-                        count.textContent = entries.length;
-                    }
-                }
-            }
-        }
-    } catch(e) { /* ignore */ }
-}
-
-// ============================================================
-// REFRESH REALTIME
-// ============================================================
-async function refreshRealtime() {
-    try {
-        const res = await callApi('GET', '/internal/request-logs?limit=50');
-        if (res.status === 200 && res.data?.logs) {
-            const logs = res.data.logs;
-            logs.forEach(log => {
-                const service = getServiceFromPath(log.path);
-                if (service && service !== 'health') {
-                    const key = log.timestamp + log.path + log.method + log.client_ip;
-                    if (!processedLogs.has(key)) {
-                        processedLogs.add(key);
-                        const displayIp = log.display_ip || log.client_ip || 'unknown';
-                        addToRealtime(service, log, displayIp);
-                        
-                        const serviceName = getServiceName(service);
-                        let detail = `${log.method} ${log.path}`;
-                        let responseDetail = '';
-                        let sendTo = '';
-                        
-                        if (log.body) {
-                            if (log.body.status) responseDetail += `status: ${log.body.status}`;
-                            if (log.body.alerts_count !== undefined) responseDetail += `, ${log.body.alerts_count} alerts`;
-                            if (log.body.message) responseDetail += `, ${log.body.message}`;
+                    if (entry.response) {
+                        if (entry.response.status) {
+                            responseStr = `📬 ${entry.response.status}${entry.response.mode ? ` (${entry.response.mode})` : ''}`;
+                        } else {
+                            responseStr = `📬 ${JSON.stringify(entry.response).slice(0, 50)}`;
                         }
+                    }
+                    
+                    const hash = hashEntry({
+                        timestamp: time,
+                        ip: ip,
+                        status: status,
+                        request: requestStr,
+                        response: responseStr,
+                        mode: mode
+                    });
+                    
+                    if (b5DisplayedHashes.has(hash)) return;
+                    b5DisplayedHashes.add(hash);
+                    if (b5DisplayedHashes.size > 100) {
+                        const arr = Array.from(b5DisplayedHashes);
+                        arr.splice(0, arr.length - 100);
+                        b5DisplayedHashes = new Set(arr);
+                    }
+                    
+                    const el = document.getElementById('realtimeB5');
+                    if (el) {
+                        const empty = el.querySelector('.empty');
+                        if (empty) empty.remove();
                         
-                        if (service === 'b1' || service === 'b2' || service === 'b3' || service === 'b4') {
-                            if (log.status_code >= 200 && log.status_code < 300) {
-                                if (log.path.includes('evaluate-sensor') || log.path.includes('evaluate-camera') || 
-                                    log.path.includes('access/check') || log.path.includes('evaluate-detection')) {
-                                    sendTo = 'B5 + B7';
-                                }
+                        let currentEntries = el.querySelectorAll('.entry');
+                        if (currentEntries.length >= 10) {
+                            while (el.children.length > 10) {
+                                el.removeChild(el.firstChild);
                             }
                         }
                         
-                        let b6Response = log.status_code >= 200 && log.status_code < 300 ? 
-                            (responseDetail || '✅ Processed successfully') : 
-                            '❌ Error: ' + log.status_code;
+                        const entryHtml = `
+                            <div class="entry">
+                                <span class="time">[${time}]</span>
+                                <span class="ip">${ip}</span>
+                                <span class="${statusClass}">${status}</span>
+                                <span class="b-request">${requestStr || '📤 --'}</span>
+                                <span class="b-response">${responseStr || '📬 --'}</span>
+                                <span class="${mode.toLowerCase()}" style="font-size:11px;font-weight:700;">${mode}</span>
+                            </div>
+                        `;
+                        el.insertAdjacentHTML('afterbegin', entryHtml);
                         
-                        addB6LogEntry(
-                            serviceName,
-                            displayIp,
-                            log.status_code,
-                            detail,
-                            sendTo,
-                            b6Response
-                        );
+                        const count = document.getElementById('countB5');
+                        if (count) {
+                            const entries = el.querySelectorAll('.entry');
+                            count.textContent = entries.length;
+                        }
                     }
-                } else if (service === 'health') {
-                    const displayIp = log.display_ip || log.client_ip || 'unknown';
-                    addHealthIP(log.client_ip || 'unknown', displayIp);
                 }
-            });
-        }
-        
-        // Fetch B5 và B7 realtime riêng
-        await fetchRealtimeB5();
-        await fetchRealtimeB7();
-        
-    } catch(e) {
-        /* ignore */
+            }
+        } catch(e) { /* ignore */ }
     }
-}
 
-// ============================================================
-// STATUS B6
-// ============================================================
-async function updateB6Status() {
-    try {
-        const res = await callApi('GET', '/health');
-        const dot = document.getElementById('statusDot');
-        const text = document.getElementById('statusText');
-        if (res.status === 200) {
-            dot.className = 'dot dot-green';
-            text.textContent = 'Online';
-        } else {
-            dot.className = 'dot dot-red';
-            text.textContent = 'Offline';
-        }
-        if (res.data && res.data.client_ip) {
-            addHealthIP(res.data.client_ip, res.data.client_ip);
-        }
-    } catch(e) {
-        document.getElementById('statusDot').className = 'dot dot-red';
-        document.getElementById('statusText').textContent = 'Offline';
+    async function fetchRealtimeB7() {
+        try {
+            const res = await callApi('GET', '/internal/realtime-b7');
+            if (res.status === 200 && res.data) {
+                const entry = res.data.last_entry;
+                if (entry) {
+                    const time = new Date(entry.timestamp).toLocaleTimeString();
+                    const ip = entry.ip || 'localhost';
+                    const status = entry.status || 200;
+                    const statusClass = status >= 200 && status < 300 ? 'status-ok' : 'status-err';
+                    const mode = entry.mode || 'FALLBACK';
+                    
+                    let requestStr = '';
+                    let responseStr = '';
+                    if (entry.request) {
+                        if (entry.request.payload) {
+                            const p = entry.request.payload;
+                            if (p.data && p.data.alertId) {
+                                requestStr = `📤 Alert ${p.data.alertId.slice(0, 8)} (${p.data.severity})`;
+                            } else if (p.alert_id) {
+                                requestStr = `📤 Alert ${p.alert_id.slice(0, 8)}`;
+                            } else if (p.message) {
+                                requestStr = `📤 ${p.message.slice(0, 30)}`;
+                            } else {
+                                requestStr = `📤 ${JSON.stringify(p).slice(0, 50)}`;
+                            }
+                        } else {
+                            requestStr = `📤 ${JSON.stringify(entry.request).slice(0, 50)}`;
+                        }
+                    }
+                    
+                    if (entry.response) {
+                        if (entry.response.status) {
+                            responseStr = `📬 ${entry.response.status}${entry.response.mode ? ` (${entry.response.mode})` : ''}`;
+                        } else if (entry.response.alertId) {
+                            responseStr = `📬 Alert ${entry.response.alertId.slice(0, 8)}`;
+                        } else {
+                            responseStr = `📬 ${JSON.stringify(entry.response).slice(0, 50)}`;
+                        }
+                    }
+                    
+                    const hash = hashEntry({
+                        timestamp: time,
+                        ip: ip,
+                        status: status,
+                        request: requestStr,
+                        response: responseStr,
+                        mode: mode
+                    });
+                    
+                    if (b7DisplayedHashes.has(hash)) return;
+                    b7DisplayedHashes.add(hash);
+                    if (b7DisplayedHashes.size > 100) {
+                        const arr = Array.from(b7DisplayedHashes);
+                        arr.splice(0, arr.length - 100);
+                        b7DisplayedHashes = new Set(arr);
+                    }
+                    
+                    const el = document.getElementById('realtimeB7');
+                    if (el) {
+                        const empty = el.querySelector('.empty');
+                        if (empty) empty.remove();
+                        
+                        let currentEntries = el.querySelectorAll('.entry');
+                        if (currentEntries.length >= 10) {
+                            while (el.children.length > 10) {
+                                el.removeChild(el.firstChild);
+                            }
+                        }
+                        
+                        const entryHtml = `
+                            <div class="entry">
+                                <span class="time">[${time}]</span>
+                                <span class="ip">${ip}</span>
+                                <span class="${statusClass}">${status}</span>
+                                <span class="b-request">${requestStr || '📤 --'}</span>
+                                <span class="b-response">${responseStr || '📬 --'}</span>
+                                <span class="${mode.toLowerCase()}" style="font-size:11px;font-weight:700;">${mode}</span>
+                            </div>
+                        `;
+                        el.insertAdjacentHTML('afterbegin', entryHtml);
+                        
+                        const count = document.getElementById('countB7');
+                        if (count) {
+                            const entries = el.querySelectorAll('.entry');
+                            count.textContent = entries.length;
+                        }
+                    }
+                }
+            }
+        } catch(e) { /* ignore */ }
     }
-}
 
-// ============================================================
-// INIT
-// ============================================================
-updateStatus();
-updateB6Status();
-setInterval(updateStatus, 30000);
-setInterval(updateB6Status, 10000);
-
-// Refresh realtime every 3 seconds when tab is active
-setInterval(() => {
-    if (document.getElementById('realtimeTab').classList.contains('active')) {
-        refreshRealtime();
+    // ============================================================
+    // REFRESH REALTIME
+    // ============================================================
+    async function refreshRealtime() {
+        try {
+            const res = await callApi('GET', '/internal/request-logs?limit=50');
+            if (res.status === 200 && res.data?.logs) {
+                const logs = res.data.logs;
+                logs.forEach(log => {
+                    const service = getServiceFromPath(log.path);
+                    if (service && service !== 'health') {
+                        const key = log.timestamp + log.path + log.method + log.client_ip;
+                        if (!processedLogs.has(key)) {
+                            processedLogs.add(key);
+                            const displayIp = log.display_ip || log.client_ip || 'unknown';
+                            addToRealtime(service, log, displayIp);
+                            
+                            const serviceName = getServiceName(service);
+                            let detail = `${log.method} ${log.path}`;
+                            let responseDetail = '';
+                            let sendTo = '';
+                            
+                            if (log.body) {
+                                if (log.body.status) responseDetail += `status: ${log.body.status}`;
+                                if (log.body.alerts_count !== undefined) responseDetail += `, ${log.body.alerts_count} alerts`;
+                                if (log.body.message) responseDetail += `, ${log.body.message}`;
+                            }
+                            
+                            if (service === 'b1' || service === 'b3' || service === 'b4') {
+                                if (log.status_code >= 200 && log.status_code < 300) {
+                                    if (log.path.includes('evaluate-sensor') ||
+                                        log.path.includes('access/check') || log.path.includes('evaluate-detection')) {
+                                        sendTo = 'B5 + B7';
+                                    }
+                                }
+                            }
+                            
+                            let b6Response = log.status_code >= 200 && log.status_code < 300 ? 
+                                (responseDetail || '✅ Processed successfully') : 
+                                '❌ Error: ' + log.status_code;
+                            
+                            addB6LogEntry(
+                                serviceName,
+                                displayIp,
+                                log.status_code,
+                                detail,
+                                sendTo,
+                                b6Response
+                            );
+                        }
+                    } else if (service === 'health') {
+                        const displayIp = log.display_ip || log.client_ip || 'unknown';
+                        addHealthIP(log.client_ip || 'unknown', displayIp);
+                    }
+                });
+            }
+            
+            await fetchRealtimeB5();
+            await fetchRealtimeB7();
+            
+        } catch(e) {
+            /* ignore */
+        }
     }
-}, 3000);
 
-document.querySelector('[data-tab="realtime"]').addEventListener('click', () => {
-    setTimeout(refreshRealtime, 500);
-});
+    // ============================================================
+    // STATUS B6
+    // ============================================================
+    async function updateB6Status() {
+        try {
+            const res = await callApi('GET', '/health');
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (res.status === 200) {
+                dot.className = 'dot dot-green';
+                text.textContent = 'Online';
+            } else {
+                dot.className = 'dot dot-red';
+                text.textContent = 'Offline';
+            }
+            if (res.data && res.data.client_ip) {
+                addHealthIP(res.data.client_ip, res.data.client_ip);
+            }
+        } catch(e) {
+            document.getElementById('statusDot').className = 'dot dot-red';
+            document.getElementById('statusText').textContent = 'Offline';
+        }
+    }
 
-setTimeout(refreshRealtime, 1000);
-
-document.getElementById('apiBaseInput').addEventListener('change', () => {
+    // ============================================================
+    // INIT
+    // ============================================================
     updateStatus();
     updateB6Status();
-    Object.keys(realtimeData).forEach(k => { realtimeData[k] = []; });
-    processedLogs = new Set();
-    ['b1','b2','b3','b4','b5','b6','b7','health'].forEach(s => renderRealtime(s));
-});
+    setInterval(updateStatus, 30000);
+    setInterval(updateB6Status, 10000);
+
+    setInterval(() => {
+        if (document.getElementById('realtimeTab').classList.contains('active')) {
+            refreshRealtime();
+        }
+    }, 3000);
+
+    document.querySelector('[data-tab="realtime"]').addEventListener('click', () => {
+        setTimeout(refreshRealtime, 500);
+    });
+
+    setTimeout(refreshRealtime, 1000);
+
+    document.getElementById('apiBaseInput').addEventListener('change', () => {
+        updateStatus();
+        updateB6Status();
+        Object.keys(realtimeData).forEach(k => { realtimeData[k] = []; });
+        processedLogs = new Set();
+        b5DisplayedHashes = new Set();
+        b7DisplayedHashes = new Set();
+        ['b1','b3','b4','b5','b6','b7','health'].forEach(s => renderRealtime(s));
+    });
+
+    // Copy button
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        const curl = document.getElementById('curlPreview').textContent;
+        if (curl && curl !== '# cURL will appear here') {
+            navigator.clipboard.writeText(curl).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const orig = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 1500);
+            }).catch(() => {});
+        }
+    });
 </script>
 </body>
 </html>

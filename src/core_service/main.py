@@ -57,8 +57,7 @@ from src.core_service.database import DatabaseManager
 from src.core_service.models import (
     AccessCheckRequest, AccessDecision, SensorEvent, AccessEvent,
     AIDetectionRequest, AIDetectionResponse, HealthResponse,
-    ProblemDetails, AlertEvent, PolicyDecisionEvent,
-    CameraEvent, CameraEventResponse, SensorEvaluationResult,
+    ProblemDetails, AlertEvent, PolicyDecisionEvent, SensorEvaluationResult,
     Severity, AlertLevel, SensorStatus, AccessResult
 )
 from src.core_service.services.policy_engine import PolicyEngine
@@ -70,7 +69,6 @@ from src.core_service.services.access_gate_client import AccessGateClient
 from src.core_service.services.notification_client import NotificationClient
 from src.core_service.services.analytics_client import AnalyticsClient
 from src.core_service.services.connection_manager import connection_manager, ConnectionStatus
-from src.core_service.services.camera_evaluator import camera_evaluator
 from src.core_service.services.sensor_evaluator import sensor_evaluator
 from src.core_service.services.access_evaluator import access_evaluator
 from src.core_service.services.device_registry import device_registry_service
@@ -474,7 +472,6 @@ async def get_request_logs(
     if service:
         service_paths = {
             "B1": "/internal/evaluate-sensor",
-            "B2": "/policies/evaluate-camera-event",
             "B3": "/access/check",
             "B4": "/policies/evaluate-detection",
             "B5": "/alerts"
@@ -665,100 +662,6 @@ async def evaluate_sensor(
         
     except Exception as e:
         logger.error(f"❌ [REQ-{request_id}] evaluate_sensor error: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============================================================
-# API Endpoint - B2: CAMERA STREAM → B6 - SỬA THÊM CLIENT_IP
-# ============================================================
-@app.post("/policies/evaluate-camera-event", response_model=CameraEventResponse, tags=["Camera Integration"])
-async def evaluate_camera_event(
-    request: Request,
-    token_data: dict = Depends(verify_token)
-):
-    """
-    Camera Stream (B2) gửi sự kiện camera sang B6
-    """
-    request_id = str(uuid4())[:8]
-    
-    try:
-        # Lấy client_ip
-        client_ip = request.client.host if request.client else "unknown"
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded:
-            client_ip = forwarded.split(",")[0].strip()
-        
-        if hasattr(request.state, 'body_parsed') and request.state.body_parsed:
-            body = request.state.body_parsed
-        else:
-            body = await request.json()
-        
-        event = CameraEvent(**body)
-        logger.info(f"📹 [REQ-{request_id}] Camera event: {event.camera_id} - {event.event_type} from {client_ip}")
-        
-        # Đánh giá sự kiện camera
-        result = await camera_evaluator.evaluate(event)
-        
-        # Áp policy
-        should_alert, alert_type, severity = await policy_engine.should_create_alert(
-            "camera",
-            {
-                "camera_id": event.camera_id,
-                "event_type": event.event_type,
-                "motion_detected": event.motion_detected,
-                "location": event.location,
-                "unknown_person": result.get("unknown_person", False)
-            }
-        )
-        
-        # Xử lý alerts từ result
-        if result["alert_triggered"] and result["alerts"]:
-            for alert in result["alerts"]:
-                if should_alert and severity:
-                    alert.severity = severity
-                
-                # ✅ Đảm bảo target đúng
-                if alert.severity in [Severity.CRITICAL, Severity.HIGH]:
-                    alert.target = "security_team"
-                elif alert.severity == Severity.MEDIUM:
-                    alert.target = "admin"
-                else:
-                    alert.target = "staff"
-                
-                # ✅ THÊM title
-                if not alert.details.get("title"):
-                    alert.details["title"] = f"📹 Camera {alert.alert_type}"
-                
-                await alert_storage.save_alert(alert)
-                alerts_list.append(alert.dict())
-                
-                # ✅ GỬI SANG B7
-                await notification_client.send_alert(alert, client_ip=client_ip)
-                logger.info(f"🔔 [REQ-{request_id}] Camera alert sent to B7: {alert.alert_id} → target: {alert.target}")
-                
-                # ✅ GỬI SANG B5
-                await analytics_client.send_decision(
-                    correlation_id=str(event.correlationId),
-                    decision=alert.severity.value,
-                    reason=f"Camera event: {result.get('message', '')}",
-                    latency_ms=0,
-                    quota_before=0,
-                    quota_after=0,
-                    rules_triggered=[result.get("rule_id", "CAMERA_EVENT")],
-                    client_ip=client_ip
-                )
-                logger.info(f"📊 [REQ-{request_id}] Camera decision sent to B5")
-        
-        return CameraEventResponse(
-            status="processed",
-            alert_triggered=result["alert_triggered"],
-            message=result["message"] or "Event processed successfully",
-            correlation_id=event.correlationId
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ [REQ-{request_id}] evaluate_camera_event error: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 

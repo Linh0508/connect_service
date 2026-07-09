@@ -1,6 +1,6 @@
 """
 Notification Client - Gửi alert sang B7 via RabbitMQ (Queue Async)
-Version: 3.3 - SỬA SEVERITY UPPERCASE
+Version: 3.4 - Tối ưu kết nối và routing key
 """
 
 import os
@@ -44,18 +44,19 @@ class NotificationClient:
         
         logger.info(f"📧 NotificationClient initialized:")
         logger.info(f"   - Host: {self.rabbitmq_host}:{self.rabbitmq_port}")
+        logger.info(f"   - Exchange: {self.exchange_name}, Routing Key: {self.routing_key}")
         logger.info(f"   - Available: {self._rabbitmq_available}")
 
     async def _ensure_channel(self):
-        """Đảm bảo có channel để publish"""
+        """Đảm bảo có channel để publish - tự động tái tạo nếu mất"""
         # Lấy connection và channel từ connection_manager
         self._connection = connection_manager.get_rabbitmq_connection()
         self._channel = connection_manager.get_rabbitmq_channel()
         
-        # Nếu connection bị đóng, yêu cầu connection_manager reconnect
+        # Nếu connection bị đóng hoặc None, yêu cầu connection_manager kết nối lại
         if self._connection is None or self._connection.is_closed:
-            logger.warning("📧 RabbitMQ connection is closed, waiting for reconnect...")
-            await asyncio.sleep(2)
+            logger.warning("📧 RabbitMQ connection is closed or None, reconnecting...")
+            await connection_manager._setup_rabbitmq_connection()
             self._connection = connection_manager.get_rabbitmq_connection()
             self._channel = connection_manager.get_rabbitmq_channel()
             
@@ -63,14 +64,20 @@ class NotificationClient:
                 logger.error("📧 Cannot get RabbitMQ connection")
                 return False
         
-        # Nếu channel bị đóng, tạo channel mới
+        # Nếu channel bị đóng hoặc None, tạo channel mới
         if self._channel is None or self._channel.is_closed:
-            logger.warning("📧 RabbitMQ channel is closed, creating new channel...")
-            self._channel = await self._connection.channel()
-            
-            # Đảm bảo queue tồn tại
-            queue = await self._channel.declare_queue(self.queue_name, durable=True)
-            await queue.bind(self.exchange_name, self.routing_key)
+            logger.warning("📧 RabbitMQ channel is closed or None, creating new channel...")
+            try:
+                self._channel = await self._connection.channel()
+                # Đảm bảo queue tồn tại
+                queue = await self._channel.declare_queue(self.queue_name, durable=True)
+                await queue.bind(self.exchange_name, self.routing_key)
+                # Cập nhật vào connection_manager để dùng chung
+                connection_manager._rabbitmq_channel = self._channel
+                logger.info("📧 RabbitMQ channel recreated and bound")
+            except Exception as e:
+                logger.error(f"📧 Failed to create channel: {e}")
+                return False
         
         return True
 
@@ -184,7 +191,8 @@ class NotificationClient:
                     message = Message(
                         body=json.dumps(payload).encode(),
                         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-                        content_type="application/json"
+                        content_type="application/json",
+                        expiration=60000  # int, không có dấu ngoặc kép
                     )
                     
                     # Publish message
@@ -216,19 +224,37 @@ class NotificationClient:
                     logger.warning(f"📧 Cannot get channel, attempt {attempt + 1}/{self._max_retries}")
                     await asyncio.sleep(1)
                     
-            except aio_pika.exceptions.ChannelNotFoundError as e:
-                logger.warning(f"📧 Channel not found, recreating: {e}")
-                self._channel = await self._connection.channel()
-                queue = await self._channel.declare_queue(self.queue_name, durable=True)
-                await queue.bind(self.exchange_name, self.routing_key)
+            except (aio_pika.exceptions.ChannelClosed, aio_pika.exceptions.AMQPChannelError, Exception) as e:
+                logger.warning(f"📧 Channel error, recreating: {e}")
+                # Tạo lại channel
+                try:
+                    if self._connection and not self._connection.is_closed:
+                        self._channel = await self._connection.channel()
+                        queue = await self._channel.declare_queue(self.queue_name, durable=True)
+                        await queue.bind(self.exchange_name, self.routing_key)
+                        connection_manager._rabbitmq_channel = self._channel
+                        logger.info("📧 Channel recreated successfully")
+                    else:
+                        logger.warning("📧 Connection also closed, full reconnect")
+                        await connection_manager._setup_rabbitmq_connection()
+                        self._connection = connection_manager.get_rabbitmq_connection()
+                        self._channel = connection_manager.get_rabbitmq_channel()
+                except Exception as e2:
+                    logger.error(f"📧 Failed to recreate channel: {e2}")
+                    # Thử reconnect full
+                    await connection_manager._setup_rabbitmq_connection()
+                    self._connection = connection_manager.get_rabbitmq_connection()
+                    self._channel = connection_manager.get_rabbitmq_channel()
                 
             except Exception as e:
                 logger.warning(f"📧 Publish attempt {attempt + 1} failed: {e}")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1)
                     # Force reconnect
-                    self._connection = None
-                    self._channel = None
+                    logger.info("📧 Forcing reconnect...")
+                    await connection_manager._setup_rabbitmq_connection()
+                    self._connection = connection_manager.get_rabbitmq_connection()
+                    self._channel = connection_manager.get_rabbitmq_channel()
         
         # Nếu tất cả retry thất bại
         logger.error(f"📧 [B7_ERROR] All {self._max_retries} attempts failed for {event_id}")
